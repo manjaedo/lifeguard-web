@@ -1,0 +1,3777 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Life Guard">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" id="metaThemeColor" content="#fbfcfc">
+  <title>Life Guard</title>
+  <script src="tailwindcss.min.js" onerror="this.onerror=null;this.src='https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js';"></script>
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+    }
+    /* 글자 크기 3단계 (1: 기본 100%, 3: 크게 116%, 5: 아주 크게 132%) - 레이아웃 틀은 고정하고 가독성만 확대 */
+    #phoneScreen {
+      --fs: 1;
+      word-break: keep-all;
+    }
+    #phoneScreen[data-font-step="3"] {
+      --fs: 1.16;
+    }
+    #phoneScreen[data-font-step="5"] {
+      --fs: 1.32;
+    }
+    #phoneScreen[data-font-step="3"] .text-\[9px\],
+    #phoneScreen[data-font-step="5"] .text-\[9px\] { font-size: calc(9px * var(--fs)) !important; }
+    #phoneScreen[data-font-step="3"] .text-\[10px\],
+    #phoneScreen[data-font-step="5"] .text-\[10px\] { font-size: calc(10px * var(--fs)) !important; line-height: 1.45 !important; }
+    #phoneScreen[data-font-step="3"] .text-\[10\.5px\],
+    #phoneScreen[data-font-step="5"] .text-\[10\.5px\] { font-size: calc(10.5px * var(--fs)) !important; line-height: 1.45 !important; }
+    #phoneScreen[data-font-step="3"] .text-\[11px\],
+    #phoneScreen[data-font-step="5"] .text-\[11px\] { font-size: calc(11px * var(--fs)) !important; line-height: 1.48 !important; }
+    #phoneScreen[data-font-step="3"] .text-\[11\.5px\],
+    #phoneScreen[data-font-step="5"] .text-\[11\.5px\] { font-size: calc(11.5px * var(--fs)) !important; line-height: 1.48 !important; }
+    #phoneScreen[data-font-step="3"] .text-\[12\.5px\],
+    #phoneScreen[data-font-step="5"] .text-\[12\.5px\] { font-size: calc(12.5px * var(--fs)) !important; line-height: 1.45 !important; }
+    #phoneScreen[data-font-step="3"] .text-\[13px\],
+    #phoneScreen[data-font-step="5"] .text-\[13px\] { font-size: calc(13px * var(--fs)) !important; line-height: 1.45 !important; }
+    #phoneScreen[data-font-step="3"] .text-xs,
+    #phoneScreen[data-font-step="5"] .text-xs { font-size: calc(12px * var(--fs)) !important; line-height: 1.45 !important; }
+    #phoneScreen[data-font-step="3"] .text-sm,
+    #phoneScreen[data-font-step="5"] .text-sm { font-size: calc(14px * var(--fs)) !important; line-height: 1.45 !important; }
+    #phoneScreen[data-font-step="3"] .text-base,
+    #phoneScreen[data-font-step="5"] .text-base { font-size: calc(16px * var(--fs)) !important; line-height: 1.45 !important; }
+    /* 구명튜브 3개 탭 버튼 및 글자 크기 3분할 버튼은 좁은 화면에서도 줄바꿈/말줄임표가 생기지 않도록 최대 배율 보호 */
+    #phoneScreen[data-font-step="5"] #peaceSceneTabs button,
+    #phoneScreen[data-font-step="5"] #fontBtn-1,
+    #phoneScreen[data-font-step="5"] #fontBtn-3,
+    #phoneScreen[data-font-step="5"] #fontBtn-5,
+    #phoneScreen[data-font-step="5"] #alarmPreviewModalBtn,
+    #phoneScreen[data-font-step="5"] #alarmTestNotifyBtn {
+      font-size: 12px !important;
+      white-space: nowrap !important;
+    }
+    /* 스마트폰(아이폰 사파리/PWA 및 안드로이드 APK)에서는 가짜 액자 테두리·회색 여백 없이 100% 꽉 찬 전체화면으로 구동 */
+    @media (max-width: 639px), (display-mode: standalone) {
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        height: 100dvh !important;
+        min-height: -webkit-fill-available !important;
+        overflow: hidden !important;
+      }
+      #phoneScreen {
+        width: 100vw !important;
+        height: 100dvh !important;
+        min-height: -webkit-fill-available !important;
+        max-width: none !important;
+        max-height: none !important;
+        border-radius: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding-top: max(1.25rem, calc(env(safe-area-inset-top) + 0.5rem)) !important;
+        padding-bottom: max(1.25rem, calc(env(safe-area-inset-bottom) + 0.5rem)) !important;
+        padding-left: max(1.25rem, env(safe-area-inset-left)) !important;
+        padding-right: max(1.25rem, env(safe-area-inset-right)) !important;
+      }
+      #reportModal, #settingsModal, #peaceModal {
+        padding-top: max(1.25rem, calc(env(safe-area-inset-top) + 0.5rem)) !important;
+        padding-bottom: max(1.25rem, calc(env(safe-area-inset-bottom) + 0.5rem)) !important;
+        padding-left: max(1.25rem, env(safe-area-inset-left)) !important;
+        padding-right: max(1.25rem, env(safe-area-inset-right)) !important;
+      }
+      #peaceTopBar {
+        top: max(1.25rem, calc(env(safe-area-inset-top) + 0.5rem)) !important;
+      }
+      #peaceTopHeader {
+        top: calc(max(1.25rem, calc(env(safe-area-inset-top) + 0.5rem)) + 52px) !important;
+      }
+      #memoModal {
+        padding-bottom: max(1.25rem, calc(env(safe-area-inset-bottom) + 0.5rem)) !important;
+      }
+      #demoToolbar, #demoFooterDesc {
+        display: none !important;
+      }
+    }
+    /* 1. 수면 파문 (Ripple) - 방정맞지 않게 천천히, 너무 크지 않고 잔잔하게 */
+    @keyframes rippleIn {
+      0% { opacity: 0; transform: scale(0.85) translateY(4px); filter: blur(2px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0px); }
+    }
+    @keyframes rippleOut {
+      0% { opacity: 1; transform: scale(1); filter: blur(0px); }
+      100% { opacity: 0; transform: scale(0.8) translateY(2px); filter: blur(3px); }
+    }
+
+    /* 2. 깊은 호흡 / 안개 분산 (Breath & Dissolve) */
+    @keyframes breathIn {
+      0% { opacity: 0; transform: scale(0.4); filter: blur(3px); }
+      70% { opacity: 1; transform: scale(1.08); filter: blur(0px); }
+      100% { opacity: 1; transform: scale(1); filter: blur(0px); }
+    }
+    @keyframes breathOut {
+      0% { opacity: 1; transform: scale(1); filter: blur(0px); }
+      100% { opacity: 0; transform: scale(1.6); filter: blur(8px); }
+    }
+
+    /* 3. 찰나의 별빛 점등 & 흡수 (Star Shimmer & Void) */
+    @keyframes starIn {
+      0% { opacity: 0; transform: rotate(-25deg) scale(0.2); }
+      80% { opacity: 1; transform: rotate(4deg) scale(1.15); }
+      100% { opacity: 1; transform: rotate(0deg) scale(1); }
+    }
+    @keyframes starOut {
+      0% { opacity: 1; transform: scale(1); }
+      30% { opacity: 1; transform: scale(1.4); filter: brightness(1.8); }
+      100% { opacity: 0; transform: scale(0.05); filter: blur(3px); }
+    }
+
+    .ripple-ring {
+      animation: ringExpand 1.35s cubic-bezier(0.1, 0.7, 0.2, 1) forwards;
+    }
+    @keyframes ringExpand {
+      0% { transform: scale(0.2); opacity: 0.38; }
+      100% { transform: scale(1.4); opacity: 0; }
+    }
+
+    @keyframes breathPulse {
+      0%, 100% { transform: scale(0.88); opacity: 0.4; }
+      50% { transform: scale(1.3); opacity: 0.85; }
+    }
+    .anim-breath {
+      animation: breathPulse 8s ease-in-out infinite;
+    }
+    /* 실제 윈드차임 물리 애니메이션 (브론즈/호박 웜톤) */
+    @keyframes chimeMicro1 { 0%, 100% { transform: rotate(-1.2deg); } 50% { transform: rotate(1.1deg); } }
+    @keyframes chimeMicro2 { 0%, 100% { transform: rotate(1.3deg); } 50% { transform: rotate(-1.0deg); } }
+    @keyframes chimeMicro3 { 0%, 100% { transform: rotate(-0.9deg); } 50% { transform: rotate(0.8deg); } }
+    @keyframes chimeMicro4 { 0%, 100% { transform: rotate(1.1deg); } 50% { transform: rotate(-1.3deg); } }
+    @keyframes chimeMicro5 { 0%, 100% { transform: rotate(-1.2deg); } 50% { transform: rotate(1.0deg); } }
+    @keyframes chimePendulumSway {
+      0%, 100% { transform: rotate(-9deg) translateX(-3.5px); }
+      50% { transform: rotate(9deg) translateX(3.5px); }
+    }
+    @keyframes windSailFlutter {
+      0%, 100% { transform: rotate(-5deg); }
+      50% { transform: rotate(5deg); }
+    }
+    .anim-chime-real-1 { animation: chimeMicro1 3.6s ease-in-out infinite; transform-origin: 54px 30px; }
+    .anim-chime-real-2 { animation: chimeMicro2 3.1s ease-in-out infinite; transform-origin: 67px 30px; }
+    .anim-chime-real-3 { animation: chimeMicro3 4.0s ease-in-out infinite; transform-origin: 80px 30px; }
+    .anim-chime-real-4 { animation: chimeMicro4 3.4s ease-in-out infinite; transform-origin: 93px 30px; }
+    .anim-chime-real-5 { animation: chimeMicro5 2.9s ease-in-out infinite; transform-origin: 106px 30px; }
+    .anim-chime-pendulum { animation: chimePendulumSway 3.8s ease-in-out infinite; transform-origin: 80px 30px; }
+    .anim-wind-sail-leaf { animation: windSailFlutter 2.2s ease-in-out infinite; transform-origin: 80px 136px; }
+    @keyframes rainFall {
+      0% { transform: translateY(-30px); opacity: 0; }
+      20% { opacity: 0.7; }
+      100% { transform: translateY(180px); opacity: 0; }
+    }
+    .anim-rain {
+      animation: rainFall 2.2s linear infinite;
+    }
+    @keyframes starTwinkle {
+      0%, 100% { opacity: 0.2; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.3); }
+    }
+    .anim-star {
+      animation: starTwinkle 3s ease-in-out infinite;
+    }
+    .corner-btn {
+      transition: opacity 300ms cubic-bezier(0.2, 0.8, 0.2, 1), transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    @keyframes floatFeedback {
+      0% { opacity: 0; transform: translateY(0); }
+      20% { opacity: 0.35; }
+      70% { opacity: 0.35; }
+      100% { opacity: 0; transform: translateY(-16px); }
+    }
+    .anim-feedback {
+      animation: floatFeedback 0.75s ease-out forwards;
+    }
+    #memoModal {
+      transition: transform 620ms cubic-bezier(0.32, 0.72, 0, 1), opacity 500ms ease-out;
+      will-change: transform, opacity;
+    }
+    #memoBackdrop {
+      transition: opacity 550ms cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    .memo-wrapper {
+      max-height: 120px;
+      transition: max-height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.28s ease, margin 0.3s ease;
+      will-change: max-height, opacity, margin;
+    }
+    .memo-wrapper.collapsing {
+      max-height: 0 !important;
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      opacity: 0 !important;
+      overflow: hidden !important;
+    }
+    .memo-front-card {
+      transition: transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.24s ease;
+      will-change: transform, opacity;
+      touch-action: pan-y;
+    }
+    .memo-front-card.sliding-out-left {
+      transform: translateX(-120%) !important;
+      opacity: 0 !important;
+    }
+  </style>
+</head>
+<body class="bg-[#e9ecef] text-gray-800 flex flex-col items-center justify-center min-h-[720px] p-4 select-none font-sans">
+
+  <!-- Mobile Frame (Canvas) -->
+  <div id="phoneScreen" data-font-step="1" onclick="handleScreenTap(event)" class="w-[330px] h-[610px] bg-[#fbfcfc] text-[#597075] rounded-[36px] border border-[#d6dcde] shadow-2xl p-5 flex flex-col justify-between relative overflow-hidden transition-colors duration-400 cursor-pointer">
+    
+    <!-- Top Corner Icons (은은한 30% 워터마크 -> 손가락 대면 300ms 부드럽게 100%로 활성화) -->
+    <div id="topCorners" class="w-full flex justify-between items-center text-xs z-20">
+      
+      <!-- Top Left: Hospital Report / Clinical Summary (좌측 상단 함께 보는 기록) -->
+      <button onclick="event.stopPropagation(); openReportModal()" class="corner-btn w-9 h-9 rounded-full opacity-30 hover:opacity-100 active:opacity-100 hover:bg-black/5 flex items-center justify-center text-current active:scale-105" title="함께 보는 기록 (선생님과 나눌 기록)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M9 14l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <!-- Top Right: Settings (우측 상단 설정: 철학 / 연출4종 / 배경3종) -->
+      <button onclick="event.stopPropagation(); openSettingsModal()" class="corner-btn w-9 h-9 rounded-full opacity-30 hover:opacity-100 active:opacity-100 hover:bg-black/5 flex items-center justify-center text-current active:scale-105" title="설정 및 철학 안내">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+    </div>
+
+    <!-- Center Canvas Area: Mood zone & Pill zone -->
+    <div id="centerCanvas" class="flex-1 flex flex-col justify-between items-center w-full relative">
+      
+      <!-- 터치한 자리 상단에 은은하게 부유하는 피드백 -->
+      <div id="moodFeedback" class="absolute top-[34%] text-xs font-medium text-current pointer-events-none opacity-0">
+        기분 기록
+      </div>
+      <div id="pillFeedback" class="absolute top-[68%] text-xs font-medium text-current pointer-events-none opacity-0">
+        약 먹었음
+      </div>
+
+      <!-- 1. Mood Section (5단계 도형: 상단 영역 터치 시 등장 - 4개 삼각형 착시효과 광학 보정으로 육안 크기 100% 통일) -->
+      <div id="moodSection" class="absolute top-[34%] left-0 right-0 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300" style="display: none;">
+        <div id="moodRow" class="flex items-center justify-center">
+          <!-- ▲ -->
+          <button id="m0" onclick="recordMood(event, '▲', this, 0)" class="shape-btn w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 active:scale-90 transition">
+            <svg class="w-7 h-7 text-current" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="miter">
+              <polygon points="12,4 21,19 3,19" />
+            </svg>
+          </button>
+          <!-- △ -->
+          <button id="m1" onclick="recordMood(event, '△', this, 1)" class="shape-btn w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 active:scale-90 transition ml-1">
+            <svg class="w-7 h-7 text-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter">
+              <polygon points="12,4 21,19 3,19" />
+            </svg>
+          </button>
+
+          <div class="w-4"></div>
+
+          <!-- ○ (평시) -->
+          <button id="m2" onclick="recordMood(event, '○', this, 2)" class="shape-btn w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 active:scale-90 transition">
+            <svg class="w-7 h-7 text-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="8" />
+            </svg>
+          </button>
+
+          <div class="w-4"></div>
+
+          <!-- ▽ -->
+          <button id="m3" onclick="recordMood(event, '▽', this, 3)" class="shape-btn w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 active:scale-90 transition mr-1">
+            <svg class="w-7 h-7 text-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter">
+              <polygon points="12,21 21,6 3,6" />
+            </svg>
+          </button>
+          <!-- ▼ -->
+          <button id="m4" onclick="recordMood(event, '▼', this, 4)" class="shape-btn w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 active:scale-90 transition">
+            <svg class="w-7 h-7 text-current" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="miter">
+              <polygon points="12,21 21,6 3,6" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. Pill Section (알약 복약 체크 버튼: 하단 영역 터치 시 등장) -->
+      <div id="pillSection" class="absolute top-[68%] left-0 right-0 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300" style="display: none;">
+        <button id="pillBtn" style="opacity: 0;" onclick="recordPill(event, this)" class="shape-btn w-12 h-8 rounded-full flex items-center justify-center hover:bg-black/5 active:scale-90 transition" title="복약 체크">
+          <svg class="w-11 h-7 text-current" viewBox="0 0 44 26">
+            <clipPath id="leftHalfClip">
+              <rect x="1" y="1" width="21" height="24" />
+            </clipPath>
+            <rect x="1" y="1" width="42" height="24" rx="12" ry="12" fill="currentColor" clip-path="url(#leftHalfClip)" />
+            <rect x="1" y="1" width="42" height="24" rx="12" ry="12" fill="none" stroke="currentColor" stroke-width="1.8" />
+            <line x1="22" y1="1" x2="22" y2="25" stroke="currentColor" stroke-width="1.8" />
+          </svg>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Bottom Corner Icons (은은한 30% 워터마크 -> 손가락 대면 300ms 부드럽게 100%로 활성화) -->
+    <div id="bottomCorners" class="w-full flex justify-between items-center text-xs z-20">
+      
+      <!-- Bottom Left: Memo (좌측 하단 한줄 메모) -->
+      <button onclick="event.stopPropagation(); openMemoModal()" class="corner-btn w-9 h-9 rounded-full opacity-30 hover:opacity-100 active:opacity-100 hover:bg-black/5 flex items-center justify-center text-current active:scale-105" title="의사 선생님께 드릴 한 줄 메모">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <!-- Bottom Right: Peace / Emergency (우측 하단 구명튜브: 마음의 평화 10선) -->
+      <button onclick="event.stopPropagation(); openPeaceModal()" class="corner-btn w-9 h-9 rounded-full opacity-30 hover:opacity-100 active:opacity-100 hover:bg-[#d9534f]/10 flex items-center justify-center text-[#d9534f] active:scale-105" title="마음의 평화 (힐링 명상 & 사운드)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="12" cy="12" r="4" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="4.93" y1="4.93" x2="9.17" y2="9.17" stroke-linecap="round"/>
+          <line x1="14.83" y1="14.83" x2="19.07" y2="19.07" stroke-linecap="round"/>
+          <line x1="14.83" y1="9.17" x2="19.07" y2="4.93" stroke-linecap="round"/>
+          <line x1="4.93" y1="19.07" x2="9.17" y2="14.83" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+    </div>
+
+    <!-- Modal 1: Hospital Clinical Summary (좌측 상단 리포트 - 최대한 심플하게: 지난 진료~이번 진료만 & 진료 완료 시 휘발) -->
+    <div id="reportModal" onclick="event.stopPropagation()" class="absolute inset-0 bg-[#fbfcfc] z-30 p-5 flex flex-col justify-between opacity-0 pointer-events-none transition-all duration-300 overflow-y-auto hidden" style="display: none;">
+      <div>
+        <div class="flex justify-between items-center mb-3 gap-2">
+          <h2 id="reportTitle" class="text-sm font-bold text-[#597075] flex items-center gap-1.5 min-w-0 flex-1">
+            <span class="shrink-0">📋</span> <span id="reportTitleText" class="truncate">함께 보는 기록</span>
+          </h2>
+          <div class="flex items-center gap-2 shrink-0">
+            <button id="reportCloseBtn" onclick="closeReportModal(event)" class="text-xs text-gray-400 hover:text-gray-700 p-1">닫기 ✕</button>
+          </div>
+        </div>
+
+        <!-- 진료 구간 (단정하고 고요한 표시 - 클릭/날짜입력 없음) -->
+        <div id="reportPeriodCard" class="py-1 px-1 mb-2.5 text-xs flex items-center gap-1 transition-colors">
+          <span id="periodText" class="font-semibold text-xs truncate">새 진료 주기 시작 · 오늘 1일차</span>
+        </div>
+
+        <!-- 기분 궤적 곡선 (진료기간 바로 아래, 조증 울증 문구 상기 방지 삭제) -->
+        <div id="reportChartCard" class="bg-white rounded-xl p-3 border border-gray-100 shadow-sm mb-3 transition-colors">
+          <div class="flex justify-between items-center text-[10px] text-[#597075] font-semibold mb-2">
+            <span id="chartLabel">기분 궤적</span>
+            <span class="text-gray-400">우측: 최근</span>
+          </div>
+          <svg class="w-full h-24" viewBox="0 0 260 90">
+            <line x1="0" y1="45" x2="260" y2="45" stroke="#7fa7aa" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.4"/>
+            <path id="chartPath" d="M 10 45 L 250 45" fill="none" stroke="#597075" stroke-width="2.5" stroke-linecap="round"/>
+            <circle id="chartCircle" cx="250" cy="45" r="4" fill="#597075" opacity="0" />
+          </svg>
+        </div>
+
+        <!-- 핵심 지표 (복약 일수 단독 표기 - 평시 비율은 연구 후 보완을 위해 임시 숨김) -->
+        <div id="reportStatsCard" class="bg-white rounded-xl p-2.5 shadow-sm border border-gray-100 mb-3 text-center transition-colors">
+          <div id="statEvenBox" class="hidden">
+            <div class="text-[10px] text-gray-400">🌿 평시(○)</div>
+            <div id="statEven" class="text-sm font-bold text-[#597075] mt-0.5">-</div>
+          </div>
+          <div id="statBorder" class="w-full">
+            <div class="text-[10px] text-gray-400">💊 복약 일수</div>
+            <div id="statMed" class="text-sm font-bold text-[#597075] mt-0.5">0 / 1일</div>
+          </div>
+        </div>
+
+        <!-- 의사 선생님께 전할 한 줄 메모 (좌로 밀어서 삭제) -->
+        <div id="reportMemoCard" class="bg-white rounded-xl p-3 border border-gray-100 shadow-sm text-xs transition-colors">
+          <div class="flex justify-between items-center mb-2">
+            <div id="reportMemoTitle" class="text-[11px] font-bold text-[#597075] flex items-center gap-1">
+              <span>💬</span> 선생님께 드릴 말씀
+            </div>
+          </div>
+          <div id="memoItemsContainer" class="space-y-1.5"></div>
+        </div>
+
+        <!-- 한줄메모 아래 진료 완료 버튼 & 2줄 안내문 (진료완료 버튼 높이만큼인 mt-11 약 44px 여유 있게 이격) -->
+        <div class="mt-11 text-center">
+          <button id="resetCycleBtn" onclick="confirmResetCycle()" class="border border-[#597075]/40 bg-[#597075]/10 hover:bg-[#597075] hover:text-white text-[#597075] text-xs font-bold px-5 py-2.5 rounded-2xl transition inline-flex items-center gap-1.5 shadow-sm">
+            <span>✓</span> 진료 완료 (새 주기 시작)
+          </button>
+          <div id="reportFooterText" class="text-[10px] text-center text-gray-400 mt-2 leading-relaxed">
+            진료를 마친 후 터치하면 지난 기록이 비워지고,<br>오늘부터 새로운 백지(0)에서 다시 시작합니다.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 2: Settings Screen (우측 상단 설정 - 상세 철학 & 4가지 연출 & 3가지 배경) -->
+    <div id="settingsModal" onclick="event.stopPropagation()" class="absolute inset-0 bg-[#fbfcfc] z-30 p-5 flex flex-col justify-between opacity-0 pointer-events-none transition-all duration-300 overflow-y-auto hidden" style="display: none;">
+      <div>
+        <div class="flex justify-between items-center mb-4">
+          <h2 id="settingsTitle" class="text-sm font-bold text-[#597075]">설정 및 안내</h2>
+          <button id="settingsCloseBtn" onclick="closeSettingsModal(event)" class="text-xs text-gray-400 hover:text-gray-700 p-1">닫기 ✕</button>
+        </div>
+
+        <!-- 철학 안내 카드 -->
+        <div id="settingsPhilosophyCard" class="bg-[#597075]/10 rounded-2xl p-3.5 mb-4 text-xs text-gray-700 space-y-2 transition-colors">
+          <div id="settingsPhilosophyTitle" class="font-bold text-[#597075] text-[13px] flex items-center gap-1.5">
+            <span>🌿</span> Life Guard 안내
+          </div>
+          <p class="leading-relaxed text-[11.5px] mt-2">
+            평온한 평시(○)의 날들을 더 많이 누릴 수 있도록 돕기 위한 디지털 구명튜브입니다.
+          </p>
+        </div>
+
+        <!-- 환자 이름 / 닉네임 설정 (선택사항) -->
+        <div id="settingsPatientCard" class="bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2 transition-colors">
+          <div id="settingsPatientTitle" class="font-bold text-[#597075] text-[13px] flex items-center gap-1.5">
+            <span>👤</span> 환자 이름 또는 닉네임 (선택)
+          </div>
+          <p class="leading-relaxed text-[11px] text-gray-500">
+            진료실에서 선생님과 함께 보는 화면에 표시됩니다. 외부 서버로 전송되지 않고 오직 이 기기에만 안전하게 보관됩니다.
+          </p>
+          <div class="pt-1">
+            <input id="settingsPatientNameInput" type="text" value="" placeholder="이름 또는 닉네임 입력 (미입력 시 비움)"
+                   oninput="updatePatientNameSim(this.value)"
+                   class="w-full text-xs p-2.5 bg-[#f4f7f8] rounded-xl outline-none border border-transparent focus:border-[#597075]/40 text-gray-700">
+          </div>
+        </div>
+
+        <!-- 복약 관리 설정 (복약 안 할 시 끄기) -->
+        <div id="settingsMedCard" class="bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2 transition-colors">
+          <div class="flex items-center justify-between">
+            <div id="settingsMedTitle" class="font-bold text-[#597075] text-[13px] flex items-center gap-1.5">
+              <span>💊</span> 복약 기록 관리
+            </div>
+            <button id="medToggleBtn" onclick="toggleMedicationSetting()" type="button" class="relative inline-flex h-6 w-11 p-0.5 items-center rounded-full transition-colors focus:outline-none bg-[#d1d5db] cursor-pointer" title="복약 기록 관리 토글">
+              <span id="medToggleCircle" class="inline-block h-5 w-5 rounded-full bg-white shadow-md transform transition-transform duration-200 translate-x-0"></span>
+            </button>
+          </div>
+          <div id="medSettingStatusText" class="text-xs font-semibold text-gray-500">현재: 복약 기록 끔 (기분만 기록)</div>
+          <p id="settingsMedDesc" class="leading-relaxed text-[11px] text-gray-500">
+            복약 치료를 받지 않으시거나 복약 체크가 필요 없으신 경우 기능을 끄면, 첫 화면과 함께보기에서 복약 정보가 숨겨지고 <strong>기분 궤적만 단독으로 표시</strong>됩니다.
+          </p>
+        </div>
+
+        <!-- 매일 기분 기록 알림 설정 (기본: 저녁 6시 18:00 / 시간 변경 가능 / 데일리요 스타일 기분 선택창 연동) -->
+        <div id="settingsAlarmCard" class="bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2.5 transition-colors">
+          <div class="flex items-center justify-between">
+            <div id="settingsAlarmTitle" class="font-bold text-[#597075] text-[13px] flex items-center gap-1.5">
+              <span>🔔</span> 매일 기분 기록 알림
+            </div>
+            <button id="alarmToggleBtn" onclick="toggleAlarmSetting()" type="button" class="relative inline-flex h-6 w-11 p-0.5 items-center rounded-full transition-colors focus:outline-none bg-[#597075] cursor-pointer" title="매일 기분 기록 알림 토글">
+              <span id="alarmToggleCircle" class="inline-block h-5 w-5 rounded-full bg-white shadow-md transform transition-transform duration-200 translate-x-[20px]"></span>
+            </button>
+          </div>
+          <div id="settingsAlarmTimeBox" class="flex items-center justify-between gap-2 bg-[#f4f7f8] rounded-xl px-3 py-2 border border-transparent transition-colors">
+            <div id="alarmSettingStatusText" class="text-xs font-semibold text-[#597075]">매일 오후 6:00 알림 켜짐</div>
+            <input id="alarmTimeInput" type="time" value="18:00" onchange="updateAlarmTimeSetting(this.value)"
+                   class="text-xs font-bold px-2 py-1 rounded-lg bg-white text-[#597075] border border-gray-200 outline-none cursor-pointer shrink-0">
+          </div>
+          <p id="settingsAlarmDesc" class="leading-relaxed text-[11px] text-gray-500">
+            하루 한 번 지정한 시각(기본 저녁 6시)에 알림이 울립니다. 알림을 터치하면 <strong>5가지 기분 도형 선택창</strong>이 바로 열려 터치 한 번으로 기록할 수 있습니다.
+          </p>
+          <div class="grid grid-cols-2 gap-1.5 pt-0.5">
+            <button id="alarmPreviewModalBtn" type="button" onclick="openDailyCheckinModal(true)" class="py-2 px-2 rounded-xl bg-[#597075]/10 hover:bg-[#597075]/20 text-[#597075] text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap">
+              <span>✨</span> 기분 선택창 보기
+            </button>
+            <button id="alarmTestNotifyBtn" type="button" onclick="testDailyAlarmNow()" class="py-2 px-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap">
+              <span>🔔</span> 지금 알림 테스트
+            </button>
+          </div>
+        </div>
+
+        <!-- 터치 효과 선택 (3가지) 영역 -->
+        <div class="mb-4">
+          <div class="text-xs font-bold mb-2 flex items-center justify-between">
+            <span id="settingsTouchTitle" class="text-[#597075]">터치 효과 선택 (3가지)</span>
+            <span id="activeStyleBadge" class="text-[10px] text-[#597075] font-semibold bg-[#597075]/10 px-2 py-0.5 rounded-full transition-colors">2. 숨결 적용 중 (기본)</span>
+          </div>
+          <div id="touchStyleContainer" class="space-y-1.5">
+            <!-- 1. 수면의 파문 -->
+            <button id="styleBtn-ripple" onclick="setTouchStyle('ripple')" class="w-full border border-gray-200 bg-white rounded-xl p-2.5 text-left flex items-start justify-between hover:border-[#597075] transition">
+              <div>
+                <div class="font-semibold text-xs flex items-center gap-1.5">
+                  1. 수면의 파문 (물결)
+                </div>
+                <div class="text-[10px] opacity-60 mt-0.5">고요한 물결이 퍼지며 수면 위로 피어오릅니다</div>
+              </div>
+              <span id="check-ripple" class="text-xs font-bold hidden">✓</span>
+            </button>
+
+            <!-- 2. 숨결 (호흡·안개) - 디폴트 (기본) -->
+            <button id="styleBtn-breath" onclick="setTouchStyle('breath')" class="w-full border-2 border-[#597075] bg-[#597075]/10 rounded-xl p-2.5 text-left flex items-start justify-between transition">
+              <div>
+                <div class="font-semibold text-xs flex items-center gap-1.5">
+                  2. 숨결 (호흡·안개)
+                  <span id="styleBadge-breath" class="bg-[#597075] text-white text-[9px] px-1.5 py-0.2 rounded font-bold">기본</span>
+                </div>
+                <div class="text-[10px] opacity-60 mt-0.5">깊은 호흡처럼 부풀어 올랐다 공기 중으로 사르르 소멸</div>
+              </div>
+              <span id="check-breath" class="text-xs font-bold">✓</span>
+            </button>
+
+            <!-- 3. 찰나의 별빛 -->
+            <button id="styleBtn-star" onclick="setTouchStyle('star')" class="w-full border border-gray-200 bg-white rounded-xl p-2.5 text-left flex items-start justify-between hover:border-[#597075] transition">
+              <div>
+                <div class="font-semibold text-xs flex items-center gap-1.5">
+                  3. 찰나의 별빛 (잔상)
+                </div>
+                <div class="text-[10px] opacity-60 mt-0.5">별빛처럼 맑게 점등되고 한 점으로 빨려 들어가듯 닫힘</div>
+              </div>
+              <span id="check-star" class="text-xs font-bold hidden">✓</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 배경 및 화면 테마 선택 (시스템 연동 / 순백 / 중간톤 / 다크) -->
+        <div class="mb-4">
+          <div id="settingsThemeTitle" class="text-xs font-bold text-[#597075] mb-2 flex items-center justify-between gap-2">
+            <span>배경 및 화면 테마</span>
+            <span id="themeSystemLiveBadge" class="text-[10px] text-[#597075] bg-[#597075]/10 px-2 py-0.5 rounded-full font-semibold shrink-0">시스템 연동 중</span>
+          </div>
+          <div class="space-y-1.5">
+            <!-- 1. 시스템 설정 연동 (기본 권장) -->
+            <button id="themeBtn-system" onclick="setPreviewTheme('system')" class="w-full border-2 border-[#597075] bg-[#597075]/10 text-[#597075] rounded-xl p-2.5 text-left flex items-center justify-between transition">
+              <div class="flex items-center gap-2">
+                <span class="text-sm">🌓</span>
+                <div>
+                  <div class="font-bold text-xs">시스템 설정 연동 <span class="bg-[#597075] text-white text-[9px] px-1.5 py-0.2 rounded font-bold ml-1">기본 권장</span></div>
+                  <div class="text-[10px] opacity-70" id="themeSystemDesc">스마트폰 다크/라이트 모드 설정에 자동 연동</div>
+                </div>
+              </div>
+              <span id="check-theme-system" class="text-xs font-bold">✓</span>
+            </button>
+            <div class="grid grid-cols-3 gap-2 text-center text-xs pt-1">
+              <button id="themeBtn-white" onclick="setPreviewTheme('white')" class="border border-gray-200 bg-[#fbfcfc] text-gray-700 rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center">순백</button>
+              <button id="themeBtn-neutral" onclick="setPreviewTheme('neutral')" class="border border-gray-200 bg-[#ecefea] text-gray-700 rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center">한지 미색</button>
+              <button id="themeBtn-dark" onclick="setPreviewTheme('dark')" class="border border-gray-200 bg-[#141718] text-white rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center">다크 (밤)</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 글자 크기 조절 (1단계 기본 / 3단계 크게 / 5단계 아주 크게) -->
+        <div class="mb-4">
+          <div class="text-xs font-bold mb-2 flex items-center justify-between gap-2">
+            <span id="settingsFontTitle" class="text-[#597075]">글자 크기 조절</span>
+            <span id="fontStepLiveBadge" class="text-[10px] text-[#597075] bg-[#597075]/10 px-2 py-0.5 rounded-full font-semibold shrink-0">1단계 (기본)</span>
+          </div>
+          <div class="grid grid-cols-3 gap-2 text-center text-xs">
+            <button id="fontBtn-1" type="button" onclick="setFontStep(1)" class="border-2 border-[#597075] bg-[#597075]/15 text-[#597075] font-bold rounded-xl py-2 shadow-sm transition flex items-center justify-center cursor-pointer active:scale-95">1 (기본)</button>
+            <button id="fontBtn-3" type="button" onclick="setFontStep(3)" class="border border-gray-200 bg-white text-gray-700 rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center cursor-pointer active:scale-95">3 (크게)</button>
+            <button id="fontBtn-5" type="button" onclick="setFontStep(5)" class="border border-gray-200 bg-white text-gray-700 rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center cursor-pointer active:scale-95">5 (아주 크게)</button>
+          </div>
+        </div>
+
+        <!-- 전문 상담 전화 안내 (24시간 마음건강 상담전화) -->
+        <div id="settingsHelplineCard" class="bg-[#597075]/10 rounded-2xl p-3.5 mb-4 text-xs space-y-2 transition-colors">
+          <div id="settingsHelplineHeader" class="font-bold text-[#597075] text-[12.5px] flex items-center justify-between">
+            <span class="flex items-center gap-1.5">
+              <span>📞</span> 24시간 마음건강 상담전화
+            </span>
+            <span id="settingsHelplineBadge" class="text-[10px] text-[#597075] bg-[#597075]/15 px-2 py-0.5 rounded-full font-medium shrink-0 whitespace-nowrap">연중무휴 무료</span>
+          </div>
+          <div class="space-y-1.5 pt-1 text-[11.5px]">
+            <a id="settingsHelplineItem" href="tel:1577-0199" class="flex items-center justify-between bg-white rounded-xl px-3 py-2 border border-gray-100 shadow-sm hover:border-[#597075]/40 transition">
+              <span id="settingsHelplineLabel" class="text-gray-700 font-medium">정신건강상담전화</span>
+              <span id="settingsHelplineNumber" class="font-bold text-[#597075] flex items-center gap-1">1577-0199 <span>›</span></span>
+            </a>
+          </div>
+          <p id="settingsHelplineDesc" class="text-[10px] text-gray-400 leading-relaxed text-center pt-0.5">
+            마음이 버겁거나 도움이 필요할 때 언제든 편안하게 연결할 수 있습니다.
+          </p>
+        </div>
+
+        <!-- 테스트용 샘플 데이터 도구 (스마트폰 전체화면에서도 즉시 테스트 가능) -->
+        <div class="grid grid-cols-2 gap-2 mb-3 pt-1">
+          <button id="settingsFillSampleBtn" type="button" onclick="fillSampleData()" class="py-2 px-2.5 rounded-xl bg-[#597075]/10 hover:bg-[#597075]/20 text-[#597075] text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95">
+            <span>📊</span> 14일 샘플 채우기
+          </button>
+          <button id="settingsClearDataBtn" type="button" onclick="clearAllData()" class="py-2 px-2.5 rounded-xl border border-gray-200 bg-white/60 hover:bg-gray-100 text-gray-600 text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95">
+            <span>🗑️</span> 데이터 비우기
+          </button>
+        </div>
+
+        <!-- 개인정보처리방침 웹페이지 링크 -->
+        <div class="text-center pt-1 pb-3">
+          <a href="privacy.html" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-[#597075] underline underline-offset-4 transition">
+            <span>🔒</span> 개인정보처리방침
+          </a>
+        </div>
+      </div>
+      <div id="settingsVersion" class="text-center text-[10px] text-gray-400">Life Guard v1.2.0-alpha (알파판)</div>
+    </div>
+
+    <!-- Modal 3: Peace Screen (마음의 평화: 호흡의 파도 & 실시간 명상 배경음 / 10초 후 중앙 이미지 외 페이드아웃, 탭 시 복귀) -->
+    <div id="peaceModal" onclick="handlePeaceModalTap(event)" class="absolute inset-0 bg-[#141718] text-white z-30 p-5 opacity-0 pointer-events-none transition-opacity duration-300 overflow-hidden cursor-pointer select-none hidden" style="display: none;">
+      
+      <!-- 1. 상단 헤더: 좌측(소리 아이콘 + 잔잔한 파도와 432Hz) / 우측(닫기 ✕) (10초 후 페이드아웃) -->
+      <div id="peaceTopBar" class="absolute top-5 inset-x-5 flex justify-between items-center text-xs z-20 transition-opacity duration-700">
+        <div class="flex items-center gap-1.5 min-w-0">
+          <button id="soundToggleBtn" type="button" onclick="handlePeaceSoundClick(event)" class="text-white/70 hover:text-white bg-white/10 px-2.5 py-1 rounded-full text-[11px] flex items-center gap-1 shrink-0 transition cursor-pointer active:scale-95">
+            <span id="soundIcon">🔇</span>
+            <span id="soundStatusText">소리 끔</span>
+          </button>
+          <span id="soundTrackName" class="text-[11px] text-[#9ec0c4] font-medium truncate whitespace-nowrap" style="max-width: 0px; opacity: 0; overflow: hidden; display: inline-block; transition: max-width 0.4s ease, opacity 0.4s ease, margin 0.4s ease; margin-left: 0px;">잔잔한 파도와 432Hz 앰비언트</span>
+        </div>
+        <button id="peaceCloseBtn" type="button" onclick="closePeaceModal(event)" class="text-white/60 hover:text-white p-1 shrink-0 cursor-pointer">닫기 ✕</button>
+      </div>
+
+      <!-- 2. 상단 제목 & 설명글 & 3가지 소리 빠른 선택 탭 (45초 후 페이드아웃) -->
+      <div id="peaceTopHeader" class="absolute top-[76px] inset-x-5 text-left z-20 pointer-events-auto transition-opacity duration-700">
+        <div class="flex items-center justify-between">
+          <div class="min-w-0 pr-2">
+            <h3 id="peaceSceneTitle" class="text-sm font-semibold text-white/90 truncate">1. 해변의 파도</h3>
+            <p id="peaceSceneDesc" class="text-[11px] text-white/50 mt-0.5 leading-relaxed truncate">파도의 호흡에 맞춰 천천히 숨을 들이쉬고... 내쉬어 보세요.</p>
+          </div>
+          <button id="peaceCycleBtn" type="button" onclick="cyclePeaceScene(event)" class="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-[11px] text-[#9ec0c4] font-medium flex items-center gap-1 transition active:scale-95 shrink-0 cursor-pointer pointer-events-auto">
+            <span>다음</span> <span>›</span>
+          </button>
+        </div>
+
+        <!-- 3가지 소리/애니메이션 전환 탭 (번갈아가며 들을 수 있는 구성) -->
+        <div id="peaceSceneTabs" class="flex items-center gap-1.5 mt-2.5 pointer-events-auto">
+          <button type="button" onclick="selectPeaceScene(0, event)" id="sceneTab-0" class="flex-1 py-1 px-1.5 text-[10.5px] rounded-lg border border-[#9ec0c4]/60 bg-[#9ec0c4]/25 text-[#9ec0c4] font-bold transition text-center truncate cursor-pointer shadow-[0_0_10px_rgba(158,192,196,0.2)]">
+            🌊 1. 파도
+          </button>
+          <button type="button" onclick="selectPeaceScene(1, event)" id="sceneTab-1" class="flex-1 py-1 px-1.5 text-[10.5px] rounded-lg border border-white/10 bg-white/5 text-white/60 hover:text-white transition text-center truncate cursor-pointer">
+            ✨ 2. 벨벳
+          </button>
+          <button type="button" onclick="selectPeaceScene(2, event)" id="sceneTab-2" class="flex-1 py-1 px-1.5 text-[10.5px] rounded-lg border border-white/10 bg-white/5 text-white/60 hover:text-white transition text-center truncate cursor-pointer">
+            🎐 3. 윈드차임
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. 중앙 애니메이션 캔버스 (화면 정중앙 Y: 50%에 완벽 배치 - 영구 유지) -->
+      <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+        <div id="peaceVisualContent" class="h-32 flex items-center justify-center">
+          <div class="w-28 h-28 rounded-full bg-[#7fa7aa]/30 border-2 border-[#9ec0c4]/70 anim-breath"></div>
+        </div>
+      </div>
+
+      <!-- 4. 중간(원)과 하단 사이 위치: 들이쉬고, 내쉬고 호흡 안내 (10초 후 페이드아웃) -->
+      <div id="peaceBottomQuoteContainer" class="absolute bottom-[148px] inset-x-0 flex justify-center z-20 pointer-events-none transition-opacity duration-700">
+        <div id="peaceSceneQuote" class="text-xs text-white/35 font-medium px-4 py-1.5 tracking-wider">
+          들이쉬고 (4초) ··· 내쉬고 (4초)
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 4: Memo Input Modal (좌측 하단 한줄 메모 - 부드러운 감속 슬라이드 & 딤 오버레이 & 외부 터치 버블링 완전 차단) -->
+    <div id="memoBackdrop" onclick="handleMemoBackdropClick(event)" class="absolute inset-0 bg-black/25 backdrop-blur-[2px] z-30 opacity-0 pointer-events-none hidden" style="display: none;"></div>
+
+    <div id="memoModal" onclick="event.stopPropagation()" class="absolute inset-x-0 bottom-0 bg-white rounded-t-3xl shadow-2xl p-5 z-40 opacity-0 pointer-events-none transform translate-y-full hidden" style="display: none;">
+      <div id="memoDragHandle" class="w-9 h-1 bg-gray-300 rounded-full mx-auto mb-3 opacity-60"></div>
+      <div class="flex justify-between items-center mb-2">
+        <h3 id="memoTitle" class="text-xs font-bold text-[#597075]">선생님께 드릴 한 줄 메모</h3>
+        <button onclick="saveAndCloseMemo(event)" class="text-xs font-bold text-[#597075] hover:opacity-75">완료</button>
+      </div>
+      <input id="memoInput" type="text" placeholder="생각난 증상이나 질문을 바로 적어두세요..."
+             onclick="event.stopPropagation()"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();saveAndCloseMemo(event);}"
+             class="w-full text-xs p-2.5 bg-[#f4f7f8] rounded-xl outline-none border border-transparent focus:border-[#597075]/40 text-gray-700">
+    </div>
+
+    <!-- Modal 5: iPhone PWA Guide (아이폰 사용자 최초 방문 시 사파리 홈 화면 바로가기 친절 안내) -->
+    <div id="iosGuideModal" class="absolute inset-x-3 bottom-4 bg-[#222628]/95 backdrop-blur-md text-white rounded-2xl p-4 shadow-2xl z-40 border border-white/10 transition-all duration-400 transform translate-y-full opacity-0 pointer-events-none">
+      <div class="flex items-start justify-between mb-2">
+        <div class="flex items-center gap-2">
+          <span class="text-base">📲</span>
+          <span class="text-xs font-bold text-white">아이폰 홈 화면 바로가기 안내</span>
+        </div>
+        <button onclick="dismissIosGuide()" class="text-white/50 hover:text-white text-xs p-0.5">✕</button>
+      </div>
+      <p class="text-[11px] text-white/80 leading-relaxed mb-3">
+        아이폰에서는 사파리 하단의 <strong>공유 버튼</strong>(<svg class="inline w-3.5 h-3.5 mx-0.5 text-[#9ec0c4]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8m-4-6l-4-4m0 0L8 6m4-4v12"/></svg>)을 누르고, <strong>[홈 화면에 추가]</strong>를 누르시면 앱스토어 설치 없이 주소창 없는 100% 온전한 구명튜브 앱으로 실행됩니다.<br>
+        <span class="text-[10px] text-[#9ec0c4] mt-1 block">• 홈 화면에 추가하면 진료 기록이 보존되고 오프라인에서도 작동합니다.</span>
+      </p>
+      <div class="flex justify-end gap-2 text-[11px]">
+        <button onclick="dismissIosGuide()" class="px-3.5 py-1.5 bg-[#597075] hover:bg-[#485c60] text-white rounded-lg font-medium transition">
+          확인했어요
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal 6: 진료 완료 확인 블러 모달 (Backdrop Blur & 중앙 다이얼로그) -->
+    <div id="finishVisitModal" onclick="closeFinishVisitModal(event)" class="absolute inset-0 bg-black/45 backdrop-blur-md z-50 flex items-center justify-center p-6 opacity-0 pointer-events-none transition-all duration-200 hidden" style="display: none;">
+      <div id="finishVisitCard" onclick="event.stopPropagation()" class="bg-white rounded-3xl p-5 shadow-2xl w-full max-w-[270px] text-center transform scale-95 transition-all duration-200 border border-gray-100 cursor-default">
+        <div id="finishVisitIconWrap" class="w-11 h-11 mx-auto mb-3 rounded-full bg-[#597075]/10 flex items-center justify-center text-[#597075] text-lg font-bold">
+          ✓
+        </div>
+        <h4 id="finishVisitTitle" class="text-sm font-bold text-[#597075] mb-2">오늘 진료를 마치셨나요?</h4>
+        <p id="finishVisitDesc" class="text-[11px] text-gray-600 leading-relaxed mb-4">
+          선생님께 보여드린 지난 진료 기록이 모두 비워지고,<br>
+          오늘부터 깨끗한 백지(0)에서 다시 시작합니다.<br><br>
+          새 주기를 시작하시겠습니까?
+        </p>
+        <div id="finishVisitActions" class="flex gap-2">
+          <button id="finishVisitCancelBtn" type="button" onclick="closeFinishVisitModal(event)" class="flex-1 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-500 font-medium hover:bg-gray-50 active:scale-95 transition cursor-pointer">
+            취소
+          </button>
+          <button id="finishVisitConfirmBtn" type="button" onclick="executeFinishVisit(event)" class="flex-1 py-2.5 rounded-xl bg-[#597075] text-xs text-white font-bold hover:bg-[#485c60] active:scale-95 transition shadow-sm cursor-pointer">
+            완료
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 7: 데일리요(Daylio) 스타일 원터치 기분 선택창 (알림 터치 진입 시 또는 미리보기 시 바로 팝업) -->
+    <div id="dailyCheckinModal" onclick="closeDailyCheckinModal(event)" class="absolute inset-0 bg-black/45 backdrop-blur-md z-50 flex items-center justify-center p-5 opacity-0 pointer-events-none transition-all duration-200 hidden" style="display: none;">
+      <div id="dailyCheckinCard" onclick="event.stopPropagation()" class="bg-white rounded-3xl p-5 shadow-2xl w-full max-w-[288px] text-center transform scale-95 transition-all duration-200 border border-gray-100 cursor-default">
+        <div class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#597075]/10 text-[#597075] mb-2" id="dailyCheckinBadge">
+          <span>🔔</span> <span id="dailyCheckinBadgeText">오늘의 마음 기록</span>
+        </div>
+        <h4 id="dailyCheckinTitle" class="text-sm font-bold text-[#597075] mb-1">오늘 하루, 마음은 어떠셨나요?</h4>
+        <p id="dailyCheckinDesc" class="text-[11px] text-gray-500 leading-relaxed mb-3.5">
+          지금 마음에 가장 가까운 도형 하나를 눌러주세요.
+        </p>
+
+        <!-- 5가지 기분 도형 원터치 선택 그리드 (점수 비노출, 직관적 도형) -->
+        <div id="dailyCheckinShapeGrid" class="grid grid-cols-5 gap-1.5 mb-3">
+          <!-- ▲ (Filled Up Triangle) -->
+          <button type="button" onclick="recordMoodFromCheckin('▲', 2, 0, event)" class="checkin-shape-btn h-12 rounded-2xl border border-gray-200 bg-[#f4f7f8] hover:border-[#597075] flex items-center justify-center text-[#597075] transition active:scale-90 cursor-pointer" title="기분 선택 ▲">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+              <polygon points="12,4 21,19 3,19"/>
+            </svg>
+          </button>
+          <!-- △ (Hollow Up Triangle) -->
+          <button type="button" onclick="recordMoodFromCheckin('△', 1, 1, event)" class="checkin-shape-btn h-12 rounded-2xl border border-gray-200 bg-[#f4f7f8] hover:border-[#597075] flex items-center justify-center text-[#597075] transition active:scale-90 cursor-pointer" title="기분 선택 △">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">
+              <polygon points="12,4 21,19 3,19"/>
+            </svg>
+          </button>
+          <!-- ○ (Hollow Circle) -->
+          <button type="button" onclick="recordMoodFromCheckin('○', 0, 2, event)" class="checkin-shape-btn h-12 rounded-2xl border border-gray-200 bg-[#f4f7f8] hover:border-[#597075] flex items-center justify-center text-[#597075] transition active:scale-90 cursor-pointer" title="기분 선택 ○">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="8"/>
+            </svg>
+          </button>
+          <!-- ▽ (Hollow Down Triangle) -->
+          <button type="button" onclick="recordMoodFromCheckin('▽', -1, 3, event)" class="checkin-shape-btn h-12 rounded-2xl border border-gray-200 bg-[#f4f7f8] hover:border-[#597075] flex items-center justify-center text-[#597075] transition active:scale-90 cursor-pointer" title="기분 선택 ▽">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">
+              <polygon points="12,21 21,6 3,6"/>
+            </svg>
+          </button>
+          <!-- ▼ (Filled Down Triangle) -->
+          <button type="button" onclick="recordMoodFromCheckin('▼', -2, 4, event)" class="checkin-shape-btn h-12 rounded-2xl border border-gray-200 bg-[#f4f7f8] hover:border-[#597075] flex items-center justify-center text-[#597075] transition active:scale-90 cursor-pointer" title="기분 선택 ▼">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+              <polygon points="12,21 21,6 3,6"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- 복약 기록 켜져 있을 때만 노출되는 원터치 약 복용 동시 체크 옵션 -->
+        <div id="dailyCheckinMedWrap" class="mb-3 hidden">
+          <button id="dailyCheckinMedBtn" type="button" onclick="toggleDailyCheckinMed(event)" class="w-full py-2 px-3 rounded-xl border border-gray-200 bg-[#f4f7f8] text-gray-600 text-[11px] font-medium flex items-center justify-between transition cursor-pointer active:scale-95">
+            <span class="flex items-center gap-1.5">
+              <span>💊</span> <span>오늘 약 복용도 함께 체크</span>
+            </span>
+            <span id="dailyCheckinMedCheckIcon" class="w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center text-[10px]"></span>
+          </button>
+        </div>
+
+        <button id="dailyCheckinLaterBtn" type="button" onclick="closeDailyCheckinModal(event)" class="w-full py-2 rounded-xl text-[11px] text-gray-400 hover:text-gray-600 font-medium transition cursor-pointer">
+          나중에 기록하기
+        </button>
+      </div>
+    </div>
+
+    <!-- Floating Toast Message (부드러운 완료 피드백 알림) -->
+    <div id="toastMessage" class="absolute top-10 inset-x-5 bg-black/85 backdrop-blur-sm text-white text-xs px-4 py-3 rounded-2xl shadow-2xl z-50 text-center opacity-0 pointer-events-none transition-all duration-300 transform -translate-y-2 border border-white/10 leading-relaxed">
+      지난 진료 기록이 모두 휘발되었습니다. 새로운 백지(0)에서 다시 시작합니다. 🌿
+    </div>
+
+  </div>
+
+  <!-- 편리한 테스트 툴바 (샘플 데이터 채우기 & 백지화 - 데스크탑 프리뷰 전용, 스마트폰 전체화면에서는 숨김) -->
+  <div id="demoToolbar" class="mt-4 flex flex-wrap items-center justify-center gap-2 max-w-sm">
+    <button onclick="fillSampleData()" class="px-3.5 py-1.5 bg-[#597075] text-white rounded-full text-[11px] font-semibold hover:bg-[#485c60] transition shadow-sm flex items-center gap-1">
+      <span>📊</span> 14일 샘플 데이터 채우기 (그래프 테스트)
+    </button>
+    <button onclick="clearAllData()" class="px-3 py-1.5 bg-white border border-gray-300 rounded-full text-[11px] font-semibold text-gray-600 hover:bg-gray-100 transition shadow-sm flex items-center gap-1">
+      <span>🗑️</span> 데이터 비우기
+    </button>
+    <button onclick="showIosGuide()" class="px-3 py-1.5 bg-white border border-gray-300 rounded-full text-[11px] font-semibold text-[#597075] hover:bg-black/5 transition shadow-sm">
+      📲 아이폰 홈 바로가기 안내
+    </button>
+  </div>
+
+  <div id="demoFooterDesc" class="mt-3 text-xs text-gray-500 max-w-sm text-center leading-relaxed">
+    <span class="font-bold text-gray-700">🌿 시연 안내:</span><br>
+    • <strong>14일 샘플 데이터 채우기:</strong> 위 버튼을 터치하면 14일간의 기분 궤적 곡선과 복약 통계, 메모가 한 번에 채워져 겹친 그래프를 즉시 테스트할 수 있습니다.<br>
+    • <strong>터치 효과 3가지:</strong> 설정에서 <strong>1.수면파문 / 2.숨결(기본) / 3.별빛</strong> 선택 시 도형들의 피어남과 사르르 녹아내리는 극적 연출이 완벽히 적용됩니다.<br>
+    • <strong>아이폰 PWA 홈 바로가기:</strong> 사파리 [홈 화면에 추가] 시 앱스토어 설치 없이 주소창 없는 온전한 앱으로 구동됩니다.
+  </div>
+
+  <script>
+    function triggerHaptic() {
+      try {
+        if (window.AndroidBridge && typeof window.AndroidBridge.haptic === 'function') {
+          window.AndroidBridge.haptic();
+        } else if (navigator.vibrate) {
+          navigator.vibrate(10);
+        }
+      } catch (_) {}
+    }
+
+    function isMobileFullScreenViewport() {
+      return window.matchMedia && (
+        window.matchMedia('(max-width: 639px)').matches ||
+        window.matchMedia('(display-mode: standalone)').matches ||
+        !!window.navigator.standalone ||
+        !!window.AndroidBridge
+      );
+    }
+
+    function syncSystemThemeColor(forceDark = false) {
+      try {
+        const eff = forceDark ? 'dark' : getEffectiveTheme(currentTheme);
+        const bgHex = eff === 'dark' ? '#141718' : (eff === 'neutral' ? '#ecefea' : '#fbfcfc');
+        const meta = document.getElementById('metaThemeColor');
+        if (meta) meta.setAttribute('content', bgHex);
+        if (isMobileFullScreenViewport()) {
+          document.body.style.backgroundColor = bgHex;
+          document.documentElement.style.backgroundColor = bgHex;
+        } else {
+          document.body.style.backgroundColor = '#e9ecef';
+          document.documentElement.style.backgroundColor = '#e9ecef';
+        }
+        if (window.AndroidBridge && typeof window.AndroidBridge.setSystemBars === 'function') {
+          window.AndroidBridge.setSystemBars(bgHex, eff === 'dark');
+        }
+      } catch (_) {}
+    }
+    let moodVisible = false;
+    let pillVisible = false;
+    let isMedicationEnabled = (function() {
+      try {
+        const v = localStorage.getItem('lifeguard_med_enabled');
+        if (v !== null) return v === 'true';
+      } catch (_) {}
+      return false; // 기본값: 복약 없는 것이 기본값
+    })();
+    let audioCtx = null;
+    let isSoundOn = false; // 기본값: 진입 시 소리 끔 시작
+    let meditationInterval = null;
+    let droneOsc1 = null;
+    let droneOsc2 = null;
+    let droneGain = null;
+    let noiseNode = null;
+    let waveFilter = null;
+    let waveGain = null;
+    let pinkNoiseBuffer = null;
+    let currentTheme = 'white';
+    let peaceAnalyser = null;
+    let peaceMasterGain = null;
+    let peaceAudioTarget = null;
+    let peaceScopeAnimFrame = null;
+
+    // Web Audio Synthesizer for Peace Scenes
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (!peaceAnalyser && audioCtx) {
+        peaceAnalyser = audioCtx.createAnalyser();
+        peaceAnalyser.fftSize = 256;
+        peaceMasterGain = audioCtx.createGain();
+        peaceMasterGain.gain.setValueAtTime(0.85, audioCtx.currentTime);
+        peaceMasterGain.connect(peaceAnalyser);
+        peaceAnalyser.connect(audioCtx.destination);
+        peaceAudioTarget = peaceMasterGain;
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      startPeaceScopeVisualizer();
+    }
+
+    // 소리청음실의 호흡 원 아래 실시간 떨리는 파형 선 (원의 지름 길이와 일치)
+    function startPeaceScopeVisualizer() {
+      if (peaceScopeAnimFrame) return;
+
+      function renderScope() {
+        peaceScopeAnimFrame = requestAnimationFrame(renderScope);
+        const canvas = document.getElementById('peaceScopeCanvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const w = canvas.width;
+        const h = canvas.height;
+        const midY = h / 2;
+        ctx.clearRect(0, 0, w, h);
+
+        const grad = ctx.createLinearGradient(0, 0, w, 0);
+        if (currentPeaceIdx === 2) {
+          // 윈드차임 씬: 따뜻한 골든 앰버/브론즈 톤의 실시간 떨림선
+          grad.addColorStop(0, 'rgba(244, 162, 97, 0)');
+          grad.addColorStop(0.2, isSoundOn ? 'rgba(244, 162, 97, 0.75)' : 'rgba(244, 162, 97, 0.4)');
+          grad.addColorStop(0.5, isSoundOn ? 'rgba(255, 235, 205, 0.98)' : 'rgba(244, 162, 97, 0.8)');
+          grad.addColorStop(0.8, isSoundOn ? 'rgba(244, 162, 97, 0.75)' : 'rgba(244, 162, 97, 0.4)');
+          grad.addColorStop(1, 'rgba(244, 162, 97, 0)');
+        } else {
+          // 파도 씬: 청량한 틸/아쿠아 톤의 실시간 떨림선
+          grad.addColorStop(0, 'rgba(158, 192, 196, 0)');
+          grad.addColorStop(0.2, isSoundOn ? 'rgba(158, 192, 196, 0.65)' : 'rgba(158, 192, 196, 0.35)');
+          grad.addColorStop(0.5, isSoundOn ? 'rgba(224, 242, 244, 0.95)' : 'rgba(158, 192, 196, 0.7)');
+          grad.addColorStop(0.8, isSoundOn ? 'rgba(158, 192, 196, 0.65)' : 'rgba(158, 192, 196, 0.35)');
+          grad.addColorStop(1, 'rgba(158, 192, 196, 0)');
+        }
+
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = isSoundOn ? 2.2 : 1.5;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+
+        const points = 48;
+        const slice = w / points;
+
+        if (isSoundOn && peaceAnalyser) {
+          const bufferLength = peaceAnalyser.frequencyBinCount;
+          const dataArray = new Uint8Array(bufferLength);
+          peaceAnalyser.getByteTimeDomainData(dataArray);
+
+          for (let i = 0; i <= points; i++) {
+            const ratio = i / points;
+            const x = i * slice;
+            const env = Math.sin(ratio * Math.PI);
+            const dataIdx = Math.floor(ratio * bufferLength);
+            const v = (dataArray[dataIdx] - 128) / 128.0;
+            const y = midY + v * (h * 0.44) * env;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+        } else {
+          // 소리가 꺼져 있을 때도 은은하게 숨쉬는 수평 잔물결 라인
+          const t = Date.now() / 1000;
+          const breathAmp = 1.0 + Math.sin(t * (Math.PI / 4)) * 0.8;
+          for (let i = 0; i <= points; i++) {
+            const ratio = i / points;
+            const x = i * slice;
+            const env = Math.sin(ratio * Math.PI);
+            const y = midY + (Math.sin(ratio * 10 + t * 2.2) * 1.5 + Math.sin(ratio * 18 - t * 3.5) * 0.8) * breathAmp * env;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+        }
+        ctx.stroke();
+      }
+      renderScope();
+    }
+
+    // 핑크 노이즈 버퍼 생성 (파도/빗소리/자연 음향용)
+    function getPinkNoiseBuffer() {
+      if (pinkNoiseBuffer) return pinkNoiseBuffer;
+      const bufferSize = audioCtx.sampleRate * 5;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        b0 = 0.99886 * b0 + white * 0.0555179;
+        b1 = 0.99332 * b1 + white * 0.0750759;
+        b2 = 0.96900 * b2 + white * 0.1538520;
+        b3 = 0.86650 * b3 + white * 0.3104856;
+        b4 = 0.55000 * b4 + white * 0.5329522;
+        b5 = -0.7616 * b5 - white * 0.0168980;
+        data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+        b6 = white * 0.115926;
+      }
+      pinkNoiseBuffer = buffer;
+      return buffer;
+    }
+
+    let meditationIntervals = [];
+    let meditationActiveNodes = [];
+
+    function stopMeditationSound() {
+      meditationIntervals.forEach(t => clearInterval(t));
+      meditationIntervals = [];
+
+      meditationActiveNodes.forEach(node => {
+        try {
+          if (node.stop) node.stop();
+          node.disconnect();
+        } catch (_) {}
+      });
+      meditationActiveNodes = [];
+    }
+
+    // 티베트 싱잉볼 맑고 깊은 타종 (배음 합산 합성)
+    function strikeTibetanBowl(fundamental) {
+      if (!audioCtx || !isSoundOn) return;
+      try {
+        const t = audioCtx.currentTime;
+        const partials = [
+          { f: fundamental, g: 0.32, d: 7.2 },
+          { f: fundamental * 2.01, g: 0.16, d: 5.5 },
+          { f: fundamental * 3.02, g: 0.08, d: 4.2 },
+          { f: fundamental * 4.76, g: 0.04, d: 2.8 }
+        ];
+
+        partials.forEach(p => {
+          const osc = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          const filter = audioCtx.createBiquadFilter();
+
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(p.f, t);
+
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(1800, t);
+
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.linearRampToValueAtTime(p.g, t + 0.12);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + p.d);
+
+          osc.connect(filter);
+          filter.connect(g);
+          g.connect(peaceAudioTarget || audioCtx.destination);
+
+          osc.start(t);
+          osc.stop(t + p.d + 0.1);
+        });
+      } catch (e) {
+        console.warn('Tibetan bowl error:', e);
+      }
+    }
+
+    // 윈드차임 맑은 금속 벨 울림 함수
+    function ringBell(freq, volume, duration) {
+      if (!audioCtx || !isSoundOn) return;
+      try {
+        const t = audioCtx.currentTime;
+        const freqs = [freq, freq * 2.76];
+        const gains = [volume, volume * 0.4];
+
+        freqs.forEach((fVal, idx) => {
+          const osc = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(fVal, t);
+
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.linearRampToValueAtTime(gains[idx], t + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+
+          osc.connect(g);
+          g.connect(peaceAudioTarget || audioCtx.destination);
+          osc.start(t);
+          osc.stop(t + duration + 0.1);
+        });
+      } catch (e) {
+        console.warn('Chime bell error:', e);
+      }
+    }
+
+    // 3가지 엄선된 힐링 장면에 특화된 실시간 사운드 합성
+    function playMeditationSound(idx) {
+      if (!isSoundOn) return;
+      initAudio();
+      stopMeditationSound();
+
+      try {
+        const sceneIndex = idx % 3;
+        const now = audioCtx.currentTime;
+
+        // 0. 실제 해변 파도 & 티베트 싱잉볼 (8초 호흡 동기화)
+        if (sceneIndex === 0) {
+          const noiseBuf = getPinkNoiseBuffer();
+          const noiseSource = audioCtx.createBufferSource();
+          noiseSource.buffer = noiseBuf;
+          noiseSource.loop = true;
+
+          const waveFilter = audioCtx.createBiquadFilter();
+          waveFilter.type = 'lowpass';
+          waveFilter.frequency.setValueAtTime(250, now);
+          waveFilter.Q.setValueAtTime(1.8, now);
+
+          const waveGain = audioCtx.createGain();
+          waveGain.gain.setValueAtTime(0.08, now);
+
+          const foamFilter = audioCtx.createBiquadFilter();
+          foamFilter.type = 'bandpass';
+          foamFilter.frequency.setValueAtTime(1800, now);
+          foamFilter.Q.setValueAtTime(1.0, now);
+
+          const foamGain = audioCtx.createGain();
+          foamGain.gain.setValueAtTime(0.02, now);
+
+          noiseSource.connect(waveFilter);
+          waveFilter.connect(waveGain);
+          waveGain.connect(peaceAudioTarget || audioCtx.destination);
+
+          noiseSource.connect(foamFilter);
+          foamFilter.connect(foamGain);
+          foamGain.connect(peaceAudioTarget || audioCtx.destination);
+
+          noiseSource.start(now);
+          meditationActiveNodes.push(noiseSource, waveFilter, waveGain, foamFilter, foamGain);
+
+          function swellWave() {
+            if (!audioCtx || !isSoundOn) return;
+            const t = audioCtx.currentTime;
+            waveGain.gain.cancelScheduledValues(t);
+            waveFilter.frequency.cancelScheduledValues(t);
+            foamGain.gain.cancelScheduledValues(t);
+
+            // 0~4초 들이쉬기: 250Hz -> 880Hz 밀려옴, gain 0.08 -> 0.48
+            waveGain.gain.setValueAtTime(0.08, t);
+            waveGain.gain.linearRampToValueAtTime(0.48, t + 3.8);
+            waveGain.gain.linearRampToValueAtTime(0.08, t + 7.9);
+
+            waveFilter.frequency.setValueAtTime(250, t);
+            waveFilter.frequency.linearRampToValueAtTime(880, t + 3.8);
+            waveFilter.frequency.linearRampToValueAtTime(250, t + 7.9);
+
+            foamGain.gain.setValueAtTime(0.02, t);
+            foamGain.gain.linearRampToValueAtTime(0.12, t + 3.5);
+            foamGain.gain.linearRampToValueAtTime(0.02, t + 7.9);
+
+            strikeTibetanBowl(340);
+          }
+
+          swellWave();
+          meditationIntervals.push(setInterval(swellWave, 8000));
+        }
+
+        // 1. 포근한 432Hz 벨벳 앰비언트 패드 (Noise 0%)
+        else if (sceneIndex === 1) {
+          const notes = [87.31, 130.81, 220.00, 261.63, 329.63, 392.00]; // Major 9th
+          const padMasterFilter = audioCtx.createBiquadFilter();
+          padMasterFilter.type = 'lowpass';
+          padMasterFilter.frequency.setValueAtTime(420, now);
+          padMasterFilter.Q.setValueAtTime(1.0, now);
+
+          const padMasterGain = audioCtx.createGain();
+          padMasterGain.gain.setValueAtTime(0.18, now);
+
+          padMasterFilter.connect(padMasterGain);
+          padMasterGain.connect(peaceAudioTarget || audioCtx.destination);
+          meditationActiveNodes.push(padMasterFilter, padMasterGain);
+
+          notes.forEach((freq, i) => {
+            const osc1 = audioCtx.createOscillator();
+            const osc2 = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+
+            osc1.type = 'triangle';
+            osc2.type = 'sawtooth';
+
+            osc1.frequency.setValueAtTime(freq - 0.4, now);
+            osc2.frequency.setValueAtTime(freq + 0.4, now);
+
+            const sawFilter = audioCtx.createBiquadFilter();
+            sawFilter.type = 'lowpass';
+            sawFilter.frequency.setValueAtTime(320, now);
+
+            g.gain.setValueAtTime(0.14 / (i + 1), now);
+
+            osc1.connect(g);
+            osc2.connect(sawFilter);
+            sawFilter.connect(g);
+            g.connect(padMasterFilter);
+
+            osc1.start(now);
+            osc2.start(now);
+            meditationActiveNodes.push(osc1, osc2, g, sawFilter);
+          });
+
+          function pulsePad() {
+            if (!audioCtx || !isSoundOn) return;
+            const t = audioCtx.currentTime;
+            padMasterFilter.frequency.cancelScheduledValues(t);
+            padMasterGain.gain.cancelScheduledValues(t);
+
+            padMasterFilter.frequency.setValueAtTime(380, t);
+            padMasterFilter.frequency.linearRampToValueAtTime(700, t + 4.0);
+            padMasterFilter.frequency.linearRampToValueAtTime(380, t + 8.0);
+
+            padMasterGain.gain.setValueAtTime(0.16, t);
+            padMasterGain.gain.linearRampToValueAtTime(0.32, t + 4.0);
+            padMasterGain.gain.linearRampToValueAtTime(0.16, t + 8.0);
+          }
+
+          pulsePad();
+          meditationIntervals.push(setInterval(pulsePad, 8000));
+        }
+
+        // 2. 새벽 숲의 산들바람과 크리스탈 윈드차임
+        else if (sceneIndex === 2) {
+          const noiseBuf = getPinkNoiseBuffer();
+          const wind = audioCtx.createBufferSource();
+          wind.buffer = noiseBuf;
+          wind.loop = true;
+
+          const windFilter = audioCtx.createBiquadFilter();
+          windFilter.type = 'bandpass';
+          windFilter.frequency.setValueAtTime(520, now);
+          windFilter.Q.setValueAtTime(2.2, now);
+
+          const windGain = audioCtx.createGain();
+          windGain.gain.setValueAtTime(0.25, now);
+
+          wind.connect(windFilter);
+          windFilter.connect(windGain);
+          windGain.connect(peaceAudioTarget || audioCtx.destination);
+          wind.start(now);
+          meditationActiveNodes.push(wind, windFilter, windGain);
+
+          function breatheWind() {
+            if (!audioCtx || !isSoundOn) return;
+            const t = audioCtx.currentTime;
+            windFilter.frequency.cancelScheduledValues(t);
+            windGain.gain.cancelScheduledValues(t);
+
+            windFilter.frequency.setValueAtTime(450, t);
+            windFilter.frequency.linearRampToValueAtTime(750, t + 4.0);
+            windFilter.frequency.linearRampToValueAtTime(450, t + 8.0);
+
+            windGain.gain.setValueAtTime(0.20, t);
+            windGain.gain.linearRampToValueAtTime(0.38, t + 4.0);
+            windGain.gain.linearRampToValueAtTime(0.20, t + 8.0);
+          }
+          breatheWind();
+          meditationIntervals.push(setInterval(breatheWind, 8000));
+
+          const chimePitches = [440.00, 523.25, 587.33, 659.25, 783.99, 880.00, 1046.50];
+          function strikeChime() {
+            if (!audioCtx || !isSoundOn) return;
+            const pitch = chimePitches[Math.floor(Math.random() * chimePitches.length)];
+            ringBell(pitch, 0.18, 3.2);
+          }
+
+          strikeChime();
+          setTimeout(strikeChime, 700);
+
+          meditationIntervals.push(setInterval(() => {
+            strikeChime();
+            if (Math.random() > 0.4) {
+              setTimeout(strikeChime, 450 + Math.random() * 600);
+            }
+          }, 2200));
+        }
+      } catch (e) {
+        console.warn('Meditation audio error:', e);
+      }
+    }
+
+    function updateSoundTrackUI() {
+      const icon = document.getElementById('soundIcon');
+      const statusText = document.getElementById('soundStatusText');
+      const trackName = document.getElementById('soundTrackName');
+      if (icon) icon.textContent = isSoundOn ? '🔊' : '🔇';
+      if (statusText) statusText.textContent = isSoundOn ? '소리 켬' : '소리 끔';
+      if (trackName) {
+        trackName.style.display = 'inline-block';
+        if (isSoundOn) {
+          trackName.style.opacity = '1';
+          trackName.style.maxWidth = '180px';
+          trackName.style.marginLeft = '6px';
+        } else {
+          trackName.style.opacity = '0';
+          trackName.style.maxWidth = '0px';
+          trackName.style.marginLeft = '0px';
+        }
+      }
+    }
+
+    function toggleMeditationAudio() {
+      isSoundOn = !isSoundOn;
+      updateSoundTrackUI();
+      if (isSoundOn) {
+        playMeditationSound(currentPeaceIdx);
+      } else {
+        stopMeditationSound();
+      }
+    }
+
+    let currentTouchStyle = 'breath'; // 디폴트: 3가지 중 2번째 (숨결)
+
+    function getEffectiveTheme(theme = currentTheme) {
+      if (theme === 'system') {
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        return prefersDark ? 'dark' : 'white';
+      }
+      return theme;
+    }
+
+    function setTouchStyle(style) {
+      currentTouchStyle = style;
+      const styles = ['ripple', 'breath', 'star'];
+      const effective = getEffectiveTheme(currentTheme);
+      const isDark = effective === 'dark';
+      const isNeutral = effective === 'neutral';
+
+      styles.forEach(s => {
+        const btn = document.getElementById(`styleBtn-${s}`);
+        const check = document.getElementById(`check-${s}`);
+        const badge = document.getElementById(`styleBadge-${s}`);
+        if (!btn || !check) return;
+
+        if (s === style) {
+          if (isDark) {
+            btn.className = "w-full border-2 border-[#9ec0c4] bg-[#2d3336] rounded-xl p-2.5 text-left flex items-start justify-between transition text-[#9ec0c4] shadow-sm";
+            check.className = "text-xs text-[#9ec0c4] font-bold";
+            if (badge) badge.className = "bg-[#9ec0c4] text-[#141718] text-[9px] px-1.5 py-0.2 rounded font-bold";
+          } else if (isNeutral) {
+            btn.className = "w-full border-2 border-[#455a5c] bg-[#455a5c]/10 rounded-xl p-2.5 text-left flex items-start justify-between transition text-[#455a5c] shadow-sm";
+            check.className = "text-xs text-[#455a5c] font-bold";
+            if (badge) badge.className = "bg-[#455a5c] text-white text-[9px] px-1.5 py-0.2 rounded font-bold";
+          } else {
+            btn.className = "w-full border-2 border-[#597075] bg-[#597075]/10 rounded-xl p-2.5 text-left flex items-start justify-between transition text-[#597075] shadow-sm";
+            check.className = "text-xs text-[#597075] font-bold";
+            if (badge) badge.className = "bg-[#597075] text-white text-[9px] px-1.5 py-0.2 rounded font-bold";
+          }
+          check.classList.remove('hidden');
+        } else {
+          if (isDark) {
+            btn.className = "w-full border border-[#333a3d] bg-[#222628] rounded-xl p-2.5 text-left flex items-start justify-between hover:border-[#9ec0c4] transition text-white/70";
+            check.className = "text-xs text-[#9ec0c4] font-bold hidden";
+            if (badge) badge.className = "bg-white/20 text-white/70 text-[9px] px-1.5 py-0.2 rounded font-bold";
+          } else if (isNeutral) {
+            btn.className = "w-full border border-[#dce2dc] bg-white/70 rounded-xl p-2.5 text-left flex items-start justify-between hover:border-[#455a5c] transition text-gray-700";
+            check.className = "text-xs text-[#455a5c] font-bold hidden";
+            if (badge) badge.className = "bg-[#455a5c]/20 text-[#455a5c] text-[9px] px-1.5 py-0.2 rounded font-bold";
+          } else {
+            btn.className = "w-full border border-gray-200 bg-white rounded-xl p-2.5 text-left flex items-start justify-between hover:border-[#597075] transition text-gray-700";
+            check.className = "text-xs text-[#597075] font-bold hidden";
+            if (badge) badge.className = "bg-[#597075]/15 text-[#597075] text-[9px] px-1.5 py-0.2 rounded font-bold";
+          }
+        }
+      });
+
+      const labelMap = {
+        ripple: '1. 파문 적용 중',
+        breath: '2. 숨결 적용 중 (기본)',
+        star: '3. 별빛 적용 중'
+      };
+      const badge = document.getElementById('activeStyleBadge');
+      if (badge) {
+        badge.textContent = labelMap[style] || style;
+        if (isDark) {
+          badge.className = "text-[10px] text-[#9ec0c4] font-semibold bg-[#9ec0c4]/15 border border-[#9ec0c4]/30 px-2 py-0.5 rounded-full transition-colors";
+        } else if (isNeutral) {
+          badge.className = "text-[10px] text-[#455a5c] font-semibold bg-[#455a5c]/10 border border-[#455a5c]/20 px-2 py-0.5 rounded-full transition-colors";
+        } else {
+          badge.className = "text-[10px] text-[#597075] font-semibold bg-[#597075]/10 border border-transparent px-2 py-0.5 rounded-full transition-colors";
+        }
+      }
+    }
+
+    // 마우스 커서 또는 손끝이 닿은 지점의 시각적 초점(Focus)에 100% 정밀 일치시키는 터치 연출
+    function triggerTouchEffect(clientX, clientY, isExactCenter = false) {
+      if (currentTouchStyle === 'breath') {
+        triggerBreath(clientX, clientY, isExactCenter);
+      } else if (currentTouchStyle === 'star') {
+        triggerStar(clientX, clientY, isExactCenter);
+      } else {
+        triggerRipple(clientX, clientY, isExactCenter);
+      }
+    }
+
+    function getThemeColor() {
+      const eff = getEffectiveTheme(currentTheme);
+      if (eff === 'dark') return '#9ec0c4';
+      if (eff === 'neutral') return '#455a5c';
+      return '#597075';
+    }
+
+    // 1. 수면의 파문: 터치/클릭 초점과 완벽히 일치하여 고요히 번지는 잔잔한 물결
+    function triggerRipple(clientX, clientY, isExactCenter = false) {
+      const screen = document.getElementById('phoneScreen');
+      const rect = screen.getBoundingClientRect();
+      const x = clientX - rect.left;
+      // 터치/커서 클릭 시 약간 아래로 처지던 시각적 오차(약 12px)를 상향 보정하여 손끝 초점과 완벽 일치
+      const focusOffsetY = isExactCenter ? 0 : 12;
+      const y = clientY - rect.top - focusOffsetY;
+
+      const ring = document.createElement('div');
+      ring.className = 'absolute rounded-full border pointer-events-none';
+      ring.style.borderColor = getThemeColor();
+      const size = 10; // 시작 지름 10px
+      ring.style.width = `${size}px`;
+      ring.style.height = `${size}px`;
+      // 마우스 커서/터치 초점이 정확히 원의 중심에 오도록 배치
+      ring.style.left = `${x - size / 2}px`;
+      ring.style.top = `${y - size / 2}px`;
+      ring.style.opacity = '0.38';
+      ring.style.transform = 'scale(0.2)';
+      ring.style.transition = 'none';
+
+      screen.appendChild(ring);
+
+      requestAnimationFrame(() => {
+        // 천천히(1.35초), 지름 약 75px(scale 7.5 * 10px = 75px) 수준으로 아담하고 잔잔하게 퍼짐
+        ring.style.transition = 'transform 1.35s cubic-bezier(0.1, 0.7, 0.2, 1), opacity 1.35s cubic-bezier(0.1, 0.7, 0.2, 1)';
+        ring.style.transform = 'scale(7.5)';
+        ring.style.opacity = '0';
+      });
+
+      setTimeout(() => ring.remove(), 1450);
+    }
+
+    // 2. 숨결 (호흡·안개): 클릭 지점에서 몽실몽실 피어났다 공기 중으로 사르르 녹아내림
+    function triggerBreath(clientX, clientY, isExactCenter = false) {
+      const screen = document.getElementById('phoneScreen');
+      const rect = screen.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const focusOffsetY = isExactCenter ? 0 : 12;
+      const y = clientY - rect.top - focusOffsetY;
+
+      const b = document.createElement('div');
+      b.className = 'absolute rounded-full blur-md pointer-events-none';
+      b.style.backgroundColor = getThemeColor();
+      const size = 28;
+      b.style.width = `${size}px`;
+      b.style.height = `${size}px`;
+      b.style.left = `${x - size / 2}px`;
+      b.style.top = `${y - size / 2}px`;
+      b.style.transform = 'scale(0.25)';
+      b.style.opacity = '0.65';
+      b.style.transition = 'none';
+
+      screen.appendChild(b);
+
+      requestAnimationFrame(() => {
+        b.style.transition = 'transform 0.65s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.65s cubic-bezier(0.2, 0.8, 0.2, 1)';
+        b.style.transform = 'scale(2.6)';
+        b.style.opacity = '0';
+      });
+
+      setTimeout(() => b.remove(), 750);
+    }
+
+    // 3. 찰나의 별빛 (잔상): 클릭 지점에서 맑게 점등되었다 한 점으로 흡수
+    function triggerStar(clientX, clientY, isExactCenter = false) {
+      const screen = document.getElementById('phoneScreen');
+      const rect = screen.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const focusOffsetY = isExactCenter ? 0 : 12;
+      const y = clientY - rect.top - focusOffsetY;
+
+      const s = document.createElement('div');
+      s.className = 'absolute rounded-full pointer-events-none flex items-center justify-center';
+      s.style.backgroundColor = getThemeColor();
+      const size = 16;
+      s.style.width = `${size}px`;
+      s.style.height = `${size}px`;
+      s.style.left = `${x - size / 2}px`;
+      s.style.top = `${y - size / 2}px`;
+      s.innerHTML = '<div class="w-1.5 h-1.5 rounded-full bg-white"></div>';
+      s.style.transform = 'scale(1.8)';
+      s.style.opacity = '0.9';
+      s.style.transition = 'none';
+
+      screen.appendChild(s);
+
+      requestAnimationFrame(() => {
+        s.style.transition = 'transform 0.45s cubic-bezier(0.1, 0.9, 0.2, 1), opacity 0.45s cubic-bezier(0.1, 0.9, 0.2, 1)';
+        s.style.transform = 'scale(0.1)';
+        s.style.opacity = '0';
+      });
+
+      setTimeout(() => s.remove(), 550);
+    }
+
+    let moodTimer = null;
+    let pillTimer = null;
+
+    function resetCanvasTimers() {
+      if (moodTimer) { clearTimeout(moodTimer); moodTimer = null; }
+      if (pillTimer) { clearTimeout(pillTimer); pillTimer = null; }
+    }
+
+    function showMood() {
+      resetCanvasTimers();
+      hidePill();
+      if (moodVisible) {
+        moodTimer = setTimeout(() => hideMood(), 10000);
+        return;
+      }
+      moodVisible = true;
+      const el = document.getElementById('moodSection');
+      if (el) {
+        el.style.display = 'flex';
+        void el.offsetWidth;
+        el.classList.remove('opacity-0', 'pointer-events-none');
+        el.classList.add('opacity-100', 'pointer-events-auto');
+      }
+
+      const btns = document.querySelectorAll('#moodRow .shape-btn');
+      btns.forEach((b, i) => {
+        b.style.opacity = '1';
+        if (currentTouchStyle === 'ripple') {
+          b.style.animation = `rippleIn 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) ${i * 0.04}s forwards`;
+        } else if (currentTouchStyle === 'breath') {
+          b.style.animation = `breathIn 0.6s cubic-bezier(0.25, 1, 0.5, 1) ${i * 0.04}s forwards`;
+        } else {
+          b.style.animation = `starIn 0.45s cubic-bezier(0.18, 0.89, 0.32, 1.28) ${i * 0.05}s forwards`;
+        }
+      });
+
+      moodTimer = setTimeout(() => hideMood(), 10000);
+    }
+
+    function hideMood() {
+      if (moodTimer) { clearTimeout(moodTimer); moodTimer = null; }
+      if (!moodVisible) return;
+      moodVisible = false;
+      const el = document.getElementById('moodSection');
+      if (el) {
+        el.classList.remove('opacity-100', 'pointer-events-auto');
+        el.classList.add('opacity-0', 'pointer-events-none');
+        setTimeout(() => {
+          if (!moodVisible && el) el.style.display = 'none';
+        }, 300);
+      }
+      const btns = document.querySelectorAll('#moodRow .shape-btn');
+      btns.forEach(b => {
+        b.style.opacity = '0';
+        b.style.animation = 'none';
+      });
+    }
+
+    function showPill() {
+      if (!isMedicationEnabled) return;
+      resetCanvasTimers();
+      hideMood();
+      if (pillVisible) {
+        pillTimer = setTimeout(() => hidePill(), 10000);
+        return;
+      }
+      pillVisible = true;
+      const el = document.getElementById('pillSection');
+      if (el) {
+        el.style.display = 'flex';
+        void el.offsetWidth;
+        el.classList.remove('opacity-0', 'pointer-events-none');
+        el.classList.add('opacity-100', 'pointer-events-auto');
+      }
+
+      const pillBtn = document.getElementById('pillBtn');
+      if (pillBtn) {
+        pillBtn.style.opacity = '1';
+        if (currentTouchStyle === 'ripple') {
+          pillBtn.style.animation = `rippleIn 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 0.05s forwards`;
+        } else if (currentTouchStyle === 'breath') {
+          pillBtn.style.animation = `breathIn 0.6s cubic-bezier(0.25, 1, 0.5, 1) 0.05s forwards`;
+        } else {
+          pillBtn.style.animation = `starIn 0.45s cubic-bezier(0.18, 0.89, 0.32, 1.28) 0.05s forwards`;
+        }
+      }
+
+      pillTimer = setTimeout(() => hidePill(), 10000);
+    }
+
+    function hidePill() {
+      if (pillTimer) { clearTimeout(pillTimer); pillTimer = null; }
+      if (!pillVisible) return;
+      pillVisible = false;
+      const el = document.getElementById('pillSection');
+      if (el) {
+        el.classList.remove('opacity-100', 'pointer-events-auto');
+        el.classList.add('opacity-0', 'pointer-events-none');
+        setTimeout(() => {
+          if (!pillVisible && el) el.style.display = 'none';
+        }, 300);
+      }
+      const pillBtn = document.getElementById('pillBtn');
+      if (pillBtn) {
+        pillBtn.style.opacity = '0';
+        pillBtn.style.animation = 'none';
+      }
+    }
+
+    let modalClosingUntil = 0;
+
+    function hideControls() {
+      hideMood();
+      hidePill();
+    }
+
+    function handleScreenTap(e) {
+      if (Date.now() < modalClosingUntil) return;
+      if (e.target.closest('#finishVisitModal, #reportModal, #memoModal, #peaceModal, #settingsModal, #toastMessage, #topCorners, #bottomCorners, #moodSection, #pillSection')) {
+        return;
+      }
+      const isAnyModalOpen = [
+        'finishVisitModal', 'reportModal', 'memoModal', 'peaceModal', 'settingsModal'
+      ].some(id => {
+        const el = document.getElementById(id);
+        return el && !el.classList.contains('pointer-events-none');
+      });
+      if (isAnyModalOpen) return;
+
+      const screen = document.getElementById('phoneScreen');
+      const rect = screen.getBoundingClientRect();
+      const clickY = e.clientY - rect.top;
+      const totalH = rect.height;
+
+      triggerTouchEffect(e.clientX, e.clientY, false);
+
+      // 복약 기록이 꺼져있을 때는 전체 화면 어디를 터치해도 기분(5단계)만 반응
+      if (!isMedicationEnabled || clickY < totalH * 0.54) {
+        if (!moodVisible) {
+          showMood();
+          if (pillVisible) hidePill();
+        } else {
+          hideMood();
+        }
+      }
+      // 하단 복약 영역 (54% ~ 100%: 복약 기록이 켜져 있을 때만 반응)
+      else {
+        if (!pillVisible) {
+          showPill();
+          if (moodVisible) hideMood();
+        } else {
+          hidePill();
+        }
+      }
+    }
+
+    // 터치한 그 자리에서 연하게 나타났다 사라지는 피드백 ("기분 기록")
+    function recordMood(e, sym, btn, clickedIdx) {
+      e.stopPropagation();
+      triggerHaptic();
+      resetCanvasTimers();
+      let cx = e.clientX;
+      let cy = e.clientY;
+      if (btn) {
+        const bRect = btn.getBoundingClientRect();
+        cx = bRect.left + bRect.width / 2;
+        cy = bRect.top + bRect.height / 2;
+      }
+      triggerTouchEffect(cx, cy, true);
+
+      try {
+        const scoreMap = [2, 1, 0, -1, -2];
+        moodRecords.push({ sym, score: scoreMap[clickedIdx] ?? 0, time: new Date().toISOString() });
+        localStorage.setItem('lifeguard_mood_records', JSON.stringify(moodRecords));
+        renderReportData();
+      } catch (err) {
+        console.warn('recordMood storage error:', err);
+      }
+
+      const fb = document.getElementById('moodFeedback');
+      if (fb) {
+        fb.classList.remove('opacity-0', 'anim-feedback');
+        void fb.offsetWidth;
+        fb.classList.add('anim-feedback');
+      }
+
+      // 기분 도형 부드럽게 퇴장
+      const btns = document.querySelectorAll('#moodRow .shape-btn');
+      btns.forEach((b, i) => {
+        const delay = Math.abs(i - (clickedIdx ?? 2)) * 0.04;
+        if (currentTouchStyle === 'ripple') {
+          b.style.animation = `rippleOut 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) ${delay}s forwards`;
+        } else if (currentTouchStyle === 'breath') {
+          b.style.animation = `breathOut 0.5s ease-out ${delay}s forwards`;
+        } else {
+          b.style.animation = `starOut 0.35s cubic-bezier(0.6, 0, 0.2, 1) ${delay}s forwards`;
+        }
+      });
+
+      setTimeout(() => {
+        hideMood();
+        btns.forEach(b => b.style.animation = '');
+      }, 650);
+    }
+
+    // 터치한 그 자리에서 연하게 나타났다 사라지는 피드백 ("약 먹었음")
+    function recordPill(e, btn) {
+      e.stopPropagation();
+      triggerHaptic();
+      resetCanvasTimers();
+      let cx = e.clientX;
+      let cy = e.clientY;
+      if (btn) {
+        const bRect = btn.getBoundingClientRect();
+        cx = bRect.left + bRect.width / 2;
+        cy = bRect.top + bRect.height / 2;
+      }
+      triggerTouchEffect(cx, cy, true);
+
+      try {
+        pillRecords.push({ time: new Date().toISOString() });
+        localStorage.setItem('lifeguard_pill_records', JSON.stringify(pillRecords));
+        renderReportData();
+      } catch (err) {
+        console.warn('recordPill storage error:', err);
+      }
+
+      const fb = document.getElementById('pillFeedback');
+      if (fb) {
+        fb.classList.remove('opacity-0', 'anim-feedback');
+        void fb.offsetWidth;
+        fb.classList.add('anim-feedback');
+      }
+
+      // 알약 부드럽게 퇴장
+      if (btn) {
+        if (currentTouchStyle === 'ripple') {
+          btn.style.animation = `rippleOut 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) forwards`;
+        } else if (currentTouchStyle === 'breath') {
+          btn.style.animation = `breathOut 0.5s ease-out forwards`;
+        } else {
+          btn.style.animation = `starOut 0.35s cubic-bezier(0.6, 0, 0.2, 1) forwards`;
+        }
+      }
+
+      setTimeout(() => {
+        hidePill();
+        if (btn) btn.style.animation = '';
+      }, 650);
+    }
+
+    // 아이폰 PWA 홈 화면 추가 가이드 표시 및 닫기
+    function checkIosGuide() {
+      if (window.AndroidBridge) return;
+      const isIosDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+      const dismissed = localStorage.getItem('lifeguard_ios_guide_dismissed');
+      const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+      if (isIosDevice && !dismissed && !isStandalone) {
+        setTimeout(() => {
+          showIosGuide();
+        }, 800);
+      }
+    }
+
+    function showIosGuide() {
+      const modal = document.getElementById('iosGuideModal');
+      if (!modal) return;
+      modal.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-full');
+      modal.classList.add('opacity-100', 'pointer-events-auto', 'translate-y-0');
+    }
+
+    function dismissIosGuide() {
+      const modal = document.getElementById('iosGuideModal');
+      if (!modal) return;
+      modal.classList.remove('opacity-100', 'pointer-events-auto', 'translate-y-0');
+      modal.classList.add('opacity-0', 'pointer-events-none', 'translate-y-full');
+      localStorage.setItem('lifeguard_ios_guide_dismissed', 'true');
+    }
+
+    // Modal Handlers
+    function openReportModal() {
+      hideControls();
+      const m = document.getElementById('reportModal');
+      if (m) {
+        m.classList.remove('hidden');
+        m.style.display = 'flex';
+        void m.offsetWidth;
+        m.classList.remove('opacity-0', 'pointer-events-none');
+        m.classList.add('opacity-100', 'pointer-events-auto');
+      }
+      try {
+        renderDoctorNotes();
+        renderReportData();
+      } catch (err) {
+        console.warn('openReportModal render error:', err);
+      }
+    }
+    function closeReportModal(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      modalClosingUntil = Date.now() + 500;
+      const m = document.getElementById('reportModal');
+      if (!m) return;
+      m.classList.remove('opacity-100', 'pointer-events-auto');
+      m.classList.add('opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        if (m.classList.contains('opacity-0')) {
+          m.classList.add('hidden');
+          m.style.display = 'none';
+        }
+      }, 250);
+      hideControls();
+    }
+
+    function openSettingsModal() {
+      hideControls();
+      const m = document.getElementById('settingsModal');
+      if (m) {
+        m.classList.remove('hidden');
+        m.style.display = 'flex';
+        void m.offsetWidth;
+        m.classList.remove('opacity-0', 'pointer-events-none');
+        m.classList.add('opacity-100', 'pointer-events-auto');
+      }
+    }
+    function closeSettingsModal(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      modalClosingUntil = Date.now() + 500;
+      const m = document.getElementById('settingsModal');
+      if (!m) return;
+      m.classList.remove('opacity-100', 'pointer-events-auto');
+      m.classList.add('opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        if (m.classList.contains('opacity-0')) {
+          m.classList.add('hidden');
+          m.style.display = 'none';
+        }
+      }, 250);
+      hideControls();
+    }
+
+    let currentPeaceIdx = 0;
+    const peaceScenes = [
+      {
+        id: 0,
+        title: '1. 해변의 파도',
+        soundName: '실제 해변 파도 & 티베트 싱잉볼',
+        message: '파도의 호흡에 맞춰 천천히\n숨을 들이쉬고... 내쉬어 보세요.',
+        quote: '들이쉬고 (4초) ··· 내쉬고 (4초)',
+        visualHtml: '<div class="flex flex-col items-center justify-center -mt-2"><div class="w-28 h-28 rounded-full bg-[#7fa7aa]/30 border-2 border-[#9ec0c4]/70 anim-breath flex items-center justify-center shadow-[0_0_40px_rgba(158,192,196,0.3)]"><div class="w-16 h-16 rounded-full bg-[#9ec0c4]/20 border border-[#9ec0c4]/50"></div></div><div class="h-6 flex items-center justify-center mt-3"><canvas id="peaceScopeCanvas" width="128" height="24" class="w-32 h-6 pointer-events-none drop-shadow-[0_0_8px_rgba(158,192,196,0.5)]"></canvas></div></div>'
+      },
+      {
+        id: 1,
+        title: '2. 벨벳 앰비언트',
+        soundName: '포근한 432Hz 벨벳 앰비언트 패드',
+        message: '따뜻한 하모닉스 화음이\n지친 마음을 부드럽게 감싸 안습니다.',
+        quote: '몸의 긴장을 가만히 내려놓으세요',
+        visualHtml: '<div class="relative w-32 h-32 flex items-center justify-center"><div class="absolute inset-0 rounded-full bg-[#8ab4f8]/15 blur-md anim-breath" style="animation-duration: 8s;"></div><div class="absolute w-28 h-28 rounded-full border border-[#8ab4f8]/40 anim-breath" style="animation-duration: 8s; animation-delay: 0.4s;"></div><div class="absolute w-20 h-20 rounded-full bg-gradient-to-tr from-[#8ab4f8]/30 to-[#c58af9]/30 border border-[#8ab4f8]/60 anim-breath" style="animation-duration: 8s;"></div><div class="w-10 h-10 rounded-full bg-white/40 blur-[1px] anim-breath shadow-[0_0_20px_#8ab4f8]" style="animation-duration: 8s;"></div></div>'
+      },
+      {
+        id: 2,
+        title: '3. 숲과 윈드차임',
+        soundName: '새벽 숲의 산들바람과 윈드차임',
+        message: '살랑이는 산들바람과\n영롱한 윈드차임 맑은 풍경소리.',
+        quote: '맑은 바람결에 생각을 흘려보내요',
+        visualHtml: '<div class="flex flex-col items-center justify-center -mt-2"><svg viewBox="0 0 160 190" class="w-32 h-40 drop-shadow-[0_0_20px_rgba(244,162,97,0.35)]" style="overflow: visible;"><defs><linearGradient id="bronzeTubeGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#7A4218" /><stop offset="25%" stop-color="#E09F3E" /><stop offset="50%" stop-color="#F4A261" /><stop offset="75%" stop-color="#DDA15E" /><stop offset="100%" stop-color="#5C3317" /></linearGradient><linearGradient id="walnutGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#A06040" /><stop offset="50%" stop-color="#8C5332" /><stop offset="100%" stop-color="#5C3317" /></linearGradient><linearGradient id="sailGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#F4A261" /><stop offset="50%" stop-color="#BC6C25" /><stop offset="100%" stop-color="#6F3D2E" /></linearGradient></defs><circle cx="80" cy="10" r="4.5" fill="none" stroke="#DDA15E" stroke-width="2" /><line x1="80" y1="14" x2="56" y2="28" stroke="#D4A373" stroke-width="1.2" stroke-opacity="0.8" /><line x1="80" y1="14" x2="80" y2="28" stroke="#D4A373" stroke-width="1.2" stroke-opacity="0.8" /><line x1="80" y1="14" x2="104" y2="28" stroke="#D4A373" stroke-width="1.2" stroke-opacity="0.8" /><ellipse cx="80" cy="30" rx="34" ry="7" fill="url(#walnutGrad)" stroke="#4A2810" stroke-width="1.2" /><ellipse cx="80" cy="28.5" rx="32" ry="5.5" fill="none" stroke="#DDA15E" stroke-width="0.8" stroke-opacity="0.4" /><g class="anim-chime-real-1"><line x1="54" y1="30" x2="54" y2="38" stroke="#D4A373" stroke-width="1" stroke-opacity="0.7" /><rect x="51" y="38" width="6" height="52" rx="3" fill="url(#bronzeTubeGrad)" stroke="#5C3317" stroke-width="0.5" /><ellipse cx="54" cy="90" rx="3" ry="1" fill="#4A2810" /></g><g class="anim-chime-real-2"><line x1="67" y1="30" x2="67" y2="38" stroke="#D4A373" stroke-width="1" stroke-opacity="0.7" /><rect x="64" y="38" width="6" height="68" rx="3" fill="url(#bronzeTubeGrad)" stroke="#5C3317" stroke-width="0.5" /><ellipse cx="67" cy="106" rx="3" ry="1" fill="#4A2810" /></g><g class="anim-chime-real-3"><line x1="80" y1="30" x2="80" y2="38" stroke="#D4A373" stroke-width="1" stroke-opacity="0.7" /><rect x="77" y="38" width="6" height="82" rx="3" fill="url(#bronzeTubeGrad)" stroke="#5C3317" stroke-width="0.5" /><ellipse cx="80" cy="120" rx="3" ry="1" fill="#4A2810" /></g><g class="anim-chime-real-4"><line x1="93" y1="30" x2="93" y2="38" stroke="#D4A373" stroke-width="1" stroke-opacity="0.7" /><rect x="90" y="38" width="6" height="62" rx="3" fill="url(#bronzeTubeGrad)" stroke="#5C3317" stroke-width="0.5" /><ellipse cx="93" cy="100" rx="3" ry="1" fill="#4A2810" /></g><g class="anim-chime-real-5"><line x1="106" y1="30" x2="106" y2="38" stroke="#D4A373" stroke-width="1" stroke-opacity="0.7" /><rect x="103" y="38" width="6" height="48" rx="3" fill="url(#bronzeTubeGrad)" stroke="#5C3317" stroke-width="0.5" /><ellipse cx="106" cy="86" rx="3" ry="1" fill="#4A2810" /></g><g class="anim-chime-pendulum"><line x1="80" y1="30" x2="80" y2="76" stroke="#D4A373" stroke-width="1.2" stroke-dasharray="2,1" stroke-opacity="0.9" /><ellipse cx="80" cy="76" rx="10" ry="4.5" fill="url(#walnutGrad)" stroke="#4A2810" stroke-width="1" /><circle cx="80" cy="76" r="2.5" fill="#DDA15E" /><line x1="80" y1="76" x2="80" y2="136" stroke="#D4A373" stroke-width="1.2" stroke-opacity="0.8" /><g class="anim-wind-sail-leaf"><path d="M80 136 C68 148, 66 162, 80 174 C94 162, 92 148, 80 136 Z" fill="url(#sailGrad)" stroke="#5C3317" stroke-width="1.2" /><path d="M80 140 L80 168" stroke="#DDA15E" stroke-width="0.8" stroke-opacity="0.6" /></g></g></svg><div class="h-6 flex items-center justify-center mt-2"><canvas id="peaceScopeCanvas" width="128" height="24" class="w-32 h-6 pointer-events-none drop-shadow-[0_0_8px_rgba(244,162,97,0.6)]"></canvas></div></div>'
+      }
+    ];
+
+    function renderPeaceScene(idx) {
+      const scene = peaceScenes[idx % peaceScenes.length];
+      const title = document.getElementById('peaceSceneTitle');
+      if (title) title.textContent = scene.title;
+      const desc = document.getElementById('peaceSceneDesc');
+      if (desc) desc.innerHTML = scene.message.replace(/\n/g, '<br>');
+      const quote = document.getElementById('peaceSceneQuote');
+      if (quote) quote.textContent = scene.quote;
+      const sound = document.getElementById('soundTrackName');
+      if (sound) {
+        sound.textContent = scene.soundName;
+      }
+      updateSoundTrackUI();
+
+      const visual = document.getElementById('peaceVisualContent');
+      if (visual) visual.innerHTML = scene.visualHtml;
+
+      // 3가지 소리 탭 활성화 상태 즉시 동기화
+      [0, 1, 2].forEach(i => {
+        const tab = document.getElementById(`sceneTab-${i}`);
+        if (!tab) return;
+        if (i === (idx % peaceScenes.length)) {
+          tab.className = "flex-1 py-1 px-1.5 text-[10.5px] rounded-lg border border-[#9ec0c4]/60 bg-[#9ec0c4]/25 text-[#9ec0c4] font-bold transition text-center truncate cursor-pointer shadow-[0_0_10px_rgba(158,192,196,0.2)]";
+        } else {
+          tab.className = "flex-1 py-1 px-1.5 text-[10.5px] rounded-lg border border-white/10 bg-white/5 text-white/60 hover:text-white transition text-center truncate cursor-pointer";
+        }
+      });
+    }
+
+    function selectPeaceScene(idx, e) {
+      if (e) e.stopPropagation();
+      triggerHaptic();
+      currentPeaceIdx = idx % peaceScenes.length;
+      renderPeaceScene(currentPeaceIdx);
+      if (isSoundOn) {
+        playMeditationSound(currentPeaceIdx);
+      }
+      startPeaceChromeTimer();
+    }
+
+    function cyclePeaceScene(e) {
+      if (e) e.stopPropagation();
+      triggerHaptic();
+      currentPeaceIdx = (currentPeaceIdx + 1) % peaceScenes.length;
+      renderPeaceScene(currentPeaceIdx);
+      if (isSoundOn) {
+        playMeditationSound(currentPeaceIdx);
+      }
+      startPeaceChromeTimer();
+    }
+
+    function showHelpline() {
+      const btn = document.getElementById('helplineOpenBtn');
+      const card = document.getElementById('helplineCard');
+      if (!btn || !card) return;
+      btn.style.opacity = '0';
+      btn.style.transform = 'scale(0.95)';
+      btn.style.pointerEvents = 'none';
+      setTimeout(() => {
+        btn.classList.add('hidden');
+        card.classList.remove('hidden');
+        requestAnimationFrame(() => {
+          card.style.opacity = '1';
+          card.style.transform = 'scale(1)';
+          card.style.pointerEvents = 'auto';
+        });
+      }, 150);
+    }
+
+    function hideHelpline() {
+      const btn = document.getElementById('helplineOpenBtn');
+      const card = document.getElementById('helplineCard');
+      if (!btn || !card) return;
+      card.style.opacity = '0';
+      card.style.transform = 'scale(0.95)';
+      card.style.pointerEvents = 'none';
+      setTimeout(() => {
+        card.classList.add('hidden');
+        btn.classList.remove('hidden');
+        btn.style.pointerEvents = 'auto';
+        requestAnimationFrame(() => {
+          btn.style.opacity = '1';
+          btn.style.transform = 'scale(1)';
+        });
+      }, 150);
+    }
+
+    function toggleHelpline() {
+      const card = document.getElementById('helplineCard');
+      if (card && !card.classList.contains('hidden') && card.style.opacity === '1') {
+        hideHelpline();
+      } else {
+        showHelpline();
+      }
+    }
+
+    let peaceChromeTimer = null;
+    let isPeaceChromeVisible = true;
+
+    function setPeaceChromeVisibility(visible) {
+      isPeaceChromeVisible = visible;
+      const topBar = document.getElementById('peaceTopBar');
+      const topHeader = document.getElementById('peaceTopHeader');
+      const quote = document.getElementById('peaceBottomQuoteContainer');
+
+      const opacityVal = visible ? '1' : '0';
+      const pointerVal = visible ? 'auto' : 'none';
+
+      if (topBar) {
+        topBar.style.opacity = opacityVal;
+        topBar.style.pointerEvents = pointerVal;
+      }
+      if (topHeader) {
+        topHeader.style.opacity = opacityVal;
+        topHeader.style.pointerEvents = pointerVal;
+      }
+      if (quote) {
+        quote.style.opacity = opacityVal;
+      }
+    }
+
+    function startPeaceChromeTimer() {
+      if (peaceChromeTimer) {
+        clearTimeout(peaceChromeTimer);
+        peaceChromeTimer = null;
+      }
+      // 사용자가 탭과 소리를 편안하게 탐색할 수 있도록 45초 유지 후 서서히 페이드
+      peaceChromeTimer = setTimeout(() => {
+        setPeaceChromeVisibility(false);
+      }, 45000);
+    }
+
+    function handlePeaceModalTap(e) {
+      if (e) e.stopPropagation();
+      // 만약 소리 토글이나 닫기/장면전환 버튼을 직접 눌렀다면 이벤트 버블링에 의한 화면 토글은 제외
+      if (e && e.target && e.target.closest('#soundToggleBtn, #peaceCloseBtn, #peaceCycleBtn, #peaceSceneTabs')) {
+        startPeaceChromeTimer();
+        return;
+      }
+      
+      // 사라진 상태면 다시 나타나게 하고 10초 타이머 재시작
+      if (!isPeaceChromeVisible) {
+        setPeaceChromeVisibility(true);
+        startPeaceChromeTimer();
+      } else {
+        // 이미 나타나 있는 상태에서 터치하면 바로 사라지게 함 (수동 감상 모드 전환)
+        setPeaceChromeVisibility(false);
+        if (peaceChromeTimer) {
+          clearTimeout(peaceChromeTimer);
+          peaceChromeTimer = null;
+        }
+      }
+    }
+
+    function handlePeaceSoundClick(e) {
+      if (e) e.stopPropagation();
+      toggleMeditationAudio();
+      startPeaceChromeTimer();
+    }
+
+    function openPeaceModal() {
+      hideControls();
+      syncSystemThemeColor(true);
+      const m = document.getElementById('peaceModal');
+      if (m) {
+        m.classList.remove('hidden');
+        m.style.display = 'block';
+        void m.offsetWidth;
+        m.classList.remove('opacity-0', 'pointer-events-none');
+        m.classList.add('opacity-100', 'pointer-events-auto');
+      }
+      renderPeaceScene(currentPeaceIdx);
+
+      // 구명튜브 진입 시 기본으로 소리 끔 시작
+      isSoundOn = false;
+      updateSoundTrackUI();
+      stopMeditationSound();
+
+      // 진입 시 전체 UI 표시 후 10초 뒤 가운데 이미지만 남고 페이드아웃
+      setPeaceChromeVisibility(true);
+      startPeaceChromeTimer();
+      startPeaceScopeVisualizer();
+    }
+
+    function closePeaceModal(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      modalClosingUntil = Date.now() + 500;
+      if (peaceChromeTimer) {
+        clearTimeout(peaceChromeTimer);
+        peaceChromeTimer = null;
+      }
+      stopMeditationSound();
+      syncSystemThemeColor(false);
+
+      const m = document.getElementById('peaceModal');
+      if (!m) return;
+      m.classList.remove('opacity-100', 'pointer-events-auto');
+      m.classList.add('opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        if (m.classList.contains('opacity-0')) {
+          m.classList.add('hidden');
+          m.style.display = 'none';
+        }
+      }, 250);
+      hideControls();
+    }
+
+    function openMemoModal() {
+      const backdrop = document.getElementById('memoBackdrop');
+      const modal = document.getElementById('memoModal');
+      if (backdrop) {
+        backdrop.classList.remove('hidden');
+        backdrop.style.display = 'block';
+        void backdrop.offsetWidth;
+        backdrop.classList.remove('opacity-0', 'pointer-events-none');
+        backdrop.classList.add('opacity-100', 'pointer-events-auto');
+      }
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'block';
+        void modal.offsetWidth;
+        modal.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-full');
+        modal.classList.add('opacity-100', 'pointer-events-auto', 'translate-y-0');
+      }
+      setTimeout(() => document.getElementById('memoInput').focus(), 480);
+    }
+    function safeJsonParse(key, defaultVal) {
+      try {
+        const item = localStorage.getItem(key);
+        if (!item) return defaultVal;
+        const parsed = JSON.parse(item);
+        return Array.isArray(defaultVal) ? (Array.isArray(parsed) ? parsed : defaultVal) : parsed;
+      } catch (e) {
+        return defaultVal;
+      }
+    }
+
+    let patientName = (function() {
+      try { return (localStorage.getItem('lifeguard_patient_name') || '').trim(); }
+      catch(e) { return ''; }
+    })();
+
+    let doctorNotes = (function() {
+      const arr = safeJsonParse('lifeguard_doctor_notes', []);
+      return arr.map(n => String(n));
+    })();
+
+    let moodRecords = (function() {
+      const raw = safeJsonParse('lifeguard_mood_records', []);
+      return raw.map(m => {
+        if (typeof m === 'object' && m !== null) {
+          const score = typeof m.score === 'number' && !isNaN(m.score) ? m.score : 0;
+          const time = typeof m.time === 'string' ? m.time : new Date().toISOString();
+          const sym = typeof m.sym === 'string' ? m.sym : '○';
+          return { sym, score, time };
+        }
+        return { sym: '○', score: 0, time: new Date().toISOString() };
+      });
+    })();
+
+    let pillRecords = (function() {
+      const raw = safeJsonParse('lifeguard_pill_records', []);
+      return raw.map(p => {
+        if (typeof p === 'string') return { time: p };
+        if (typeof p === 'object' && p !== null && typeof p.time === 'string') return { time: p.time };
+        return { time: new Date().toISOString() };
+      });
+    })();
+
+    function getDefaultStartDate() {
+      const d = new Date();
+      // 기본값은 오늘(새 진료 주기 시작 1일차)
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    let lastVisitDate = (function() {
+      try {
+        const d = localStorage.getItem('lifeguard_last_visit_date');
+        if (d && !isNaN(new Date(d).getTime())) return d;
+      } catch(e) {}
+      return getDefaultStartDate();
+    })();
+
+    function updatePatientNameSim(name) {
+      patientName = (name || '').trim();
+      try { localStorage.setItem('lifeguard_patient_name', patientName); } catch(e) {}
+      const titleText = document.getElementById('reportTitleText');
+      const badge = document.getElementById('periodPatientBadge');
+      const input = document.getElementById('settingsPatientNameInput');
+      if (input && input.value !== patientName) {
+        input.value = patientName;
+      }
+      if (titleText) {
+        titleText.textContent = patientName ? `함께 보는 기록 · ${patientName}님` : '함께 보는 기록';
+      }
+      if (badge) {
+        badge.textContent = patientName ? `${patientName}님 진료 참고자료` : '병원 진료용 참고자료';
+      }
+    }
+
+    function editPatientNameSim() {
+      const res = prompt('환자 이름 또는 닉네임을 입력하세요 (선택사항, 비우면 숨김):', patientName);
+      if (res !== null) {
+        updatePatientNameSim(res);
+      }
+    }
+
+    // 복약 기록 관리 설정 UI 업데이트 및 토글
+    function updateMedicationSettingUI() {
+      const toggleBtn = document.getElementById('medToggleBtn');
+      const toggleCircle = document.getElementById('medToggleCircle');
+      const statusText = document.getElementById('medSettingStatusText');
+      const reportStatsCard = document.getElementById('reportStatsCard');
+      const effective = getEffectiveTheme(currentTheme);
+      const isDark = effective === 'dark';
+      const isNeutral = effective === 'neutral';
+
+      const activeBg = isDark ? '#9ec0c4' : (isNeutral ? '#455a5c' : '#597075');
+      const activeTextColor = isDark ? '#9ec0c4' : (isNeutral ? '#455a5c' : '#597075');
+      const offBg = isDark ? '#343a3d' : '#d1d5db';
+
+      if (toggleBtn && toggleCircle) {
+        if (isMedicationEnabled) {
+          toggleBtn.style.backgroundColor = activeBg;
+          toggleCircle.style.transform = 'translateX(20px)';
+        } else {
+          toggleBtn.style.backgroundColor = offBg;
+          toggleCircle.style.transform = 'translateX(0px)';
+        }
+      }
+
+      if (statusText) {
+        if (isMedicationEnabled) {
+          statusText.textContent = '현재: 복약 기록 사용 중';
+          statusText.style.color = activeTextColor;
+        } else {
+          statusText.textContent = '현재: 복약 기록 끔 (기분만 기록)';
+          statusText.style.color = isDark ? '#889295' : '#6b7280';
+        }
+      }
+
+      if (reportStatsCard) {
+        reportStatsCard.style.display = isMedicationEnabled ? 'block' : 'none';
+      }
+
+      if (!isMedicationEnabled) {
+        const pillSection = document.getElementById('pillSection');
+        if (pillSection) {
+          pillSection.style.display = 'none';
+          pillSection.classList.add('opacity-0', 'pointer-events-none');
+          pillSection.classList.remove('opacity-100', 'pointer-events-auto');
+        }
+        pillVisible = false;
+      }
+    }
+
+    function toggleMedicationSetting() {
+      isMedicationEnabled = !isMedicationEnabled;
+      try {
+        localStorage.setItem('lifeguard_med_enabled', isMedicationEnabled.toString());
+      } catch (_) {}
+      updateMedicationSettingUI();
+      if (!isMedicationEnabled && pillVisible) {
+        hidePill();
+      }
+      renderReportData();
+    }
+
+    // 매일 기분 기록 알림 설정 (기본: 켜짐, 저녁 6시 18:00) 및 데일리요 스타일 기분 선택창
+    let isAlarmEnabled = (function() {
+      try {
+        const v = localStorage.getItem('lifeguard_alarm_enabled');
+        if (v === 'false') return false;
+        if (v === 'true') return true;
+      } catch (_) {}
+      return true;
+    })();
+
+    let alarmTime = (function() {
+      try {
+        const t = localStorage.getItem('lifeguard_alarm_time');
+        if (t && /^\d{2}:\d{2}$/.test(t)) return t;
+      } catch (_) {}
+      return '18:00';
+    })();
+
+    let dailyCheckinMedChecked = false;
+
+    function formatAlarmTimeKorean(timeStr) {
+      const parts = (timeStr || '18:00').split(':');
+      const h = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      if (isNaN(h) || isNaN(m)) return '오후 6:00';
+      const ampm = h < 12 ? '오전' : '오후';
+      const h12 = h % 12 === 0 ? 12 : h % 12;
+      return `${ampm} ${h12}:${String(m).padStart(2, '0')}`;
+    }
+
+    function syncAlarmWithNative() {
+      try {
+        const parts = (alarmTime || '18:00').split(':');
+        const hour = parseInt(parts[0], 10);
+        const minute = parseInt(parts[1], 10);
+        if (window.AndroidBridge && typeof window.AndroidBridge.setDailyAlarm === 'function') {
+          window.AndroidBridge.setDailyAlarm(
+            Boolean(isAlarmEnabled),
+            isNaN(hour) ? 18 : hour,
+            isNaN(minute) ? 0 : minute
+          );
+        }
+      } catch (err) {
+        console.warn('syncAlarmWithNative error:', err);
+      }
+    }
+
+    function updateAlarmSettingUI() {
+      const effective = getEffectiveTheme(currentTheme);
+      const isDark = effective === 'dark';
+      const isNeutral = effective === 'neutral';
+
+      const activeBg = isDark ? '#9ec0c4' : (isNeutral ? '#455a5c' : '#597075');
+      const activeTextColor = isDark ? '#9ec0c4' : (isNeutral ? '#455a5c' : '#597075');
+      const offBg = isDark ? '#343a3d' : '#d1d5db';
+
+      const card = document.getElementById('settingsAlarmCard');
+      const title = document.getElementById('settingsAlarmTitle');
+      const toggleBtn = document.getElementById('alarmToggleBtn');
+      const toggleCircle = document.getElementById('alarmToggleCircle');
+      const timeBox = document.getElementById('settingsAlarmTimeBox');
+      const statusText = document.getElementById('alarmSettingStatusText');
+      const timeInput = document.getElementById('alarmTimeInput');
+      const desc = document.getElementById('settingsAlarmDesc');
+      const previewBtn = document.getElementById('alarmPreviewModalBtn');
+      const testBtn = document.getElementById('alarmTestNotifyBtn');
+
+      if (card) {
+        card.className = isDark
+          ? "bg-[#222628] rounded-2xl p-3.5 mb-4 border border-[#333a3d] shadow-sm text-xs text-white/80 space-y-2.5 transition-colors"
+          : (isNeutral
+            ? "bg-white/70 rounded-2xl p-3.5 mb-4 border border-[#dce2dc] shadow-sm text-xs text-gray-700 space-y-2.5 transition-colors"
+            : "bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2.5 transition-colors");
+      }
+      if (title) {
+        title.className = `font-bold text-[13px] flex items-center gap-1.5 ${isDark ? 'text-[#9ec0c4]' : (isNeutral ? 'text-[#455a5c]' : 'text-[#597075]')}`;
+      }
+      if (toggleBtn && toggleCircle) {
+        if (isAlarmEnabled) {
+          toggleBtn.style.backgroundColor = activeBg;
+          toggleCircle.style.transform = 'translateX(20px)';
+        } else {
+          toggleBtn.style.backgroundColor = offBg;
+          toggleCircle.style.transform = 'translateX(0px)';
+        }
+      }
+      if (timeBox) {
+        timeBox.className = isDark
+          ? "flex items-center justify-between gap-2 bg-[#191d1e] rounded-xl px-3 py-2 border border-[#333a3d] transition-colors"
+          : (isNeutral
+            ? "flex items-center justify-between gap-2 bg-white rounded-xl px-3 py-2 border border-[#dce2dc] transition-colors"
+            : "flex items-center justify-between gap-2 bg-[#f4f7f8] rounded-xl px-3 py-2 border border-transparent transition-colors");
+      }
+      if (timeInput) {
+        if (timeInput.value !== alarmTime) timeInput.value = alarmTime;
+        timeInput.disabled = !isAlarmEnabled;
+        timeInput.className = isDark
+          ? `text-xs font-bold px-2 py-1 rounded-lg bg-[#222628] text-[#9ec0c4] border border-[#333a3d] outline-none cursor-pointer shrink-0 ${isAlarmEnabled ? '' : 'opacity-40'}`
+          : (isNeutral
+            ? `text-xs font-bold px-2 py-1 rounded-lg bg-[#f4f7f2] text-[#455a5c] border border-[#dce2dc] outline-none cursor-pointer shrink-0 ${isAlarmEnabled ? '' : 'opacity-40'}`
+            : `text-xs font-bold px-2 py-1 rounded-lg bg-white text-[#597075] border border-gray-200 outline-none cursor-pointer shrink-0 ${isAlarmEnabled ? '' : 'opacity-40'}`);
+      }
+      if (statusText) {
+        if (isAlarmEnabled) {
+          statusText.textContent = `매일 ${formatAlarmTimeKorean(alarmTime)} 알림 켜짐`;
+          statusText.style.color = activeTextColor;
+        } else {
+          statusText.textContent = '현재: 기분 기록 알림 끔';
+          statusText.style.color = isDark ? '#889295' : '#6b7280';
+        }
+      }
+      if (desc) {
+        desc.className = isDark ? "leading-relaxed text-[11px] text-white/50" : "leading-relaxed text-[11px] text-gray-500";
+      }
+      if (previewBtn && testBtn) {
+        if (isDark) {
+          previewBtn.className = "py-2 px-2 rounded-xl bg-[#9ec0c4]/15 border border-[#9ec0c4]/30 hover:bg-[#9ec0c4]/25 text-[#9ec0c4] text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap";
+          testBtn.className = "py-2 px-2 rounded-xl border border-[#333a3d] bg-[#191d1e] hover:bg-white/5 text-white/80 text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap";
+        } else if (isNeutral) {
+          previewBtn.className = "py-2 px-2 rounded-xl bg-[#455a5c]/10 border border-[#455a5c]/20 hover:bg-[#455a5c]/20 text-[#455a5c] text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap";
+          testBtn.className = "py-2 px-2 rounded-xl border border-[#dce2dc] bg-white hover:bg-gray-50 text-gray-700 text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap";
+        } else {
+          previewBtn.className = "py-2 px-2 rounded-xl bg-[#597075]/10 hover:bg-[#597075]/20 text-[#597075] text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap";
+          testBtn.className = "py-2 px-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap";
+        }
+      }
+
+      // 데일리요 스타일 기분 선택창(#dailyCheckinModal) 테마 동기화
+      const checkinCard = document.getElementById('dailyCheckinCard');
+      const checkinBadge = document.getElementById('dailyCheckinBadge');
+      const checkinTitle = document.getElementById('dailyCheckinTitle');
+      const checkinDesc = document.getElementById('dailyCheckinDesc');
+      const checkinLaterBtn = document.getElementById('dailyCheckinLaterBtn');
+      const checkinBtns = document.querySelectorAll('#dailyCheckinShapeGrid .checkin-shape-btn');
+
+      if (checkinCard) {
+        const isScaled = !checkinCard.classList.contains('scale-95');
+        const scaleCls = isScaled ? 'scale-100' : 'scale-95';
+        checkinCard.className = isDark
+          ? `bg-[#222628] text-white rounded-3xl p-5 shadow-2xl w-full max-w-[288px] text-center transform ${scaleCls} transition-all duration-200 border border-[#333a3d] cursor-default`
+          : (isNeutral
+            ? `bg-[#f4f7f2] text-[#2c3e40] rounded-3xl p-5 shadow-2xl w-full max-w-[288px] text-center transform ${scaleCls} transition-all duration-200 border border-[#dce2dc] cursor-default`
+            : `bg-white text-[#2c3e40] rounded-3xl p-5 shadow-2xl w-full max-w-[288px] text-center transform ${scaleCls} transition-all duration-200 border border-gray-100 cursor-default`);
+      }
+      if (checkinBadge) {
+        checkinBadge.className = isDark
+          ? "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#9ec0c4]/15 text-[#9ec0c4] mb-2"
+          : (isNeutral
+            ? "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#455a5c]/15 text-[#455a5c] mb-2"
+            : "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#597075]/10 text-[#597075] mb-2");
+      }
+      if (checkinTitle) {
+        checkinTitle.className = isDark
+          ? "text-sm font-bold text-[#9ec0c4] mb-1"
+          : (isNeutral ? "text-sm font-bold text-[#455a5c] mb-1" : "text-sm font-bold text-[#597075] mb-1");
+      }
+      if (checkinDesc) {
+        checkinDesc.className = isDark
+          ? "text-[11px] text-white/70 leading-relaxed mb-3.5"
+          : "text-[11px] text-gray-500 leading-relaxed mb-3.5";
+      }
+      if (checkinLaterBtn) {
+        checkinLaterBtn.className = isDark
+          ? "w-full py-2 rounded-xl text-[11px] text-white/45 hover:text-white/80 font-medium transition cursor-pointer"
+          : "w-full py-2 rounded-xl text-[11px] text-gray-400 hover:text-gray-600 font-medium transition cursor-pointer";
+      }
+      checkinBtns.forEach(btn => {
+        btn.className = isDark
+          ? "checkin-shape-btn h-12 rounded-2xl border border-[#333a3d] bg-[#191d1e] hover:border-[#9ec0c4] hover:bg-[#9ec0c4]/15 flex items-center justify-center text-[#9ec0c4] transition active:scale-90 cursor-pointer"
+          : (isNeutral
+            ? "checkin-shape-btn h-12 rounded-2xl border border-[#dce2dc] bg-white hover:border-[#455a5c] hover:bg-[#455a5c]/10 flex items-center justify-center text-[#455a5c] transition active:scale-90 cursor-pointer"
+            : "checkin-shape-btn h-12 rounded-2xl border border-gray-200 bg-[#f4f7f8] hover:border-[#597075] hover:bg-[#597075]/10 flex items-center justify-center text-[#597075] transition active:scale-90 cursor-pointer");
+      });
+
+      updateDailyCheckinMedUI();
+    }
+
+    function toggleAlarmSetting() {
+      triggerHaptic();
+      isAlarmEnabled = !isAlarmEnabled;
+      try {
+        localStorage.setItem('lifeguard_alarm_enabled', isAlarmEnabled.toString());
+      } catch (_) {}
+      updateAlarmSettingUI();
+      syncAlarmWithNative();
+      if (isAlarmEnabled) {
+        showToast(`매일 ${formatAlarmTimeKorean(alarmTime)} 기분 기록 알림이 켜졌습니다 🔔`);
+      } else {
+        showToast('매일 기분 기록 알림이 꺼졌습니다.');
+      }
+    }
+
+    function updateAlarmTimeSetting(newTime) {
+      if (!newTime || !/^\d{2}:\d{2}$/.test(newTime)) return;
+      triggerHaptic();
+      alarmTime = newTime;
+      isAlarmEnabled = true;
+      try {
+        localStorage.setItem('lifeguard_alarm_time', alarmTime);
+        localStorage.setItem('lifeguard_alarm_enabled', 'true');
+      } catch (_) {}
+      updateAlarmSettingUI();
+      syncAlarmWithNative();
+      showToast(`매일 ${formatAlarmTimeKorean(alarmTime)}에 기분 선택 알림을 보내드립니다 🔔`);
+    }
+
+    function testDailyAlarmNow() {
+      triggerHaptic();
+      if (window.AndroidBridge && typeof window.AndroidBridge.testDailyAlarmNow === 'function') {
+        window.AndroidBridge.testDailyAlarmNow();
+        showToast('상단 알림창에 기분 선택 알림을 띄웠습니다! 위에서 쓸어내려 확인해 보세요 🔔');
+        return;
+      }
+      // 웹 브라우저 환경에서는 데일리요 스타일 기분 선택창을 바로 띄워 시연
+      openDailyCheckinModal(true);
+      showToast('알림 터치 시 나타나는 기분 선택창입니다 ✨');
+    }
+
+    function updateDailyCheckinMedUI() {
+      const wrap = document.getElementById('dailyCheckinMedWrap');
+      const btn = document.getElementById('dailyCheckinMedBtn');
+      const icon = document.getElementById('dailyCheckinMedCheckIcon');
+      if (!wrap || !btn || !icon) return;
+
+      if (!isMedicationEnabled) {
+        wrap.classList.add('hidden');
+        return;
+      }
+      wrap.classList.remove('hidden');
+
+      const effective = getEffectiveTheme(currentTheme);
+      const isDark = effective === 'dark';
+      const isNeutral = effective === 'neutral';
+
+      if (dailyCheckinMedChecked) {
+        btn.className = isDark
+          ? "w-full py-2 px-3 rounded-xl border-2 border-[#9ec0c4] bg-[#9ec0c4]/15 text-[#9ec0c4] text-[11px] font-bold flex items-center justify-between transition cursor-pointer active:scale-95"
+          : (isNeutral
+            ? "w-full py-2 px-3 rounded-xl border-2 border-[#455a5c] bg-[#455a5c]/15 text-[#455a5c] text-[11px] font-bold flex items-center justify-between transition cursor-pointer active:scale-95"
+            : "w-full py-2 px-3 rounded-xl border-2 border-[#597075] bg-[#597075]/15 text-[#597075] text-[11px] font-bold flex items-center justify-between transition cursor-pointer active:scale-95");
+        icon.className = isDark
+          ? "w-4 h-4 rounded-full bg-[#9ec0c4] text-[#141718] flex items-center justify-center text-[10px] font-bold"
+          : (isNeutral
+            ? "w-4 h-4 rounded-full bg-[#455a5c] text-white flex items-center justify-center text-[10px] font-bold"
+            : "w-4 h-4 rounded-full bg-[#597075] text-white flex items-center justify-center text-[10px] font-bold");
+        icon.textContent = '✓';
+      } else {
+        btn.className = isDark
+          ? "w-full py-2 px-3 rounded-xl border border-[#333a3d] bg-[#191d1e] text-white/70 text-[11px] font-medium flex items-center justify-between transition cursor-pointer active:scale-95"
+          : (isNeutral
+            ? "w-full py-2 px-3 rounded-xl border border-[#dce2dc] bg-white text-gray-600 text-[11px] font-medium flex items-center justify-between transition cursor-pointer active:scale-95"
+            : "w-full py-2 px-3 rounded-xl border border-gray-200 bg-[#f4f7f8] text-gray-600 text-[11px] font-medium flex items-center justify-between transition cursor-pointer active:scale-95");
+        icon.className = isDark
+          ? "w-4 h-4 rounded-full border border-white/30 flex items-center justify-center text-[10px]"
+          : "w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center text-[10px]";
+        icon.textContent = '';
+      }
+    }
+
+    function toggleDailyCheckinMed(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      triggerHaptic();
+      dailyCheckinMedChecked = !dailyCheckinMedChecked;
+      updateDailyCheckinMedUI();
+    }
+
+    function openDailyCheckinModal(fromPreview) {
+      triggerHaptic();
+      dailyCheckinMedChecked = false;
+      updateDailyCheckinMedUI();
+
+      const badgeText = document.getElementById('dailyCheckinBadgeText');
+      if (badgeText) {
+        const now = new Date();
+        badgeText.textContent = `${now.getMonth() + 1}월 ${now.getDate()}일 · 마음 체크인`;
+      }
+
+      const modal = document.getElementById('dailyCheckinModal');
+      const card = document.getElementById('dailyCheckinCard');
+      if (!modal || !card) return;
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+      void modal.offsetWidth;
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+      modal.classList.add('opacity-100', 'pointer-events-auto');
+      modal.style.pointerEvents = 'auto';
+      card.style.pointerEvents = 'auto';
+      card.classList.remove('scale-95');
+      card.classList.add('scale-100');
+    }
+
+    function closeDailyCheckinModal(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      modalClosingUntil = Date.now() + 450;
+      const modal = document.getElementById('dailyCheckinModal');
+      const card = document.getElementById('dailyCheckinCard');
+      if (!modal || !card) return;
+      modal.classList.remove('opacity-100', 'pointer-events-auto');
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      modal.style.pointerEvents = 'none';
+      card.style.pointerEvents = 'none';
+      card.classList.remove('scale-100');
+      card.classList.add('scale-95');
+      setTimeout(() => {
+        if (modal.classList.contains('opacity-0')) {
+          modal.classList.add('hidden');
+          modal.style.display = 'none';
+        }
+      }, 220);
+    }
+
+    function recordMoodFromCheckin(sym, score, clickedIdx, e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      triggerHaptic();
+
+      try {
+        const nowIso = new Date().toISOString();
+        moodRecords.push({ sym, score, time: nowIso });
+        localStorage.setItem('lifeguard_mood_records', JSON.stringify(moodRecords));
+
+        let recordedMedToo = false;
+        if (isMedicationEnabled && dailyCheckinMedChecked) {
+          pillRecords.push({ time: nowIso });
+          localStorage.setItem('lifeguard_pill_records', JSON.stringify(pillRecords));
+          recordedMedToo = true;
+        }
+        renderReportData();
+
+        closeDailyCheckinModal();
+        closeSettingsModal();
+        hideControls();
+
+        const screen = document.getElementById('phoneScreen');
+        if (screen) {
+          const rect = screen.getBoundingClientRect();
+          triggerTouchEffect(rect.left + rect.width / 2, rect.top + rect.height * 0.48, true);
+        }
+
+        const fb = document.getElementById('moodFeedback');
+        if (fb) {
+          fb.classList.remove('opacity-0', 'anim-feedback');
+          void fb.offsetWidth;
+          fb.classList.add('anim-feedback');
+        }
+
+        showToast(recordedMedToo
+          ? `오늘의 기분(${sym})과 약 복용이 함께 기록되었습니다 🌿`
+          : `오늘의 기분(${sym})이 기록되었습니다 🌿`);
+      } catch (err) {
+        console.warn('recordMoodFromCheckin error:', err);
+      }
+    }
+
+    // 안드로이드 상단 알림 본문 터치 시 호출: 데일리요 스타일 기분 선택창 즉시 오픈
+    window.openDailyCheckinModalFromNative = function() {
+      closeSettingsModal();
+      closeReportModal();
+      closePeaceModal();
+      saveAndCloseMemo();
+      setTimeout(() => {
+        openDailyCheckinModal(false);
+      }, 120);
+    };
+
+    // 안드로이드 상단 알림 내부 5개 도형(▲ △ ○ ▽ ▼) 직접 터치 시 호출: 즉시 기록 & 파문 연출
+    window.recordMoodFromNativeNotification = function(scoreNum) {
+      const s = Number(scoreNum);
+      const symMap = { '2': '▲', '1': '△', '0': '○', '-1': '▽', '-2': '▼' };
+      const sym = symMap[String(s)] || '○';
+      const validScore = [2, 1, 0, -1, -2].includes(s) ? s : 0;
+
+      try {
+        moodRecords.push({ sym, score: validScore, time: new Date().toISOString() });
+        localStorage.setItem('lifeguard_mood_records', JSON.stringify(moodRecords));
+        renderReportData();
+      } catch (e) {}
+
+      closeDailyCheckinModal();
+      closeSettingsModal();
+      closeReportModal();
+      closePeaceModal();
+      hideControls();
+
+      setTimeout(() => {
+        const screen = document.getElementById('phoneScreen');
+        if (screen) {
+          const rect = screen.getBoundingClientRect();
+          triggerTouchEffect(rect.left + rect.width / 2, rect.top + rect.height * 0.48, true);
+        }
+        const fb = document.getElementById('moodFeedback');
+        if (fb) {
+          fb.classList.remove('opacity-0', 'anim-feedback');
+          void fb.offsetWidth;
+          fb.classList.add('anim-feedback');
+        }
+        showToast(`알림창에서 선택하신 기분(${sym})이 기록되었습니다 🌿`);
+      }, 180);
+    };
+
+    let isReordering = false;
+    let draggedIndex = null;
+
+    function renderDoctorNotes() {
+      const container = document.getElementById('memoItemsContainer');
+      if (!container) return;
+      if (doctorNotes.length === 0) {
+        container.innerHTML = '<div class="text-gray-400 italic text-[11px] py-2 text-center">남겨진 메모가 없습니다. 좌측 하단 메모 버튼을 눌러 추가하세요.</div>';
+        return;
+      }
+
+      const isDark = getEffectiveTheme(currentTheme) === 'dark';
+
+      const cardBg = isDark ? '#242a2c' : '#f4f7f8';
+      const cardBorder = isDark ? '#384246' : '#e2e7ea';
+      const cardText = isDark ? '#eff3f2' : '#2d3748';
+      const cardNum = isDark ? '#9ec0c4' : '#597075';
+      const handleColor = isDark ? '#9ec0c4' : '#597075';
+
+      container.innerHTML = doctorNotes.map((note, idx) => `
+        <div id="memo-wrapper-${idx}" class="memo-wrapper relative rounded-xl mb-1.5 select-none transition-all duration-200" data-idx="${idx}" style="overflow: hidden;">
+          <!-- 뒤쪽 '삭제' 버튼 영역 (평소엔 opacity 0으로 완전히 숨겨져 절대 삐져나오지 않음, 좌로 밀 때만 부드럽게 페이드인 노출) -->
+          <div id="memo-del-btn-${idx}"
+               style="position: absolute; top: 0; bottom: 0; right: 0; width: 56px; background-color: #d9534f; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: calc(11px * var(--fs)); border-radius: 10px; cursor: pointer; user-select: none; opacity: 0; pointer-events: none; transition: opacity 0.15s ease;"
+               onclick="confirmDeleteMemoItem(${idx})">
+            삭제
+          </div>
+          <!-- 전면 카드: 좌로 밀면 '삭제' 영역 노출 (엑스 표시 없음) -->
+          <div id="memo-front-${idx}"
+               class="memo-front-card relative z-10 rounded-xl p-2.5 text-[11px] flex items-center justify-between"
+               style="background-color: ${cardBg}; border: 1px solid ${cardBorder}; color: ${cardText}; transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); transform: translateX(0px);"
+               data-idx="${idx}">
+            <!-- 텍스트 영역 (좌우 스와이프 전용) -->
+            <div class="memo-swipe-area flex items-start gap-2 flex-1 pr-2 cursor-pointer" data-idx="${idx}">
+              <span class="font-bold text-[11px] min-w-[16px]" style="color: ${cardNum};">${idx + 1}.</span>
+              <span class="flex-1 leading-snug" style="color: ${cardText};">${note}</span>
+            </div>
+            <!-- 순서 이동 드래그 핸들 (위아래 드래그 전용) -->
+            <div class="memo-drag-handle p-1.5 cursor-grab active:cursor-grabbing shrink-0" data-idx="${idx}" title="터치 후 끌어서 순서 이동">
+              <svg class="w-4 h-4 opacity-60 hover:opacity-100" viewBox="0 0 24 24" fill="${handleColor}">
+                <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
+                <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      // 1. 좌로 밀기 (Swipe-to-delete) 핸들러 등록
+      container.querySelectorAll('.memo-swipe-area').forEach(swipeArea => {
+        const idx = swipeArea.dataset.idx;
+        const front = document.getElementById(`memo-front-${idx}`);
+        const delBtn = document.getElementById(`memo-del-btn-${idx}`);
+        let startX = 0;
+        let currentX = 0;
+        let isDragging = false;
+        let isOpen = false;
+
+        const onStart = (clientX) => {
+          startX = clientX;
+          isDragging = true;
+          front.style.transition = 'none';
+        };
+
+        const onMove = (clientX) => {
+          if (!isDragging) return;
+          const diff = clientX - startX;
+          const offset = isOpen ? Math.min(0, Math.max(-56, -56 + diff)) : Math.min(0, Math.max(-56, diff));
+          front.style.transform = `translateX(${offset}px)`;
+          currentX = offset;
+          if (delBtn) {
+            delBtn.style.opacity = Math.abs(offset) > 4 ? Math.min(1, Math.abs(offset) / 50) : 0;
+            delBtn.style.pointerEvents = offset < -24 ? 'auto' : 'none';
+          }
+        };
+
+        const onEnd = () => {
+          if (!isDragging) return;
+          isDragging = false;
+          front.style.transition = 'transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1)';
+          if (currentX < -24) {
+            front.style.transform = 'translateX(-56px)';
+            if (delBtn) {
+              delBtn.style.opacity = '1';
+              delBtn.style.pointerEvents = 'auto';
+            }
+            isOpen = true;
+          } else {
+            front.style.transform = 'translateX(0px)';
+            if (delBtn) {
+              delBtn.style.opacity = '0';
+              delBtn.style.pointerEvents = 'none';
+            }
+            isOpen = false;
+          }
+        };
+
+        swipeArea.addEventListener('touchstart', (e) => onStart(e.touches[0].clientX), { passive: true });
+        swipeArea.addEventListener('touchmove', (e) => onMove(e.touches[0].clientX), { passive: true });
+        swipeArea.addEventListener('touchend', onEnd);
+
+        swipeArea.addEventListener('mousedown', (e) => {
+          onStart(e.clientX);
+          const mouseMove = (ev) => onMove(ev.clientX);
+          const mouseUp = () => {
+            onEnd();
+            window.removeEventListener('mousemove', mouseMove);
+            window.removeEventListener('mouseup', mouseUp);
+          };
+          window.addEventListener('mousemove', mouseMove);
+          window.addEventListener('mouseup', mouseUp);
+        });
+      });
+
+      // 2. 드래그 앤 드롭 (순서 이동) - 부드러운 물리 애니메이션 및 슬라이딩 (손맛 UX)
+      let isReordering = false;
+      let activeDragIdx = null;
+
+      container.querySelectorAll('.memo-drag-handle').forEach(handle => {
+        const fromIdx = parseInt(handle.dataset.idx, 10);
+        const wrapper = document.getElementById(`memo-wrapper-${fromIdx}`);
+        if (!wrapper) return;
+
+        let startY = 0;
+        let currentSlot = fromIdx;
+        let itemRects = [];
+        let H = 48;
+        let wrappers = [];
+
+        const onDragStart = (clientY) => {
+          if (isReordering) return;
+          isReordering = true;
+          activeDragIdx = fromIdx;
+          currentSlot = fromIdx;
+          startY = clientY;
+
+          wrappers = Array.from(container.querySelectorAll('.memo-wrapper'));
+          itemRects = wrappers.map(w => w.getBoundingClientRect());
+          H = wrapper.offsetHeight + 6; // 6px = margin-bottom (mb-1.5)
+
+          wrapper.style.transition = 'box-shadow 0.2s ease, transform 0.05s ease';
+          wrapper.style.zIndex = '60';
+          wrapper.style.boxShadow = '0 10px 24px rgba(0,0,0,0.22)';
+          wrapper.style.transform = 'translateY(0px) scale(1.03)';
+          wrapper.style.pointerEvents = 'none';
+
+          wrappers.forEach((w, i) => {
+            if (i !== fromIdx) {
+              w.style.transition = 'transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1)';
+              w.style.transform = 'translateY(0px)';
+            }
+          });
+        };
+
+        const onDragMove = (clientY) => {
+          if (!isReordering || activeDragIdx !== fromIdx) return;
+          const dy = clientY - startY;
+          wrapper.style.transform = `translateY(${dy}px) scale(1.03)`;
+
+          const draggedCenter = itemRects[fromIdx].top + itemRects[fromIdx].height / 2 + dy;
+          let newSlot = fromIdx;
+
+          for (let i = 0; i < wrappers.length; i++) {
+            if (i === fromIdx) continue;
+            const mid = itemRects[i].top + itemRects[i].height / 2;
+            if (fromIdx < i && draggedCenter > mid) {
+              newSlot = i;
+            } else if (fromIdx > i && draggedCenter < mid) {
+              if (newSlot === fromIdx || i < newSlot) {
+                newSlot = i;
+              }
+            }
+          }
+
+          currentSlot = newSlot;
+
+          // 아래/위 항목들이 딸려 올라오거나 밀려내려가는 부드러운 위치 변경
+          wrappers.forEach((w, i) => {
+            if (i === fromIdx) return;
+            if (fromIdx < currentSlot) {
+              if (i > fromIdx && i <= currentSlot) {
+                w.style.transform = `translateY(-${H}px)`;
+              } else {
+                w.style.transform = 'translateY(0px)';
+              }
+            } else if (fromIdx > currentSlot) {
+              if (i >= currentSlot && i < fromIdx) {
+                w.style.transform = `translateY(${H}px)`;
+              } else {
+                w.style.transform = 'translateY(0px)';
+              }
+            } else {
+              w.style.transform = 'translateY(0px)';
+            }
+          });
+        };
+
+        const onDragEnd = () => {
+          if (!isReordering || activeDragIdx !== fromIdx) return;
+          isReordering = false;
+          activeDragIdx = null;
+
+          // 착지 위치 계산
+          let targetY = 0;
+          if (currentSlot !== fromIdx && itemRects[currentSlot]) {
+            targetY = itemRects[currentSlot].top - itemRects[fromIdx].top;
+          }
+
+          // 손을 떼었을 때 제자리로 스무스하게 쏙 빨려들어가는 감속 애니메이션
+          wrapper.style.transition = 'transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.24s ease';
+          wrapper.style.transform = `translateY(${targetY}px) scale(1.0)`;
+          wrapper.style.boxShadow = 'none';
+
+          setTimeout(() => {
+            wrapper.style.pointerEvents = '';
+            wrapper.style.zIndex = '';
+            wrapper.style.transform = '';
+            wrappers.forEach(w => {
+              w.style.transition = '';
+              w.style.transform = '';
+            });
+
+            if (currentSlot !== fromIdx) {
+              const [moved] = doctorNotes.splice(fromIdx, 1);
+              doctorNotes.splice(currentSlot, 0, moved);
+              try {
+                localStorage.setItem('lifeguard_doctor_notes', JSON.stringify(doctorNotes));
+              } catch(e) {}
+            }
+            renderDoctorNotes();
+          }, 240);
+        };
+
+        handle.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          onDragStart(e.touches[0].clientY);
+          const touchMove = (ev) => {
+            ev.preventDefault();
+            onDragMove(ev.touches[0].clientY);
+          };
+          const touchEnd = () => {
+            onDragEnd();
+            window.removeEventListener('touchmove', touchMove);
+            window.removeEventListener('touchend', touchEnd);
+          };
+          window.addEventListener('touchmove', touchMove, { passive: false });
+          window.addEventListener('touchend', touchEnd);
+        }, { passive: false });
+
+        handle.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          onDragStart(e.clientY);
+          const mouseMove = (ev) => onDragMove(ev.clientY);
+          const mouseUp = () => {
+            onDragEnd();
+            window.removeEventListener('mousemove', mouseMove);
+            window.removeEventListener('mouseup', mouseUp);
+          };
+          window.addEventListener('mousemove', mouseMove);
+          window.addEventListener('mouseup', mouseUp);
+        });
+      });
+    }
+
+    // 스무스 슬라이드 아웃 & 리스트 매꿈 애니메이션 삭제 (손맛 나는 2단계 애니메이션)
+    function confirmDeleteMemoItem(idx) {
+      const wrapper = document.getElementById(`memo-wrapper-${idx}`);
+      const front = document.getElementById(`memo-front-${idx}`);
+      const delBtn = document.getElementById(`memo-del-btn-${idx}`);
+      if (!wrapper || !front) return;
+
+      if (delBtn) delBtn.style.opacity = '0';
+
+      // 1. 현재 높이 고정 (CSS 트랜지션을 위한 명시적 픽셀 높이 부여)
+      const currentH = wrapper.offsetHeight;
+      wrapper.style.height = currentH + 'px';
+      wrapper.style.overflow = 'hidden';
+
+      // 2. 카드가 왼쪽으로 경쾌하게 미끄러지며 페이드아웃 (손맛 슬라이드)
+      front.style.transition = 'transform 0.26s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease-out';
+      front.style.transform = 'translateX(-130%)';
+      front.style.opacity = '0';
+
+      // 3. 살짝 겹치는 타이밍에 아래 항목들이 위로 매끄럽게 올라옴 (Height Collapse)
+      setTimeout(() => {
+        wrapper.style.transition = 'height 0.24s cubic-bezier(0.2, 0.8, 0.2, 1), margin 0.24s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.18s ease';
+        wrapper.style.height = '0px';
+        wrapper.style.marginBottom = '0px';
+        wrapper.style.paddingTop = '0px';
+        wrapper.style.paddingBottom = '0px';
+        wrapper.style.opacity = '0';
+
+        setTimeout(() => {
+          doctorNotes.splice(idx, 1);
+          localStorage.setItem('lifeguard_doctor_notes', JSON.stringify(doctorNotes));
+          renderDoctorNotes();
+        }, 250);
+      }, 100);
+    }
+
+    function handleMemoBackdropClick(e) {
+      if (e) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+      saveAndCloseMemo(e);
+    }
+
+    function saveAndCloseMemo(e) {
+      if (e && e.stopPropagation) {
+        e.stopPropagation();
+      }
+      const input = document.getElementById('memoInput');
+      const val = (input?.value || '').trim();
+      if (val) {
+        doctorNotes.push(val);
+        try { localStorage.setItem('lifeguard_doctor_notes', JSON.stringify(doctorNotes)); } catch(err) {}
+        if (input) input.value = '';
+        renderDoctorNotes();
+        showToast('선생님께 드릴 말씀이 저장되었습니다 💬');
+      }
+      const backdrop = document.getElementById('memoBackdrop');
+      const modal = document.getElementById('memoModal');
+      if (backdrop) {
+        backdrop.classList.remove('opacity-100', 'pointer-events-auto');
+        backdrop.classList.add('opacity-0', 'pointer-events-none');
+        setTimeout(() => {
+          if (backdrop.classList.contains('opacity-0')) {
+            backdrop.classList.add('hidden');
+            backdrop.style.display = 'none';
+          }
+        }, 250);
+      }
+      if (modal) {
+        modal.classList.remove('opacity-100', 'pointer-events-auto', 'translate-y-0');
+        modal.classList.add('opacity-0', 'pointer-events-none', 'translate-y-full');
+        setTimeout(() => {
+          if (modal.classList.contains('opacity-0')) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+          }
+        }, 250);
+      }
+      if (input) input.blur();
+    }
+
+    // 진료 완료: 블러 팝업 모달 열기 (함께보는기록 화면이 열려있을 때만 안전하게 실행)
+    function confirmResetCycle(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      const reportModal = document.getElementById('reportModal');
+      if (!reportModal || reportModal.classList.contains('opacity-0') || reportModal.classList.contains('hidden') || reportModal.style.display === 'none') {
+        return;
+      }
+      openFinishVisitModal();
+    }
+
+    function openFinishVisitModal() {
+      hideControls();
+      const modal = document.getElementById('finishVisitModal');
+      const card = document.getElementById('finishVisitCard');
+      const cancelBtn = document.getElementById('finishVisitCancelBtn');
+      const confirmBtn = document.getElementById('finishVisitConfirmBtn');
+      const actions = document.getElementById('finishVisitActions');
+      if (!modal || !card) return;
+      if (actions) actions.style.display = 'flex';
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+      void modal.offsetWidth; // force reflow for smooth opacity transition
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+      modal.classList.add('opacity-100', 'pointer-events-auto');
+      modal.style.pointerEvents = 'auto';
+      card.style.pointerEvents = 'auto';
+      if (cancelBtn) cancelBtn.style.pointerEvents = 'auto';
+      if (confirmBtn) confirmBtn.style.pointerEvents = 'auto';
+      card.classList.remove('scale-95');
+      card.classList.add('scale-100');
+    }
+
+    function closeFinishVisitModal(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      modalClosingUntil = Date.now() + 500;
+      const modal = document.getElementById('finishVisitModal');
+      const card = document.getElementById('finishVisitCard');
+      const cancelBtn = document.getElementById('finishVisitCancelBtn');
+      const confirmBtn = document.getElementById('finishVisitConfirmBtn');
+      if (!modal || !card) return;
+      modal.classList.remove('opacity-100', 'pointer-events-auto');
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      modal.style.pointerEvents = 'none';
+      card.style.pointerEvents = 'none';
+      if (cancelBtn) cancelBtn.style.pointerEvents = 'none';
+      if (confirmBtn) confirmBtn.style.pointerEvents = 'none';
+      card.classList.remove('scale-100');
+      card.classList.add('scale-95');
+      setTimeout(() => {
+        if (modal.classList.contains('opacity-0')) {
+          modal.classList.add('hidden');
+          modal.style.display = 'none';
+        }
+      }, 220);
+      hideControls();
+    }
+
+    // 모든 실제 데이터 초기화 (백지 상태 복귀)
+    function performDataReset() {
+      moodRecords = [];
+      pillRecords = [];
+      doctorNotes = [];
+      isMedicationEnabled = false;
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      lastVisitDate = todayStr;
+      try {
+        localStorage.setItem('lifeguard_mood_records', '[]');
+        localStorage.setItem('lifeguard_pill_records', '[]');
+        localStorage.setItem('lifeguard_doctor_notes', '[]');
+        localStorage.setItem('lifeguard_last_visit_date', todayStr);
+        localStorage.setItem('lifeguard_med_enabled', 'false');
+      } catch(e) {}
+      updateMedicationSettingUI();
+      renderDoctorNotes();
+      renderReportData();
+    }
+
+    // 진료 완료: 블러 팝업 모달에서 확인 시 실행
+    function executeFinishVisit(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      const finishVisitModal = document.getElementById('finishVisitModal');
+      if (!finishVisitModal || finishVisitModal.classList.contains('opacity-0') || finishVisitModal.classList.contains('hidden') || finishVisitModal.style.display === 'none') {
+        return;
+      }
+      modalClosingUntil = Date.now() + 2000;
+      hideControls();
+      performDataReset();
+
+      // 블러 팝업 내부를 '초기화 완료' 상태로 전환
+      const iconWrap = document.getElementById('finishVisitIconWrap');
+      const title = document.getElementById('finishVisitTitle');
+      const desc = document.getElementById('finishVisitDesc');
+      const actions = document.getElementById('finishVisitActions');
+      if (iconWrap) iconWrap.textContent = '🌿';
+      if (title) title.textContent = '초기화되었습니다';
+      if (desc) desc.innerHTML = '다시 기록을 시작합니다.<br>새로운 백지에서 오늘을 맞이합니다.';
+      if (actions) actions.style.display = 'none';
+
+      // 1.1초 후 팝업 닫고 첫 화면으로 복귀
+      setTimeout(() => {
+        modalClosingUntil = Date.now() + 600;
+        closeFinishVisitModal();
+        closeReportModal();
+        hideControls();
+        showToast('초기화되었습니다. 다시 기록을 시작합니다. 🌿');
+        setTimeout(() => {
+          if (iconWrap) iconWrap.textContent = '✓';
+          if (title) title.textContent = '오늘 진료를 마치셨나요?';
+          if (desc) desc.innerHTML = '선생님께 보여드린 지난 진료 기록이 모두 비워지고,<br>오늘부터 깨끗한 백지(0)에서 다시 시작합니다.<br><br>새 주기를 시작하시겠습니까?';
+          if (actions) actions.style.display = 'flex';
+          hideControls();
+        }, 400);
+      }, 1100);
+    }
+
+    function formatPeriodDuration(days) {
+      if (days <= 0) return '0일 중';
+      if (days === 1) return '1일 중';
+      if (days < 30) return `${days}일 중`;
+      if (days < 365) {
+        const months = Math.max(1, Math.round(days / 30.4));
+        return `${months}개월 중`;
+      }
+      const years = Math.max(1, Math.round(days / 365));
+      return `${years}년 중`;
+    }
+
+    // 실제 입력된 기분/복약/진료구간 데이터 계산 및 리포트 화면 동적 렌더링
+    function renderReportData() {
+      try {
+        const now = new Date();
+        let last;
+        if (lastVisitDate) {
+          const parts = String(lastVisitDate).split('-');
+          if (parts.length === 3) {
+            last = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+          } else {
+            last = new Date(lastVisitDate);
+          }
+        } else {
+          last = now;
+        }
+        if (isNaN(last.getTime())) last = now;
+        const d1 = new Date(last.getFullYear(), last.getMonth(), last.getDate());
+        const d2 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const diffDays = Math.max(1, Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1);
+        const fmt = (d) => `${d.getMonth() + 1}.${d.getDate()}`;
+
+        // 1. 진료 구간 텍스트 (지난 진료 ~ 오늘)
+        const periodEl = document.getElementById('periodText');
+        if (periodEl) {
+          if (d1.getTime() === d2.getTime() || (!moodRecords.length && !pillRecords.length && diffDays <= 1)) {
+            periodEl.textContent = `새 진료 주기 시작 · 오늘(${fmt(now)}) 1일차`;
+          } else {
+            periodEl.textContent = `지난 진료(${fmt(last)}) ~ 오늘(${fmt(now)}) · ${diffDays}일간`;
+          }
+        }
+
+        // 2. 평시(○) 유지율
+        const statEvenEl = document.getElementById('statEven');
+        if (statEvenEl) {
+          const durationStr = formatPeriodDuration(diffDays);
+          if (!moodRecords || moodRecords.length === 0) {
+            statEvenEl.textContent = `${durationStr} -`;
+          } else {
+            const evenCount = moodRecords.filter(m => m && m.score === 0).length;
+            const pct = Math.round((evenCount / moodRecords.length) * 100);
+            statEvenEl.textContent = `${durationStr} ${pct}%`;
+          }
+        }
+
+        // 3. 복약 일수 카드 표시 여부 (복약 기록 설정 연동)
+        const reportStatsCard = document.getElementById('reportStatsCard');
+        if (reportStatsCard) {
+          reportStatsCard.style.display = isMedicationEnabled ? 'block' : 'none';
+        }
+
+        const statMedEl = document.getElementById('statMed');
+        if (statMedEl) {
+          const uniqueDates = new Set(
+            (pillRecords || []).map(p => {
+              const t = (typeof p === 'string' ? p : p?.time) || '';
+              return t.slice(0, 10);
+            }).filter(Boolean)
+          ).size;
+          statMedEl.textContent = `${uniqueDates} / ${diffDays}일`;
+        }
+
+        // 4. 기분 궤적 곡선
+        const chartLabelEl = document.getElementById('chartLabel');
+        const chartPathEl = document.getElementById('chartPath');
+        const chartCircleEl = document.getElementById('chartCircle');
+
+        if (chartLabelEl) {
+          chartLabelEl.textContent = (!moodRecords || moodRecords.length === 0)
+            ? '기분 궤적 (기록 없음)'
+            : `${diffDays}일간 기분 궤적`;
+        }
+
+        if (chartPathEl && chartCircleEl) {
+          if (!moodRecords || moodRecords.length === 0) {
+            chartPathEl.setAttribute('d', 'M 10 45 L 250 45');
+            chartCircleEl.setAttribute('opacity', '0');
+          } else if (moodRecords.length === 1) {
+            const score = typeof moodRecords[0]?.score === 'number' ? moodRecords[0].score : 0;
+            const y = 45 - (score * 15);
+            chartPathEl.setAttribute('d', `M 10 ${y} L 250 ${y}`);
+            chartCircleEl.setAttribute('opacity', '1');
+            chartCircleEl.setAttribute('cx', '250');
+            chartCircleEl.setAttribute('cy', `${y}`);
+          } else {
+            const pts = moodRecords.map((m, idx) => {
+              const x = 10 + (idx / (moodRecords.length - 1)) * 240;
+              const score = typeof m?.score === 'number' && !isNaN(m.score) ? m.score : 0;
+              const y = 45 - (score * 15);
+              return { x, y };
+            });
+            let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+            for (let i = 0; i < pts.length - 1; i++) {
+              const p0 = pts[Math.max(0, i - 1)];
+              const p1 = pts[i];
+              const p2 = pts[i + 1];
+              const p3 = pts[Math.min(pts.length - 1, i + 2)];
+              const cp1x = p1.x + (p2.x - p0.x) / 6;
+              const cp1y = p1.y + (p2.y - p0.y) / 6;
+              const cp2x = p2.x - (p3.x - p1.x) / 6;
+              const cp2y = p2.y - (p3.y - p1.y) / 6;
+              d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+            }
+            chartPathEl.setAttribute('d', d);
+            const lastPt = pts[pts.length - 1];
+            chartCircleEl.setAttribute('opacity', '1');
+            chartCircleEl.setAttribute('cx', `${lastPt.x.toFixed(1)}`);
+            chartCircleEl.setAttribute('cy', `${lastPt.y.toFixed(1)}`);
+          }
+        }
+      } catch (err) {
+        console.warn('renderReportData error:', err);
+      }
+    }
+
+    // 14일간의 현실적인 기분 궤적/복약 샘플 데이터 자동 생성 (그래프 겹침 테스트용)
+    function fillSampleData() {
+      const now = new Date();
+      const start = new Date(now);
+      start.setDate(now.getDate() - 13);
+      lastVisitDate = start.toISOString().slice(0, 10);
+      try { localStorage.setItem('lifeguard_last_visit_date', lastVisitDate); } catch(e){}
+
+      // 현실적인 양극성장애 14일 기분 파동 궤적
+      const waveScores = [0, 1, 2, 1, 1, 0, 0, -1, -2, -1, -1, 0, 1, 0];
+      const symMap = { 2: '▲', 1: '△', 0: '○', '-1': '▽', '-2': '▼' };
+      moodRecords = waveScores.map((score, i) => {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        return { sym: symMap[score] || '○', score, time: d.toISOString() };
+      });
+      try { localStorage.setItem('lifeguard_mood_records', JSON.stringify(moodRecords)); } catch(e){}
+
+      // 14일 중 12일 복약 체크 (2일 미복약)
+      pillRecords = [];
+      for (let i = 0; i < 14; i++) {
+        if (i === 3 || i === 8) continue;
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        pillRecords.push({ time: d.toISOString() });
+      }
+      try { localStorage.setItem('lifeguard_pill_records', JSON.stringify(pillRecords)); } catch(e){}
+
+      // 2건의 한 줄 메모
+      doctorNotes = [
+        "진료 4일차 아침: 30분 정도 가벼운 무기력감 있었으나 호전됨",
+        "진료 10일차 저녁: 약 복용 후 1시간 뒤 약간의 나른함 느낌"
+      ];
+      try { localStorage.setItem('lifeguard_doctor_notes', JSON.stringify(doctorNotes)); } catch(e){}
+
+      renderDoctorNotes();
+      renderReportData();
+      showToast('14일간의 기분 궤적 샘플 데이터가 채워졌습니다! 📊');
+    }
+
+    function clearAllData() {
+      performDataReset();
+      showToast('모든 데이터가 비워졌습니다. 새로운 백지(0)에서 시작합니다. 🌿');
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toastMessage');
+      if (!toast) return;
+      toast.textContent = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-2');
+      toast.classList.add('opacity-100', 'pointer-events-auto', 'translate-y-0');
+      setTimeout(() => {
+        toast.classList.remove('opacity-100', 'pointer-events-auto', 'translate-y-0');
+        toast.classList.add('opacity-0', 'pointer-events-none', '-translate-y-2');
+      }, 3000);
+    }
+
+    // 글자 크기 3단계 조절 (1: 기본, 3: 크게, 5: 아주 크게)
+    let currentFontStep = (function() {
+      try {
+        const s = parseInt(localStorage.getItem('lifeguard_font_step'), 10);
+        if (s === 1 || s === 3 || s === 5) return s;
+      } catch (_) {}
+      return 1;
+    })();
+
+    function setFontStep(step) {
+      const normalized = (step === 3 || step === 5) ? step : 1;
+      currentFontStep = normalized;
+      try { localStorage.setItem('lifeguard_font_step', String(normalized)); } catch (_) {}
+
+      const screen = document.getElementById('phoneScreen');
+      if (screen) {
+        screen.setAttribute('data-font-step', String(normalized));
+      }
+
+      const effectiveTheme = getEffectiveTheme(currentTheme);
+      const fontTitle = document.getElementById('settingsFontTitle');
+      const liveBadge = document.getElementById('fontStepLiveBadge');
+      const labelMap = {
+        1: '1단계 (기본)',
+        3: '3단계 (크게)',
+        5: '5단계 (아주 크게)'
+      };
+
+      if (fontTitle) {
+        fontTitle.className = effectiveTheme === 'dark'
+          ? 'text-[#9ec0c4]'
+          : (effectiveTheme === 'neutral' ? 'text-[#455a5c]' : 'text-[#597075]');
+      }
+      if (liveBadge) {
+        liveBadge.textContent = labelMap[normalized] || '1단계 (기본)';
+        liveBadge.className = effectiveTheme === 'dark'
+          ? 'text-[10px] text-[#9ec0c4] bg-[#9ec0c4]/15 px-2 py-0.5 rounded-full font-semibold shrink-0'
+          : (effectiveTheme === 'neutral'
+            ? 'text-[10px] text-[#455a5c] bg-[#455a5c]/15 px-2 py-0.5 rounded-full font-semibold shrink-0'
+            : 'text-[10px] text-[#597075] bg-[#597075]/10 px-2 py-0.5 rounded-full font-semibold shrink-0');
+      }
+
+      [1, 3, 5].forEach(s => {
+        const btn = document.getElementById(`fontBtn-${s}`);
+        if (!btn) return;
+        const isActive = (s === normalized);
+        if (isActive) {
+          btn.className = effectiveTheme === 'dark'
+            ? 'border-2 border-[#9ec0c4] bg-[#9ec0c4]/15 text-[#9ec0c4] font-bold rounded-xl py-2 shadow-sm transition flex items-center justify-center cursor-pointer active:scale-95'
+            : (effectiveTheme === 'neutral'
+              ? 'border-2 border-[#455a5c] bg-[#455a5c]/15 text-[#455a5c] font-bold rounded-xl py-2 shadow-sm transition flex items-center justify-center cursor-pointer active:scale-95'
+              : 'border-2 border-[#597075] bg-[#597075]/15 text-[#597075] font-bold rounded-xl py-2 shadow-sm transition flex items-center justify-center cursor-pointer active:scale-95');
+        } else {
+          btn.className = effectiveTheme === 'dark'
+            ? 'border border-[#333a3d] bg-[#222628] text-white/60 rounded-xl py-2 font-medium hover:border-[#9ec0c4] transition flex items-center justify-center cursor-pointer active:scale-95'
+            : (effectiveTheme === 'neutral'
+              ? 'border border-[#dce2dc] bg-white/70 text-gray-700 rounded-xl py-2 font-medium hover:border-[#455a5c] transition flex items-center justify-center cursor-pointer active:scale-95'
+              : 'border border-gray-200 bg-white text-gray-700 rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center cursor-pointer active:scale-95');
+        }
+      });
+    }
+
+    // 4귀퉁이 화면 전체 색상 동적 적응 (시스템 연동, 순백, 한지 미색, 다크)
+    function setPreviewTheme(theme) {
+      currentTheme = theme;
+      try { localStorage.setItem('lifeguard_theme', theme); } catch (_) {}
+      const effectiveTheme = getEffectiveTheme(theme);
+
+      const settingsFillSampleBtn = document.getElementById('settingsFillSampleBtn');
+      const settingsClearDataBtn = document.getElementById('settingsClearDataBtn');
+
+      const screen = document.getElementById('phoneScreen');
+      const reportModal = document.getElementById('reportModal');
+      const reportTitle = document.getElementById('reportTitle');
+      const resetCycleBtn = document.getElementById('resetCycleBtn');
+      const reportCloseBtn = document.getElementById('reportCloseBtn');
+      const reportPeriodCard = document.getElementById('reportPeriodCard');
+      const periodLabel = document.getElementById('periodLabel');
+      const periodText = document.getElementById('periodText');
+      const reportStatsCard = document.getElementById('reportStatsCard');
+      const statEven = document.getElementById('statEven');
+      const statMed = document.getElementById('statMed');
+      const statBorder = document.getElementById('statBorder');
+      const reportChartCard = document.getElementById('reportChartCard');
+      const chartLabel = document.getElementById('chartLabel');
+      const chartPath = document.getElementById('chartPath');
+      const chartCircle = document.getElementById('chartCircle');
+      const reportMemoCard = document.getElementById('reportMemoCard');
+      const reportMemoTitle = document.getElementById('reportMemoTitle');
+      const reportFooterText = document.getElementById('reportFooterText');
+
+      const settingsModal = document.getElementById('settingsModal');
+      const settingsTitle = document.getElementById('settingsTitle');
+      const settingsCloseBtn = document.getElementById('settingsCloseBtn');
+      const settingsCard = document.getElementById('settingsPhilosophyCard');
+      const settingsPhilosophyTitle = document.getElementById('settingsPhilosophyTitle');
+      const settingsPatientCard = document.getElementById('settingsPatientCard');
+      const settingsPatientTitle = document.getElementById('settingsPatientTitle');
+      const settingsPatientNameInput = document.getElementById('settingsPatientNameInput');
+      const settingsMedCard = document.getElementById('settingsMedCard');
+      const settingsMedTitle = document.getElementById('settingsMedTitle');
+      const settingsMedDesc = document.getElementById('settingsMedDesc');
+      const settingsTouchTitle = document.getElementById('settingsTouchTitle');
+      const settingsThemeTitle = document.getElementById('settingsThemeTitle');
+      const settingsHelplineCard = document.getElementById('settingsHelplineCard');
+      const settingsHelplineHeader = document.getElementById('settingsHelplineHeader');
+      const settingsHelplineBadge = document.getElementById('settingsHelplineBadge');
+      const settingsHelplineItem = document.getElementById('settingsHelplineItem');
+      const settingsHelplineLabel = document.getElementById('settingsHelplineLabel');
+      const settingsHelplineNumber = document.getElementById('settingsHelplineNumber');
+      const settingsHelplineDesc = document.getElementById('settingsHelplineDesc');
+      const settingsVersion = document.getElementById('settingsVersion');
+
+      const themeBtnSystem = document.getElementById('themeBtn-system');
+      const checkThemeSystem = document.getElementById('check-theme-system');
+      const themeSystemLiveBadge = document.getElementById('themeSystemLiveBadge');
+      const themeBtnWhite = document.getElementById('themeBtn-white');
+      const themeBtnNeutral = document.getElementById('themeBtn-neutral');
+      const themeBtnDark = document.getElementById('themeBtn-dark');
+
+      const memoModal = document.getElementById('memoModal');
+      const memoInput = document.getElementById('memoInput');
+      const memoTitle = document.getElementById('memoTitle');
+      const peaceModal = document.getElementById('peaceModal');
+
+      const finishVisitCard = document.getElementById('finishVisitCard');
+      const finishVisitTitle = document.getElementById('finishVisitTitle');
+      const finishVisitDesc = document.getElementById('finishVisitDesc');
+      const finishVisitCancelBtn = document.getElementById('finishVisitCancelBtn');
+      const finishVisitConfirmBtn = document.getElementById('finishVisitConfirmBtn');
+      const finishVisitIconWrap = document.getElementById('finishVisitIconWrap');
+
+      const isSettingsOpen = settingsModal && !settingsModal.classList.contains('opacity-0') && !settingsModal.classList.contains('hidden');
+      const isReportOpen = reportModal && !reportModal.classList.contains('opacity-0') && !reportModal.classList.contains('hidden');
+      const isPeaceOpen = peaceModal && !peaceModal.classList.contains('opacity-0') && !peaceModal.classList.contains('hidden');
+      const isMemoOpen = memoModal && !memoModal.classList.contains('opacity-0') && !memoModal.classList.contains('hidden');
+
+      const settingsVis = isSettingsOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none hidden";
+      const reportVis = isReportOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none hidden";
+      const peaceVis = isPeaceOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none hidden";
+      const memoVis = isMemoOpen ? "opacity-100 pointer-events-auto translate-y-0" : "opacity-0 pointer-events-none transform translate-y-full hidden";
+
+      if (settingsModal) settingsModal.style.display = isSettingsOpen ? 'flex' : 'none';
+      if (reportModal) reportModal.style.display = isReportOpen ? 'flex' : 'none';
+      if (peaceModal) peaceModal.style.display = isPeaceOpen ? 'block' : 'none';
+      if (memoModal) memoModal.style.display = isMemoOpen ? 'block' : 'none';
+
+      // 시스템 연동 및 테마 버튼 상태 동기화
+      if (themeBtnSystem && checkThemeSystem) {
+        if (theme === 'system') {
+          themeBtnSystem.className = effectiveTheme === 'dark'
+            ? "w-full border-2 border-[#9ec0c4] bg-[#9ec0c4]/15 text-[#9ec0c4] rounded-xl p-2.5 text-left flex items-center justify-between transition"
+            : (effectiveTheme === 'neutral'
+              ? "w-full border-2 border-[#455a5c] bg-[#455a5c]/15 text-[#455a5c] rounded-xl p-2.5 text-left flex items-center justify-between transition"
+              : "w-full border-2 border-[#597075] bg-[#597075]/10 text-[#597075] rounded-xl p-2.5 text-left flex items-center justify-between transition");
+          checkThemeSystem.classList.remove('hidden');
+          if (themeSystemLiveBadge) themeSystemLiveBadge.textContent = effectiveTheme === 'dark' ? '현재: 다크 모드' : '현재: 라이트 모드';
+        } else {
+          themeBtnSystem.className = effectiveTheme === 'dark'
+            ? "w-full border border-[#333a3d] bg-[#222628] text-white/70 rounded-xl p-2.5 text-left flex items-center justify-between hover:border-[#9ec0c4] transition"
+            : (effectiveTheme === 'neutral'
+              ? "w-full border border-[#dce2dc] bg-white/70 text-gray-700 rounded-xl p-2.5 text-left flex items-center justify-between hover:border-[#455a5c] transition"
+              : "w-full border border-gray-200 bg-white/70 text-gray-700 rounded-xl p-2.5 text-left flex items-center justify-between hover:border-[#597075] transition");
+          checkThemeSystem.classList.add('hidden');
+          if (themeSystemLiveBadge) themeSystemLiveBadge.textContent = '수동 선택 중';
+        }
+      }
+
+      // 개별 3종 테마 버튼 스타일 (현재 선택된 테마 강조)
+      if (themeBtnWhite && themeBtnNeutral && themeBtnDark) {
+        // 1) 순백 버튼
+        if (theme === 'white') {
+          themeBtnWhite.className = "border-2 border-[#597075] bg-[#597075]/15 text-[#597075] font-bold rounded-xl py-2 shadow-sm transition flex items-center justify-center";
+        } else {
+          themeBtnWhite.className = effectiveTheme === 'dark'
+            ? "border border-[#333a3d] bg-[#222628] text-white/60 rounded-xl py-2 font-medium hover:border-[#9ec0c4] transition flex items-center justify-center"
+            : "border border-gray-200 bg-white text-gray-700 rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center";
+        }
+
+        // 2) 한지 미색 버튼
+        if (theme === 'neutral') {
+          themeBtnNeutral.className = "border-2 border-[#455a5c] bg-[#455a5c]/15 text-[#455a5c] font-bold rounded-xl py-2 shadow-sm transition flex items-center justify-center";
+        } else {
+          themeBtnNeutral.className = effectiveTheme === 'dark'
+            ? "border border-[#333a3d] bg-[#222628] text-white/60 rounded-xl py-2 font-medium hover:border-[#9ec0c4] transition flex items-center justify-center"
+            : "border border-gray-200 bg-[#ecefea] text-gray-700 rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center";
+        }
+
+        // 3) 다크 버튼
+        if (theme === 'dark') {
+          themeBtnDark.className = "border-2 border-[#9ec0c4] bg-[#2d3336] text-[#9ec0c4] font-bold rounded-xl py-2 shadow-sm transition flex items-center justify-center";
+        } else {
+          themeBtnDark.className = effectiveTheme === 'dark'
+            ? "border border-[#333a3d] bg-[#141718] text-white/70 rounded-xl py-2 font-medium hover:border-[#9ec0c4] transition flex items-center justify-center"
+            : "border border-gray-200 bg-[#141718] text-white rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center";
+        }
+      }
+
+      // 1. 다크 모드 (밤)
+      if (effectiveTheme === 'dark') {
+        screen.className = "w-[330px] h-[610px] bg-[#141718] text-[#9ec0c4] rounded-[36px] border border-[#333a3d] shadow-2xl p-5 flex flex-col justify-between relative overflow-hidden transition-colors duration-400 cursor-pointer";
+
+        // Report Modal Dark
+        reportModal.className = `absolute inset-0 bg-[#141718] text-white z-30 p-5 flex flex-col justify-between ${reportVis} transition-all duration-300 overflow-y-auto`;
+        if (reportTitle) reportTitle.className = "text-sm font-bold text-white flex items-center gap-1.5 min-w-0 flex-1";
+        if (resetCycleBtn) resetCycleBtn.className = "border border-[#9ec0c4]/40 bg-[#9ec0c4]/15 hover:bg-[#9ec0c4] hover:text-[#141718] text-[#9ec0c4] text-xs font-bold px-5 py-2.5 rounded-2xl transition inline-flex items-center gap-1.5 shadow-sm";
+        if (reportCloseBtn) reportCloseBtn.className = "text-xs text-white/50 hover:text-white p-1";
+        
+        // 지난 진료 구간 (연필 아이콘과 날짜 밀착)
+        if (reportPeriodCard) {
+          reportPeriodCard.className = "py-1 px-1 mb-2.5 text-xs flex items-center gap-1 transition-colors text-white cursor-pointer hover:opacity-80";
+          reportPeriodCard.style.backgroundColor = 'transparent';
+          reportPeriodCard.style.border = 'none';
+        }
+        if (periodText) periodText.className = "text-[#9ec0c4] font-semibold text-xs";
+
+        if (reportStatsCard) reportStatsCard.className = "bg-[#222628] rounded-xl p-2.5 shadow-sm border border-[#333a3d] mb-3 text-center transition-colors text-white";
+        if (statEven) statEven.className = "text-sm font-bold text-[#9ec0c4] mt-0.5";
+        if (statMed) statMed.className = "text-sm font-bold text-[#9ec0c4] mt-0.5";
+        if (statBorder) statBorder.className = "w-full";
+
+        if (reportChartCard) reportChartCard.className = "bg-[#222628] rounded-xl p-3 border border-[#333a3d] shadow-sm mb-3 transition-colors text-white";
+        if (chartLabel) chartLabel.className = "text-[#9ec0c4]";
+        if (chartPath) chartPath.setAttribute('stroke', '#9ec0c4');
+        if (chartCircle) chartCircle.setAttribute('fill', '#9ec0c4');
+
+        if (reportMemoCard) reportMemoCard.className = "bg-[#222628] rounded-xl p-3 border border-[#333a3d] shadow-sm text-xs transition-colors text-white";
+        if (reportMemoTitle) reportMemoTitle.className = "text-[11px] font-bold text-[#9ec0c4] flex items-center gap-1";
+        if (reportFooterText) reportFooterText.className = "text-[10px] text-center text-white/40 mt-2 leading-relaxed";
+
+        // Settings Modal Dark (완벽한 다크 조화)
+        settingsModal.className = `absolute inset-0 bg-[#141718] text-white z-30 p-5 flex flex-col justify-between ${settingsVis} transition-all duration-300 overflow-y-auto`;
+        if (settingsTitle) settingsTitle.className = "text-sm font-bold text-white";
+        if (settingsCloseBtn) settingsCloseBtn.className = "text-xs text-white/50 hover:text-white p-1";
+        if (settingsCard) settingsCard.className = "bg-[#222628] border border-[#333a3d] rounded-2xl p-3.5 mb-4 text-xs text-white/80 space-y-2 transition-colors";
+        if (settingsPhilosophyTitle) settingsPhilosophyTitle.className = "font-bold text-[#9ec0c4] text-[13px] flex items-center gap-1.5";
+        
+        // 환자 닉네임 섹션 다크 조화
+        if (settingsPatientCard) settingsPatientCard.className = "bg-[#222628] rounded-2xl p-3.5 mb-4 border border-[#333a3d] shadow-sm text-xs text-white/80 space-y-2 transition-colors";
+        if (settingsPatientTitle) settingsPatientTitle.className = "font-bold text-[#9ec0c4] text-[13px] flex items-center gap-1.5";
+        if (settingsPatientNameInput) settingsPatientNameInput.className = "w-full text-xs p-2.5 bg-[#191d1e] text-white rounded-xl outline-none border border-[#333a3d] focus:border-[#9ec0c4]/40";
+
+        // 복약 관리 섹션 다크 조화
+        if (settingsMedCard) settingsMedCard.className = "bg-[#222628] rounded-2xl p-3.5 mb-4 border border-[#333a3d] shadow-sm text-xs text-white/80 space-y-2 transition-colors";
+        if (settingsMedTitle) settingsMedTitle.className = "font-bold text-[#9ec0c4] text-[13px] flex items-center gap-1.5";
+        if (settingsMedDesc) settingsMedDesc.className = "leading-relaxed text-[11px] text-white/50";
+
+        if (settingsTouchTitle) settingsTouchTitle.className = "text-[#9ec0c4]";
+        if (settingsThemeTitle) settingsThemeTitle.className = "text-xs font-bold text-[#9ec0c4] mb-2 flex items-center justify-between gap-2";
+        if (settingsHelplineCard) settingsHelplineCard.className = "bg-[#222628] border border-[#333a3d] rounded-2xl p-3.5 mb-4 text-xs space-y-2 transition-colors";
+        if (settingsHelplineHeader) settingsHelplineHeader.className = "font-bold text-[#9ec0c4] text-[12.5px] flex items-center justify-between gap-2";
+        if (settingsHelplineBadge) settingsHelplineBadge.className = "text-[10px] text-[#9ec0c4] bg-[#9ec0c4]/15 px-2 py-0.5 rounded-full font-medium shrink-0 whitespace-nowrap";
+        if (settingsHelplineItem) settingsHelplineItem.className = "flex items-center justify-between bg-[#191d1e] rounded-xl px-3 py-2 border border-[#333a3d] shadow-sm hover:border-[#9ec0c4]/40 transition text-white";
+        if (settingsHelplineLabel) settingsHelplineLabel.className = "text-white/80 font-medium";
+        if (settingsHelplineNumber) settingsHelplineNumber.className = "font-bold text-[#9ec0c4] flex items-center gap-1";
+        if (settingsHelplineDesc) settingsHelplineDesc.className = "text-[10px] text-white/40 leading-relaxed text-center pt-0.5";
+        if (settingsVersion) settingsVersion.className = "text-center text-[10px] text-white/30";
+
+        // Memo Modal Dark
+        memoModal.className = `absolute inset-x-0 bottom-0 bg-[#222628] text-white rounded-t-3xl shadow-2xl p-5 z-40 ${memoVis} border-t border-[#333a3d]`;
+        memoInput.className = "w-full text-xs p-2.5 bg-[#191d1e] text-white rounded-xl outline-none border border-[#333a3d] focus:border-[#9ec0c4]/40";
+        if (memoTitle) memoTitle.className = "text-xs font-bold text-[#9ec0c4]";
+        const memoDragHandleDark = document.getElementById('memoDragHandle');
+        if (memoDragHandleDark) memoDragHandleDark.className = "w-9 h-1 bg-white/20 rounded-full mx-auto mb-3";
+
+        // Finish Visit Modal Dark
+        if (finishVisitCard) finishVisitCard.className = "bg-[#222628] text-white rounded-3xl p-5 shadow-2xl w-full max-w-[270px] text-center transform scale-95 transition-all duration-200 border border-[#333a3d]";
+        if (finishVisitIconWrap) finishVisitIconWrap.className = "w-11 h-11 mx-auto mb-3 rounded-full bg-[#9ec0c4]/15 flex items-center justify-center text-[#9ec0c4] text-lg font-bold";
+        if (finishVisitTitle) finishVisitTitle.className = "text-sm font-bold text-[#9ec0c4] mb-2";
+        if (finishVisitDesc) finishVisitDesc.className = "text-[11px] text-white/80 leading-relaxed mb-4";
+        if (finishVisitCancelBtn) finishVisitCancelBtn.className = "flex-1 py-2.5 rounded-xl border border-[#333a3d] text-xs text-white/60 font-medium hover:bg-white/5 active:scale-95 transition cursor-pointer";
+        if (finishVisitConfirmBtn) finishVisitConfirmBtn.className = "flex-1 py-2.5 rounded-xl bg-[#9ec0c4] text-xs text-[#141718] font-bold hover:bg-[#8dafb3] active:scale-95 transition shadow-sm cursor-pointer";
+
+        peaceModal.className = `absolute inset-0 bg-[#141718] text-white z-30 p-5 overflow-hidden cursor-pointer select-none ${peaceVis} transition-opacity duration-300`;
+      } 
+      // 2. 중간톤 (한지 미색)
+      else if (effectiveTheme === 'neutral') {
+        screen.className = "w-[330px] h-[610px] bg-[#ecefea] text-[#455a5c] rounded-[36px] border border-[#d6dcde] shadow-2xl p-5 flex flex-col justify-between relative overflow-hidden transition-colors duration-400 cursor-pointer";
+
+        reportModal.className = `absolute inset-0 bg-[#ecefea] text-[#2c3e40] z-30 p-5 flex flex-col justify-between ${reportVis} transition-all duration-300 overflow-y-auto`;
+        if (reportTitle) reportTitle.className = "text-sm font-bold text-[#455a5c] flex items-center gap-1.5 min-w-0 flex-1";
+        if (resetCycleBtn) resetCycleBtn.className = "border border-[#455a5c]/40 bg-[#455a5c]/10 hover:bg-[#455a5c] hover:text-white text-[#455a5c] text-xs font-bold px-5 py-2.5 rounded-2xl transition inline-flex items-center gap-1.5 shadow-sm";
+        if (reportCloseBtn) reportCloseBtn.className = "text-xs text-gray-400 hover:text-gray-700 p-1";
+
+        if (reportPeriodCard) {
+          reportPeriodCard.className = "py-1 px-1 mb-2.5 text-xs flex items-center gap-1 transition-colors text-[#455a5c] cursor-pointer hover:opacity-80";
+          reportPeriodCard.style.backgroundColor = 'transparent';
+          reportPeriodCard.style.border = 'none';
+        }
+        if (periodText) periodText.className = "text-[#455a5c] font-semibold text-xs";
+
+        if (reportStatsCard) reportStatsCard.className = "bg-white/80 rounded-xl p-2.5 shadow-sm border border-[#dce2dc] mb-3 text-center transition-colors";
+        if (statEven) statEven.className = "text-sm font-bold text-[#455a5c] mt-0.5";
+        if (statMed) statMed.className = "text-sm font-bold text-[#455a5c] mt-0.5";
+        if (statBorder) statBorder.className = "w-full";
+
+        if (reportChartCard) reportChartCard.className = "bg-white/80 rounded-xl p-3 border border-[#dce2dc] shadow-sm mb-3 transition-colors";
+        if (chartLabel) chartLabel.className = "text-[#455a5c]";
+        if (chartPath) chartPath.setAttribute('stroke', '#455a5c');
+        if (chartCircle) chartCircle.setAttribute('fill', '#455a5c');
+
+        if (reportMemoCard) reportMemoCard.className = "bg-white/80 rounded-xl p-3 border border-[#dce2dc] shadow-sm text-xs transition-colors";
+        if (reportMemoTitle) reportMemoTitle.className = "text-[11px] font-bold text-[#455a5c] flex items-center gap-1";
+        if (reportFooterText) reportFooterText.className = "text-[10px] text-center text-gray-400 mt-2 leading-relaxed";
+
+        settingsModal.className = `absolute inset-0 bg-[#ecefea] text-[#2c3e40] z-30 p-5 flex flex-col justify-between ${settingsVis} transition-all duration-300 overflow-y-auto`;
+        if (settingsTitle) settingsTitle.className = "text-sm font-bold text-[#455a5c]";
+        if (settingsCloseBtn) settingsCloseBtn.className = "text-xs text-gray-400 hover:text-gray-700 p-1";
+        if (settingsCard) settingsCard.className = "bg-white/70 border border-[#dce2dc] rounded-2xl p-3.5 mb-4 text-xs text-gray-700 space-y-2 transition-colors";
+        if (settingsPhilosophyTitle) settingsPhilosophyTitle.className = "font-bold text-[#455a5c] text-[13px] flex items-center gap-1.5";
+
+        if (settingsPatientCard) settingsPatientCard.className = "bg-white/70 rounded-2xl p-3.5 mb-4 border border-[#dce2dc] shadow-sm text-xs text-gray-700 space-y-2 transition-colors";
+        if (settingsPatientTitle) settingsPatientTitle.className = "font-bold text-[#455a5c] text-[13px] flex items-center gap-1.5";
+        if (settingsPatientNameInput) settingsPatientNameInput.className = "w-full text-xs p-2.5 bg-white text-gray-800 rounded-xl outline-none border border-[#dce2dc] focus:border-[#455a5c]/40";
+
+        if (settingsMedCard) settingsMedCard.className = "bg-white/70 rounded-2xl p-3.5 mb-4 border border-[#dce2dc] shadow-sm text-xs text-gray-700 space-y-2 transition-colors";
+        if (settingsMedTitle) settingsMedTitle.className = "font-bold text-[#455a5c] text-[13px] flex items-center gap-1.5";
+        if (settingsMedDesc) settingsMedDesc.className = "leading-relaxed text-[11px] text-gray-500";
+
+        if (settingsTouchTitle) settingsTouchTitle.className = "text-[#455a5c]";
+        if (settingsThemeTitle) settingsThemeTitle.className = "text-xs font-bold text-[#455a5c] mb-2 flex items-center justify-between gap-2";
+        if (settingsHelplineCard) settingsHelplineCard.className = "bg-white/70 border border-[#dce2dc] rounded-2xl p-3.5 mb-4 text-xs space-y-2 transition-colors";
+        if (settingsHelplineHeader) settingsHelplineHeader.className = "font-bold text-[#455a5c] text-[12.5px] flex items-center justify-between gap-2";
+        if (settingsHelplineBadge) settingsHelplineBadge.className = "text-[10px] text-[#455a5c] bg-[#455a5c]/15 px-2 py-0.5 rounded-full font-medium shrink-0 whitespace-nowrap";
+        if (settingsHelplineItem) settingsHelplineItem.className = "flex items-center justify-between bg-white rounded-xl px-3 py-2 border border-[#dce2dc] shadow-sm hover:border-[#455a5c]/40 transition text-gray-700";
+        if (settingsHelplineLabel) settingsHelplineLabel.className = "text-gray-700 font-medium";
+        if (settingsHelplineNumber) settingsHelplineNumber.className = "font-bold text-[#455a5c] flex items-center gap-1";
+        if (settingsHelplineDesc) settingsHelplineDesc.className = "text-[10px] text-gray-400 leading-relaxed text-center pt-0.5";
+        if (settingsVersion) settingsVersion.className = "text-center text-[10px] text-gray-400";
+
+        memoModal.className = `absolute inset-x-0 bottom-0 bg-[#f4f7f2] text-[#2c3e40] rounded-t-3xl shadow-2xl p-5 z-40 ${memoVis} border-t border-[#dce2dc]`;
+        memoInput.className = "w-full text-xs p-2.5 bg-white text-gray-800 rounded-xl outline-none border border-transparent focus:border-[#4e6365]/40";
+        if (memoTitle) memoTitle.className = "text-xs font-bold text-[#455a5c]";
+        const memoDragHandleNeutral = document.getElementById('memoDragHandle');
+        if (memoDragHandleNeutral) memoDragHandleNeutral.className = "w-9 h-1 bg-black/15 rounded-full mx-auto mb-3";
+
+        if (finishVisitCard) finishVisitCard.className = "bg-[#f4f7f2] text-[#2c3e40] rounded-3xl p-5 shadow-2xl w-full max-w-[270px] text-center transform scale-95 transition-all duration-200 border border-[#dce2dc]";
+        if (finishVisitIconWrap) finishVisitIconWrap.className = "w-11 h-11 mx-auto mb-3 rounded-full bg-[#455a5c]/10 flex items-center justify-center text-[#455a5c] text-lg font-bold";
+        if (finishVisitTitle) finishVisitTitle.className = "text-sm font-bold text-[#455a5c] mb-2";
+        if (finishVisitDesc) finishVisitDesc.className = "text-[11px] text-gray-600 leading-relaxed mb-4";
+        if (finishVisitCancelBtn) finishVisitCancelBtn.className = "flex-1 py-2.5 rounded-xl border border-[#dce2dc] text-xs text-gray-500 font-medium hover:bg-black/5 active:scale-95 transition cursor-pointer";
+        if (finishVisitConfirmBtn) finishVisitConfirmBtn.className = "flex-1 py-2.5 rounded-xl bg-[#455a5c] text-xs text-white font-bold hover:bg-[#344648] active:scale-95 transition shadow-sm cursor-pointer";
+
+        peaceModal.className = `absolute inset-0 bg-[#1b2321] text-white z-30 p-5 overflow-hidden cursor-pointer select-none ${peaceVis} transition-opacity duration-300`;
+      } 
+      // 3. 순백 (기본)
+      else {
+        screen.className = "w-[330px] h-[610px] bg-[#fbfcfc] text-[#597075] rounded-[36px] border border-[#e5e9ea] shadow-2xl p-5 flex flex-col justify-between relative overflow-hidden transition-colors duration-400 cursor-pointer";
+
+        reportModal.className = `absolute inset-0 bg-[#fbfcfc] text-[#2c3e40] z-30 p-5 flex flex-col justify-between ${reportVis} transition-all duration-300 overflow-y-auto`;
+        if (reportTitle) reportTitle.className = "text-sm font-bold text-[#597075] flex items-center gap-1.5 min-w-0 flex-1";
+        if (resetCycleBtn) resetCycleBtn.className = "border border-[#597075]/40 bg-[#597075]/10 hover:bg-[#597075] hover:text-white text-[#597075] text-xs font-bold px-5 py-2.5 rounded-2xl transition inline-flex items-center gap-1.5 shadow-sm";
+        if (reportCloseBtn) reportCloseBtn.className = "text-xs text-gray-400 hover:text-gray-700 p-1";
+
+        if (reportPeriodCard) {
+          reportPeriodCard.className = "py-1 px-1 mb-2.5 text-xs flex items-center gap-1 transition-colors text-[#597075] cursor-pointer hover:opacity-80";
+          reportPeriodCard.style.backgroundColor = 'transparent';
+          reportPeriodCard.style.border = 'none';
+        }
+        if (periodText) periodText.className = "text-[#597075] font-semibold text-xs";
+
+        if (reportStatsCard) reportStatsCard.className = "bg-white rounded-xl p-2.5 shadow-sm border border-gray-100 mb-3 text-center transition-colors";
+        if (statEven) statEven.className = "text-sm font-bold text-[#597075] mt-0.5";
+        if (statMed) statMed.className = "text-sm font-bold text-[#597075] mt-0.5";
+        if (statBorder) statBorder.className = "w-full";
+
+        if (reportChartCard) reportChartCard.className = "bg-white rounded-xl p-3 border border-gray-100 shadow-sm mb-3 transition-colors";
+        if (chartLabel) chartLabel.className = "text-[#597075]";
+        if (chartPath) chartPath.setAttribute('stroke', '#597075');
+        if (chartCircle) chartCircle.setAttribute('fill', '#597075');
+
+        if (reportMemoCard) reportMemoCard.className = "bg-white rounded-xl p-3 border border-gray-100 shadow-sm text-xs transition-colors";
+        if (reportMemoTitle) reportMemoTitle.className = "text-[11px] font-bold text-[#597075] flex items-center gap-1";
+        if (reportFooterText) reportFooterText.className = "text-[10px] text-center text-gray-400 mt-2 leading-relaxed";
+
+        settingsModal.className = `absolute inset-0 bg-[#fbfcfc] text-[#2c3e40] z-30 p-5 flex flex-col justify-between ${settingsVis} transition-all duration-300 overflow-y-auto`;
+        if (settingsTitle) settingsTitle.className = "text-sm font-bold text-[#597075]";
+        if (settingsCloseBtn) settingsCloseBtn.className = "text-xs text-gray-400 hover:text-gray-700 p-1";
+        if (settingsCard) settingsCard.className = "bg-[#597075]/10 rounded-2xl p-3.5 mb-4 text-xs text-gray-700 space-y-2 transition-colors";
+        if (settingsPhilosophyTitle) settingsPhilosophyTitle.className = "font-bold text-[#597075] text-[13px] flex items-center gap-1.5";
+
+        if (settingsPatientCard) settingsPatientCard.className = "bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2 transition-colors";
+        if (settingsPatientTitle) settingsPatientTitle.className = "font-bold text-[#597075] text-[13px] flex items-center gap-1.5";
+        if (settingsPatientNameInput) settingsPatientNameInput.className = "w-full text-xs p-2.5 bg-[#f4f7f8] rounded-xl outline-none border border-transparent focus:border-[#597075]/40 text-gray-700";
+
+        if (settingsMedCard) settingsMedCard.className = "bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2 transition-colors";
+        if (settingsMedTitle) settingsMedTitle.className = "font-bold text-[#597075] text-[13px] flex items-center gap-1.5";
+        if (settingsMedDesc) settingsMedDesc.className = "leading-relaxed text-[11px] text-gray-500";
+
+        if (settingsTouchTitle) settingsTouchTitle.className = "text-[#597075]";
+        if (settingsThemeTitle) settingsThemeTitle.className = "text-xs font-bold text-[#597075] mb-2 flex items-center justify-between gap-2";
+        if (settingsHelplineCard) settingsHelplineCard.className = "bg-[#597075]/10 rounded-2xl p-3.5 mb-4 text-xs space-y-2 transition-colors";
+        if (settingsHelplineHeader) settingsHelplineHeader.className = "font-bold text-[#597075] text-[12.5px] flex items-center justify-between gap-2";
+        if (settingsHelplineBadge) settingsHelplineBadge.className = "text-[10px] text-[#597075] bg-[#597075]/15 px-2 py-0.5 rounded-full font-medium shrink-0 whitespace-nowrap";
+        if (settingsHelplineItem) settingsHelplineItem.className = "flex items-center justify-between bg-white rounded-xl px-3 py-2 border border-gray-100 shadow-sm hover:border-[#597075]/40 transition text-gray-700";
+        if (settingsHelplineLabel) settingsHelplineLabel.className = "text-gray-700 font-medium";
+        if (settingsHelplineNumber) settingsHelplineNumber.className = "font-bold text-[#597075] flex items-center gap-1";
+        if (settingsHelplineDesc) settingsHelplineDesc.className = "text-[10px] text-gray-400 leading-relaxed text-center pt-0.5";
+        if (settingsVersion) settingsVersion.className = "text-center text-[10px] text-gray-400";
+
+        memoModal.className = `absolute inset-x-0 bottom-0 bg-white text-[#2c3e40] rounded-t-3xl shadow-2xl p-5 z-40 ${memoVis}`;
+        memoInput.className = "w-full text-xs p-2.5 bg-[#f4f7f8] text-gray-700 rounded-xl outline-none border border-transparent focus:border-[#597075]/40";
+        if (memoTitle) memoTitle.className = "text-xs font-bold text-[#597075]";
+        const memoDragHandleWhite = document.getElementById('memoDragHandle');
+        if (memoDragHandleWhite) memoDragHandleWhite.className = "w-9 h-1 bg-gray-300 rounded-full mx-auto mb-3 opacity-60";
+
+        if (finishVisitCard) finishVisitCard.className = "bg-white rounded-3xl p-5 shadow-2xl w-full max-w-[270px] text-center transform scale-95 transition-all duration-200 border border-gray-100";
+        if (finishVisitIconWrap) finishVisitIconWrap.className = "w-11 h-11 mx-auto mb-3 rounded-full bg-[#597075]/10 flex items-center justify-center text-[#597075] text-lg font-bold";
+        if (finishVisitTitle) finishVisitTitle.className = "text-sm font-bold text-[#597075] mb-2";
+        if (finishVisitDesc) finishVisitDesc.className = "text-[11px] text-gray-600 leading-relaxed mb-4";
+        if (finishVisitCancelBtn) finishVisitCancelBtn.className = "flex-1 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-500 font-medium hover:bg-gray-50 active:scale-95 transition cursor-pointer";
+        if (finishVisitConfirmBtn) finishVisitConfirmBtn.className = "flex-1 py-2.5 rounded-xl bg-[#597075] text-xs text-white font-bold hover:bg-[#485c60] active:scale-95 transition shadow-sm cursor-pointer";
+
+        peaceModal.className = `absolute inset-0 bg-[#141718] text-white z-30 p-5 overflow-hidden cursor-pointer select-none ${peaceVis} transition-opacity duration-300`;
+      }
+
+      if (settingsFillSampleBtn && settingsClearDataBtn) {
+        if (effectiveTheme === 'dark') {
+          settingsFillSampleBtn.className = "py-2 px-2.5 rounded-xl bg-[#9ec0c4]/15 border border-[#9ec0c4]/30 hover:bg-[#9ec0c4]/25 text-[#9ec0c4] text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95";
+          settingsClearDataBtn.className = "py-2 px-2.5 rounded-xl border border-[#333a3d] bg-[#222628] hover:bg-white/5 text-white/70 text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95";
+        } else if (effectiveTheme === 'neutral') {
+          settingsFillSampleBtn.className = "py-2 px-2.5 rounded-xl bg-[#455a5c]/10 border border-[#455a5c]/20 hover:bg-[#455a5c]/20 text-[#455a5c] text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95";
+          settingsClearDataBtn.className = "py-2 px-2.5 rounded-xl border border-[#dce2dc] bg-white/70 hover:bg-white text-gray-600 text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95";
+        } else {
+          settingsFillSampleBtn.className = "py-2 px-2.5 rounded-xl bg-[#597075]/10 hover:bg-[#597075]/20 text-[#597075] text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95";
+          settingsClearDataBtn.className = "py-2 px-2.5 rounded-xl border border-gray-200 bg-white/60 hover:bg-gray-100 text-gray-600 text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95";
+        }
+      }
+
+      // 테마 변경 시 메모 카드 및 터치 효과, 글자 크기 버튼, 시스템 상태바 실시간 동기화
+      syncSystemThemeColor(isPeaceOpen);
+      renderDoctorNotes();
+      setTouchStyle(currentTouchStyle);
+      setFontStep(currentFontStep);
+      updateMedicationSettingUI();
+      updateAlarmSettingUI();
+    }
+
+    window.handleAndroidBackButton = function() {
+      const isOpen = (id) => {
+        const el = document.getElementById(id);
+        return el && !el.classList.contains('opacity-0') && !el.classList.contains('hidden') && el.style.display !== 'none';
+      };
+      if (isOpen('dailyCheckinModal')) { closeDailyCheckinModal(); return true; }
+      if (isOpen('finishVisitModal')) { closeFinishVisitModal(); return true; }
+      if (isOpen('memoModal')) { saveAndCloseMemo(); return true; }
+      if (isOpen('peaceModal')) { closePeaceModal(); return true; }
+      if (isOpen('settingsModal')) { closeSettingsModal(); return true; }
+      if (isOpen('reportModal')) { closeReportModal(); return true; }
+      if (moodVisible || pillVisible) { hideControls(); return true; }
+      return false;
+    };
+
+    if (window.matchMedia) {
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+        if (currentTheme === 'system') {
+          setPreviewTheme('system');
+        }
+      });
+    }
+    window.addEventListener('resize', () => {
+      const peaceModal = document.getElementById('peaceModal');
+      const isPeaceOpen = peaceModal && !peaceModal.classList.contains('opacity-0') && !peaceModal.classList.contains('hidden');
+      syncSystemThemeColor(isPeaceOpen);
+    });
+
+    // 초기화 시 저장된 테마 또는 시스템 설정 연동(다크/라이트 모드 자동 감지) 기본 적용
+    window.addEventListener('DOMContentLoaded', () => {
+      let savedTheme = 'system';
+      try {
+        const t = localStorage.getItem('lifeguard_theme');
+        if (t && ['system', 'white', 'neutral', 'dark'].includes(t)) savedTheme = t;
+      } catch (_) {}
+      setPreviewTheme(savedTheme);
+      checkIosGuide();
+      updatePatientNameSim(patientName);
+      renderDoctorNotes();
+      renderReportData();
+      updateAlarmSettingUI();
+      syncAlarmWithNative();
+
+      // URL 파라미터(?checkin=1)로 진입 시 데일리요 스타일 기분 선택창 자동 오픈
+      try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('checkin') === '1') {
+          setTimeout(() => openDailyCheckinModal(false), 300);
+        }
+      } catch (_) {}
+
+      // 앱/웹 화면이 열려 있는 동안 지정 시각(예: 18:00) 도달 시 하루 1회 자동 기분 선택창 팝업
+      setInterval(() => {
+        if (!isAlarmEnabled) return;
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        const curHm = `${hh}:${mm}`;
+        if (curHm === alarmTime) {
+          const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}@${alarmTime}`;
+          try {
+            if (localStorage.getItem('lifeguard_last_auto_checkin') !== todayKey) {
+              localStorage.setItem('lifeguard_last_auto_checkin', todayKey);
+              openDailyCheckinModal(false);
+            }
+          } catch (_) {}
+        }
+      }, 20000);
+    });
+  </script>
+</body>
+</html>
