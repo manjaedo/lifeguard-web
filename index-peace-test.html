@@ -158,7 +158,7 @@
     }
     /* 색 동그라미 (구명튜브 장면 고르기) */
     .scene-dot { flex: 1; height: 40px; display: flex; align-items: center; justify-content: center; background: transparent; border: 0; padding: 0; cursor: pointer; }
-    .scene-dot span { display: block; width: 15px; height: 15px; border-radius: 9999px; opacity: 0.4; transition: all 0.35s ease; }
+    .scene-dot span { display: block; width: 15px; height: 15px; border-radius: 9999px; opacity: 0.65; transition: all 0.35s ease; }
     .scene-dot.on span { width: 22px; height: 22px; opacity: 1; box-shadow: 0 0 0 2px #141718, 0 0 0 3.5px rgba(255,255,255,0.5); }
     /* 새 장면들의 느린 움직임 */
     @keyframes sunSink { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(9px); } }
@@ -702,12 +702,12 @@
         <!-- 빨주노초파남보 색 동그라미로 장면 고르기 -->
         <div id="peaceSceneTabs" class="flex items-center justify-between mt-2 pointer-events-auto">
           <button type="button" onclick="selectPeaceScene(0, event)" id="sceneTab-0" class="scene-dot" aria-label="해 질 녘 노을"><span style="background:#d98a72;"></span></button>
-          <button type="button" onclick="selectPeaceScene(1, event)" id="sceneTab-1" class="scene-dot" aria-label="숲과 윈드차임"><span style="background:#e9a35f;"></span></button>
+          <button type="button" onclick="selectPeaceScene(1, event)" id="sceneTab-1" class="scene-dot" aria-label="윈드차임"><span style="background:#e9a35f;"></span></button>
           <button type="button" onclick="selectPeaceScene(2, event)" id="sceneTab-2" class="scene-dot" aria-label="봄 아침 개나리"><span style="background:#f2d16b;"></span></button>
           <button type="button" onclick="selectPeaceScene(3, event)" id="sceneTab-3" class="scene-dot" aria-label="오월의 숲"><span style="background:#a8d672;"></span></button>
           <button type="button" onclick="selectPeaceScene(4, event)" id="sceneTab-4" class="scene-dot" aria-label="맑은 하늘"><span style="background:#8cc8ec;"></span></button>
           <button type="button" onclick="selectPeaceScene(5, event)" id="sceneTab-5" class="scene-dot" aria-label="해변의 파도"><span style="background:#7d8ad6;"></span></button>
-          <button type="button" onclick="selectPeaceScene(6, event)" id="sceneTab-6" class="scene-dot" aria-label="벨벳 앰비언트"><span style="background:#ad94ea;"></span></button>
+          <button type="button" onclick="selectPeaceScene(6, event)" id="sceneTab-6" class="scene-dot" aria-label="포근한 화음"><span style="background:#ad94ea;"></span></button>
           <span aria-hidden="true" style="width:1px;height:16px;background:rgba(255,255,255,0.15);margin:0 2px;"></span>
           <button type="button" onclick="selectPeaceScene(7, event)" id="sceneTab-7" class="scene-dot" aria-label="모닥불 (번외)"><span style="background:#e0884a;"></span></button>
           <button type="button" onclick="selectPeaceScene(8, event)" id="sceneTab-8" class="scene-dot" aria-label="단풍길 (번외)"><span style="background:#c9624a;"></span></button>
@@ -1225,7 +1225,9 @@
         const gen = soundGen;
         currentSceneBus = audioCtx.createGain();
         currentSceneBus.gain.setValueAtTime(0.0001, now);
-        currentSceneBus.gain.exponentialRampToValueAtTime(1, now + 1.8);
+        // 장면마다 들리는 크기가 비슷하도록 맞춘 값
+        const sceneLevel = ({ sunset: 0.85, chime: 1.7, spring: 2.8, forest: 2.2, sky: 1.25, wave: 0.7, velvet: 1, fire: 1.65, maple: 5 })[kind] || 1;
+        currentSceneBus.gain.exponentialRampToValueAtTime(sceneLevel, now + 1.8);
         currentSceneBus.connect(peaceAudioTarget || audioCtx.destination);
         // 소리 크기나 높이를 아주 천천히 출렁이게 하는 도우미
         const addLfo = (param, rate, depth) => {
@@ -1302,7 +1304,7 @@
 
             if (breathCount === nextBowlAt) {
               const delayMs = Math.random() * 1500;
-              const strength = 0.7 + Math.random() * 0.45;
+              const strength = 0.55 + Math.random() * 0.35;
               meditationIntervals.push(setTimeout(() => {
                 if (gen === soundGen) strikeTibetanBowl(340, strength);
               }, delayMs));
@@ -1355,6 +1357,15 @@
             osc1.start(now);
             osc2.start(now);
             meditationActiveNodes.push(osc1, osc2, g, sawFilter);
+          });
+
+          // 폰 스피커에서도 들리도록 아주 옅은 높은 음 둘
+          [523.25, 659.25].forEach((f, i) => {
+            const o = audioCtx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(f, now);
+            const g = audioCtx.createGain(); g.gain.setValueAtTime(0.022, now);
+            addLfo(g.gain, 0.06 + i * 0.027, 0.014);
+            o.connect(g); g.connect(padMasterGain); o.start(now);
+            meditationActiveNodes.push(o, g);
           });
 
           function pulsePad() {
@@ -1425,11 +1436,11 @@
               if (gen !== soundGen || !audioCtx || !isSoundOn) return;
               const w = windStrength();
               if (Math.random() < 0.3 + 0.65 * w) {
-                ringBell(pickPitch(), 0.09 + 0.09 * w, 3.6);
+                ringBell(pickPitch(), 0.06 + 0.06 * w, 3.6);
                 // 바람이 셀 때만 가끔 한 번 더, 더 작게
                 if (w > 0.7 && Math.random() < 0.35) {
                   meditationIntervals.push(setTimeout(() => {
-                    if (gen === soundGen) ringBell(pickPitch(), 0.05 + 0.05 * w, 3.2);
+                    if (gen === soundGen) ringBell(pickPitch(), 0.035 + 0.035 * w, 3.2);
                   }, 350 + Math.random() * 450));
                 }
               }
@@ -1444,13 +1455,14 @@
           const wf = audioCtx.createBiquadFilter(); wf.type = 'lowpass'; wf.frequency.setValueAtTime(300, now);
           const wg = audioCtx.createGain(); wg.gain.setValueAtTime(0.08, now);
           noiseSrc(0.7).connect(wf); wf.connect(wg); wg.connect(sceneOut());
-          const cf = audioCtx.createBiquadFilter(); cf.type = 'lowpass'; cf.frequency.setValueAtTime(700, now);
+          const cf = audioCtx.createBiquadFilter(); cf.type = 'lowpass'; cf.frequency.setValueAtTime(900, now);
           const cg = audioCtx.createGain(); cg.gain.setValueAtTime(0.09, now);
           cf.connect(cg); cg.connect(sceneOut());
           meditationActiveNodes.push(wf, wg, cf, cg);
-          [110.00, 164.81, 220.00, 277.18].forEach((f, i) => {
+          [110.00, 164.81, 220.00, 277.18, 329.63, 440.00].forEach((f, i) => {
             const o = audioCtx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(f, now);
             const g = audioCtx.createGain(); g.gain.setValueAtTime(0.32 / (i + 1), now);
+            addLfo(g.gain, 0.035 + i * 0.019, 0.16 / (i + 1)); // 음마다 다른 빠르기로 천천히 떠올랐다 가라앉는다
             o.connect(g); g.connect(cf); o.start(now);
             meditationActiveNodes.push(o, g);
           });
@@ -1459,7 +1471,7 @@
             const t = audioCtx.currentTime;
             [wg.gain, wf.frequency, cg.gain].forEach(p => p.cancelScheduledValues(t));
             wg.gain.setValueAtTime(0.06, t); wg.gain.linearRampToValueAtTime(0.16, t + 4); wg.gain.linearRampToValueAtTime(0.06, t + 8);
-            wf.frequency.setValueAtTime(260, t); wf.frequency.linearRampToValueAtTime(480, t + 4); wf.frequency.linearRampToValueAtTime(260, t + 8);
+            wf.frequency.setValueAtTime(380, t); wf.frequency.linearRampToValueAtTime(700, t + 4); wf.frequency.linearRampToValueAtTime(380, t + 8);
             cg.gain.setValueAtTime(0.08, t); cg.gain.linearRampToValueAtTime(0.14, t + 4); cg.gain.linearRampToValueAtTime(0.08, t + 8);
           }
           breatheSunset();
@@ -1478,11 +1490,18 @@
             o.connect(g); g.connect(bf); o.start(now);
             meditationActiveNodes.push(o, g);
           });
+          // 봄 아침의 옅은 공기 소리
+          const airF = audioCtx.createBiquadFilter(); airF.type = 'bandpass'; airF.frequency.setValueAtTime(900, now); airF.Q.setValueAtTime(0.5, now);
+          const airG = audioCtx.createGain(); airG.gain.setValueAtTime(0.05, now);
+          noiseSrc(3.1).connect(airF); airF.connect(airG); airG.connect(sceneOut());
+          meditationActiveNodes.push(airF, airG);
           function breatheBed() {
             if (gen !== soundGen || !audioCtx || !isSoundOn) return;
             const t = audioCtx.currentTime;
             bg.gain.cancelScheduledValues(t);
-            bg.gain.setValueAtTime(0.05, t); bg.gain.linearRampToValueAtTime(0.09, t + 4); bg.gain.linearRampToValueAtTime(0.05, t + 8);
+            bg.gain.setValueAtTime(0.018, t); bg.gain.linearRampToValueAtTime(0.035, t + 4); bg.gain.linearRampToValueAtTime(0.018, t + 8);
+            airG.gain.cancelScheduledValues(t);
+            airG.gain.setValueAtTime(0.05, t); airG.gain.linearRampToValueAtTime(0.1, t + 4); airG.gain.linearRampToValueAtTime(0.05, t + 8);
           }
           breatheBed();
           meditationIntervals.push(setInterval(breatheBed, 8000));
@@ -1512,7 +1531,7 @@
             const t = audioCtx.currentTime + 0.05;
             const base = 2600 + Math.random() * 1200;
             const n = 2 + Math.floor(Math.random() * 3);
-            const vol = 0.02 + Math.random() * 0.025;
+            const vol = 0.05 + Math.random() * 0.04;
             const pan = Math.random() * 1.2 - 0.6;
             for (let i = 0; i < n; i++) {
               chirp(t + i * (0.14 + Math.random() * 0.06), base * (1 + (Math.random() - 0.5) * 0.08), vol * (i === n - 1 ? 0.7 : 1), pan);
@@ -1547,15 +1566,21 @@
           }
           breatheFire();
           meditationIntervals.push(setInterval(breatheFire, 8000));
-          const crackOut = audioCtx.createBiquadFilter(); crackOut.type = 'highpass'; crackOut.frequency.setValueAtTime(1200, now);
+          const crackOut = audioCtx.createBiquadFilter(); crackOut.type = 'bandpass'; crackOut.frequency.setValueAtTime(2200, now); crackOut.Q.setValueAtTime(0.5, now); // 날카로운 끝을 둥글게
           crackOut.connect(sceneOut());
+          // 폰 스피커에서도 들리는 옅은 '솨' 소리
+          const hf = audioCtx.createBiquadFilter(); hf.type = 'bandpass'; hf.frequency.setValueAtTime(900, now); hf.Q.setValueAtTime(0.6, now);
+          const hg = audioCtx.createGain(); hg.gain.setValueAtTime(0.05, now);
+          noiseSrc(2.9).connect(hf); hf.connect(hg); hg.connect(sceneOut());
+          addLfo(hg.gain, 0.23, 0.015);
+          meditationActiveNodes.push(hf, hg);
           meditationActiveNodes.push(crackOut);
           // 타닥: 아주 짧은 잡음 한 조각
           function crack(when, vol, len) {
             const n = audioCtx.createBufferSource(); n.buffer = getPinkNoiseBuffer();
             const g = audioCtx.createGain();
             g.gain.setValueAtTime(0.0001, when);
-            g.gain.linearRampToValueAtTime(vol, when + 0.002);
+            g.gain.linearRampToValueAtTime(vol, when + 0.005);
             g.gain.exponentialRampToValueAtTime(0.0001, when + len);
             n.connect(g);
             if (audioCtx.createStereoPanner) {
@@ -1567,13 +1592,13 @@
             n.start(when, Math.random() * 4); n.stop(when + len + 0.02);
           }
           function scheduleCrack() {
-            const waitMs = 350 + Math.random() * 1600; // 0.35~2초 사이 불규칙, 한 번에 1~3번
+            const waitMs = 600 + Math.random() * 2200; // 0.6~2.8초 사이 불규칙, 한 번에 1~3번
             meditationIntervals.push(setTimeout(() => {
               if (gen !== soundGen || !audioCtx || !isSoundOn) return;
               const t = audioCtx.currentTime + 0.02;
               const n = 1 + Math.floor(Math.random() * 3);
               for (let i = 0; i < n; i++) {
-                crack(t + i * (0.03 + Math.random() * 0.09), 0.05 + Math.random() * 0.12, 0.012 + Math.random() * 0.03);
+                crack(t + i * (0.03 + Math.random() * 0.09), 0.035 + Math.random() * 0.06, 0.016 + Math.random() * 0.03);
               }
               scheduleCrack();
             }, waitMs));
@@ -1631,8 +1656,8 @@
               const steps = 6 + Math.floor(Math.random() * 5);
               const gap = 0.95 + Math.random() * 0.25;
               for (let i = 0; i < steps; i++) {
-                const fade = Math.sin(Math.PI * (i + 0.5) / steps); // 다가왔다 멀어지듯
-                step(t + i * gap + Math.random() * 0.06, i % 2 ? 0.15 : -0.15, 0.05 + 0.06 * fade);
+                // 누가 다가오는 느낌이 들지 않게, 내가 걷는 것처럼 크기를 일정하게
+                step(t + i * gap + Math.random() * 0.06, i % 2 ? 0.08 : -0.08, 0.1 + Math.random() * 0.02);
               }
               walk(false, steps * gap * 1000);
             }, waitMs));
@@ -1676,6 +1701,31 @@
           addLfo(rg.gain, 0.73, 0.035);
           addLfo(rg.gain, 1.9, 0.02);
           addLfo(rf.frequency, 0.31, 180);
+          // 물방울: 짧고 맑은 소리가 불규칙하게 또르르
+          const dropOut = audioCtx.createBiquadFilter(); dropOut.type = 'lowpass'; dropOut.frequency.setValueAtTime(3500, now);
+          dropOut.connect(sceneOut());
+          meditationActiveNodes.push(dropOut);
+          function drop(when, base, vol) {
+            const o = audioCtx.createOscillator(); o.type = 'sine';
+            const g = audioCtx.createGain();
+            o.frequency.setValueAtTime(base, when);
+            o.frequency.exponentialRampToValueAtTime(base * 1.45, when + 0.045);
+            g.gain.setValueAtTime(0.0001, when);
+            g.gain.linearRampToValueAtTime(vol, when + 0.008);
+            g.gain.exponentialRampToValueAtTime(0.0001, when + 0.07);
+            o.connect(g); g.connect(dropOut);
+            o.start(when); o.stop(when + 0.09);
+          }
+          function scheduleDrops() {
+            meditationIntervals.push(setTimeout(() => {
+              if (gen !== soundGen || !audioCtx || !isSoundOn) return;
+              const t = audioCtx.currentTime + 0.02;
+              const n = 1 + Math.floor(Math.random() * 3);
+              for (let i = 0; i < n; i++) drop(t + i * (0.07 + Math.random() * 0.08), 700 + Math.random() * 900, 0.02 + Math.random() * 0.025);
+              scheduleDrops();
+            }, 250 + Math.random() * 900));
+          }
+          scheduleDrops();
           function breatheLeaves() {
             if (gen !== soundGen || !audioCtx || !isSoundOn) return;
             const t = audioCtx.currentTime;
@@ -1693,7 +1743,7 @@
           const ag = audioCtx.createGain(); ag.gain.setValueAtTime(0.05, now);
           noiseSrc(1.1).connect(af); af.connect(ag); ag.connect(sceneOut());
           const pf = audioCtx.createBiquadFilter(); pf.type = 'lowpass'; pf.frequency.setValueAtTime(2400, now);
-          const pg = audioCtx.createGain(); pg.gain.setValueAtTime(0.05, now);
+          const pg = audioCtx.createGain(); pg.gain.setValueAtTime(0.028, now);
           pf.connect(pg); pg.connect(sceneOut());
           meditationActiveNodes.push(af, ag, pf, pg);
           [523.25, 659.25, 783.99, 987.77].forEach((f, i) => {
@@ -1707,7 +1757,7 @@
             if (gen !== soundGen || !audioCtx || !isSoundOn) return;
             const t = audioCtx.currentTime;
             ag.gain.cancelScheduledValues(t); af.frequency.cancelScheduledValues(t);
-            ag.gain.setValueAtTime(0.04, t); ag.gain.linearRampToValueAtTime(0.11, t + 4); ag.gain.linearRampToValueAtTime(0.04, t + 8);
+            ag.gain.setValueAtTime(0.08, t); ag.gain.linearRampToValueAtTime(0.2, t + 4); ag.gain.linearRampToValueAtTime(0.08, t + 8);
             af.frequency.setValueAtTime(900, t); af.frequency.linearRampToValueAtTime(1700, t + 4); af.frequency.linearRampToValueAtTime(900, t + 8);
           }
           breatheSky();
@@ -2334,9 +2384,9 @@
       },
       {
         kind: 'chime', dot: '#e9a35f', rgb: [244, 162, 97], light: [255, 235, 205], scopeAmp: 1,
-        title: '숲과 윈드차임',
-        soundName: '새벽 숲의 산들바람과 윈드차임',
-        message: '살랑이는 산들바람과\n영롱한 윈드차임 맑은 풍경소리.',
+        title: '윈드차임',
+        soundName: '산들바람과 윈드차임',
+        message: '살랑이는 산들바람에\n맑은 풍경소리가 울려요.',
         quote: '맑은 바람결에 생각을 흘려보내요',
         visualHtml: '<div class="flex flex-col items-center justify-center -mt-2"><svg viewBox="0 0 160 190" class="w-32 h-40 drop-shadow-[0_0_20px_rgba(244,162,97,0.35)]" style="overflow: visible;"><defs><linearGradient id="bronzeTubeGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#7A4218" /><stop offset="25%" stop-color="#E09F3E" /><stop offset="50%" stop-color="#F4A261" /><stop offset="75%" stop-color="#DDA15E" /><stop offset="100%" stop-color="#5C3317" /></linearGradient><linearGradient id="walnutGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#A06040" /><stop offset="50%" stop-color="#8C5332" /><stop offset="100%" stop-color="#5C3317" /></linearGradient><linearGradient id="sailGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#F4A261" /><stop offset="50%" stop-color="#BC6C25" /><stop offset="100%" stop-color="#6F3D2E" /></linearGradient></defs><circle cx="80" cy="10" r="4.5" fill="none" stroke="#DDA15E" stroke-width="2" /><line x1="80" y1="14" x2="56" y2="28" stroke="#D4A373" stroke-width="1.2" stroke-opacity="0.8" /><line x1="80" y1="14" x2="80" y2="28" stroke="#D4A373" stroke-width="1.2" stroke-opacity="0.8" /><line x1="80" y1="14" x2="104" y2="28" stroke="#D4A373" stroke-width="1.2" stroke-opacity="0.8" /><ellipse cx="80" cy="30" rx="34" ry="7" fill="url(#walnutGrad)" stroke="#4A2810" stroke-width="1.2" /><ellipse cx="80" cy="28.5" rx="32" ry="5.5" fill="none" stroke="#DDA15E" stroke-width="0.8" stroke-opacity="0.4" /><g class="anim-chime-real-1"><line x1="54" y1="30" x2="54" y2="38" stroke="#D4A373" stroke-width="1" stroke-opacity="0.7" /><rect x="51" y="38" width="6" height="52" rx="3" fill="url(#bronzeTubeGrad)" stroke="#5C3317" stroke-width="0.5" /><ellipse cx="54" cy="90" rx="3" ry="1" fill="#4A2810" /></g><g class="anim-chime-real-2"><line x1="67" y1="30" x2="67" y2="38" stroke="#D4A373" stroke-width="1" stroke-opacity="0.7" /><rect x="64" y="38" width="6" height="68" rx="3" fill="url(#bronzeTubeGrad)" stroke="#5C3317" stroke-width="0.5" /><ellipse cx="67" cy="106" rx="3" ry="1" fill="#4A2810" /></g><g class="anim-chime-real-3"><line x1="80" y1="30" x2="80" y2="38" stroke="#D4A373" stroke-width="1" stroke-opacity="0.7" /><rect x="77" y="38" width="6" height="82" rx="3" fill="url(#bronzeTubeGrad)" stroke="#5C3317" stroke-width="0.5" /><ellipse cx="80" cy="120" rx="3" ry="1" fill="#4A2810" /></g><g class="anim-chime-real-4"><line x1="93" y1="30" x2="93" y2="38" stroke="#D4A373" stroke-width="1" stroke-opacity="0.7" /><rect x="90" y="38" width="6" height="62" rx="3" fill="url(#bronzeTubeGrad)" stroke="#5C3317" stroke-width="0.5" /><ellipse cx="93" cy="100" rx="3" ry="1" fill="#4A2810" /></g><g class="anim-chime-real-5"><line x1="106" y1="30" x2="106" y2="38" stroke="#D4A373" stroke-width="1" stroke-opacity="0.7" /><rect x="103" y="38" width="6" height="48" rx="3" fill="url(#bronzeTubeGrad)" stroke="#5C3317" stroke-width="0.5" /><ellipse cx="106" cy="86" rx="3" ry="1" fill="#4A2810" /></g><g class="anim-chime-pendulum"><line x1="80" y1="30" x2="80" y2="76" stroke="#D4A373" stroke-width="1.2" stroke-dasharray="2,1" stroke-opacity="0.9" /><ellipse cx="80" cy="76" rx="10" ry="4.5" fill="url(#walnutGrad)" stroke="#4A2810" stroke-width="1" /><circle cx="80" cy="76" r="2.5" fill="#DDA15E" /><line x1="80" y1="76" x2="80" y2="136" stroke="#D4A373" stroke-width="1.2" stroke-opacity="0.8" /><g class="anim-wind-sail-leaf"><path d="M80 136 C68 148, 66 162, 80 174 C94 162, 92 148, 80 136 Z" fill="url(#sailGrad)" stroke="#5C3317" stroke-width="1.2" /><path d="M80 140 L80 168" stroke="#DDA15E" stroke-width="0.8" stroke-opacity="0.6" /></g></g></svg><div class="h-6 flex items-center justify-center mt-2"><canvas id="peaceScopeCanvas" width="128" height="24" class="w-32 h-6 pointer-events-none drop-shadow-[0_0_8px_rgba(244,162,97,0.6)]"></canvas></div></div>'
       },
@@ -2374,10 +2424,10 @@
       },
       {
         kind: 'velvet', dot: '#ad94ea', rgb: [169, 154, 240], light: [225, 215, 255], scopeAmp: 0.5,
-        title: '벨벳 앰비언트',
-        soundName: '포근한 벨벳 화음',
-        message: '따뜻한 하모닉스 화음이\n지친 마음을 부드럽게 감싸 안습니다.',
-        quote: '몸의 긴장을 가만히 내려놓으세요',
+        title: '포근한 화음',
+        soundName: '부드럽게 감싸는 화음',
+        message: '따뜻한 화음이\n지친 마음을 부드럽게 감싸 안아요.',
+        quote: '몸의 긴장을 가만히 내려놓아요',
         visualHtml: '<div class="flex flex-col items-center justify-center"><div class="relative w-32 h-32 flex items-center justify-center"><div class="absolute inset-0 rounded-full bg-[#a99af0]/15 blur-md anim-breath" style="animation-duration: 8s;"></div><div class="absolute w-28 h-28 rounded-full border border-[#a99af0]/40 anim-breath" style="animation-duration: 8s; animation-delay: 0.4s;"></div><div class="absolute w-20 h-20 rounded-full bg-gradient-to-tr from-[#a99af0]/30 to-[#c58af9]/30 border border-[#a99af0]/60 anim-breath" style="animation-duration: 8s;"></div><div class="w-10 h-10 rounded-full bg-white/40 blur-[1px] anim-breath shadow-[0_0_20px_#a99af0]" style="animation-duration: 8s;"></div></div><div class="h-6 flex items-center justify-center mt-10"><canvas id="peaceScopeCanvas" width="128" height="24" class="w-28 h-6 pointer-events-none"></canvas></div></div>'
       },
       // ── 번외 ──
