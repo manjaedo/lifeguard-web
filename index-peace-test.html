@@ -156,6 +156,25 @@
       0%, 100% { transform: rotate(-9deg) translateX(-3.5px); }
       50% { transform: rotate(9deg) translateX(3.5px); }
     }
+    /* 색 동그라미 (구명튜브 장면 고르기) */
+    .scene-dot { flex: 1; height: 40px; display: flex; align-items: center; justify-content: center; background: transparent; border: 0; padding: 0; cursor: pointer; }
+    .scene-dot span { display: block; width: 15px; height: 15px; border-radius: 9999px; opacity: 0.4; transition: all 0.35s ease; }
+    .scene-dot.on span { width: 22px; height: 22px; opacity: 1; box-shadow: 0 0 0 2px #141718, 0 0 0 3.5px rgba(255,255,255,0.5); }
+    /* 새 장면들의 느린 움직임 */
+    @keyframes sunSink { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(9px); } }
+    .anim-sun-sink { animation: sunSink 16s ease-in-out infinite; }
+    @keyframes flameFlicker { 0%, 100% { transform: scaleY(1) skewX(0deg); } 30% { transform: scaleY(1.05) skewX(1.5deg); } 60% { transform: scaleY(0.95) skewX(-1.5deg); } }
+    .anim-flame-a { animation: flameFlicker 3.2s ease-in-out infinite; }
+    .anim-flame-b { animation: flameFlicker 2.5s ease-in-out infinite reverse; }
+    .anim-flame-c { animation: flameFlicker 1.9s ease-in-out infinite; }
+    @keyframes mapleDrift { 0%, 100% { transform: rotate(-7deg) translateY(-3px); } 50% { transform: rotate(7deg) translateY(4px); } }
+    .anim-maple-drift { animation: mapleDrift 7s ease-in-out infinite; }
+    @keyframes petalTurn { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+    .anim-petal-turn { animation: petalTurn 12s ease-in-out infinite; }
+    @keyframes leafSway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+    .anim-leaf-sway { animation: leafSway 6s ease-in-out infinite; }
+    @keyframes cloudDrift { 0%, 100% { transform: translateX(-12px); } 50% { transform: translateX(12px); } }
+    .anim-cloud-drift { animation: cloudDrift 20s ease-in-out infinite; }
     @keyframes windSailFlutter {
       0%, 100% { transform: rotate(-5deg); }
       50% { transform: rotate(5deg); }
@@ -680,16 +699,18 @@
         </div>
 
         <!-- 3가지 소리/애니메이션 전환 탭 (번갈아가며 들을 수 있는 구성) -->
-        <div id="peaceSceneTabs" class="flex items-center gap-1.5 mt-2.5 pointer-events-auto">
-          <button type="button" onclick="selectPeaceScene(0, event)" id="sceneTab-0" class="flex-1 py-1 px-1.5 text-[10.5px] rounded-lg border border-[#9ec0c4]/60 bg-[#9ec0c4]/25 text-[#9ec0c4] font-bold transition text-center truncate cursor-pointer shadow-[0_0_10px_rgba(158,192,196,0.2)]">
-            파도
-          </button>
-          <button type="button" onclick="selectPeaceScene(1, event)" id="sceneTab-1" class="flex-1 py-1 px-1.5 text-[10.5px] rounded-lg border border-white/10 bg-white/5 text-white/60 hover:text-white transition text-center truncate cursor-pointer">
-            벨벳
-          </button>
-          <button type="button" onclick="selectPeaceScene(2, event)" id="sceneTab-2" class="flex-1 py-1 px-1.5 text-[10.5px] rounded-lg border border-white/10 bg-white/5 text-white/60 hover:text-white transition text-center truncate cursor-pointer">
-            윈드차임
-          </button>
+        <!-- 빨주노초파남보 색 동그라미로 장면 고르기 -->
+        <div id="peaceSceneTabs" class="flex items-center justify-between mt-2 pointer-events-auto">
+          <button type="button" onclick="selectPeaceScene(0, event)" id="sceneTab-0" class="scene-dot" aria-label="해 질 녘 노을"><span style="background:#d98a72;"></span></button>
+          <button type="button" onclick="selectPeaceScene(1, event)" id="sceneTab-1" class="scene-dot" aria-label="숲과 윈드차임"><span style="background:#e9a35f;"></span></button>
+          <button type="button" onclick="selectPeaceScene(2, event)" id="sceneTab-2" class="scene-dot" aria-label="봄 아침 개나리"><span style="background:#f2d16b;"></span></button>
+          <button type="button" onclick="selectPeaceScene(3, event)" id="sceneTab-3" class="scene-dot" aria-label="오월의 숲"><span style="background:#a8d672;"></span></button>
+          <button type="button" onclick="selectPeaceScene(4, event)" id="sceneTab-4" class="scene-dot" aria-label="맑은 하늘"><span style="background:#8cc8ec;"></span></button>
+          <button type="button" onclick="selectPeaceScene(5, event)" id="sceneTab-5" class="scene-dot" aria-label="해변의 파도"><span style="background:#7d8ad6;"></span></button>
+          <button type="button" onclick="selectPeaceScene(6, event)" id="sceneTab-6" class="scene-dot" aria-label="벨벳 앰비언트"><span style="background:#ad94ea;"></span></button>
+          <span aria-hidden="true" style="width:1px;height:16px;background:rgba(255,255,255,0.15);margin:0 2px;"></span>
+          <button type="button" onclick="selectPeaceScene(7, event)" id="sceneTab-7" class="scene-dot" aria-label="모닥불 (번외)"><span style="background:#e0884a;"></span></button>
+          <button type="button" onclick="selectPeaceScene(8, event)" id="sceneTab-8" class="scene-dot" aria-label="단풍길 (번외)"><span style="background:#c9624a;"></span></button>
         </div>
       </div>
 
@@ -1005,29 +1026,16 @@
         const midY = h / 2;
         ctx.clearRect(0, 0, w, h);
 
+        // 장면 색을 따라 그린다 (소리를 켜면 가운데가 더 밝아진다)
+        const sc = peaceScenes[currentPeaceIdx] || peaceScenes[0];
+        const c = sc.rgb.join(', '), lc = sc.light.join(', ');
         const grad = ctx.createLinearGradient(0, 0, w, 0);
-        if (currentPeaceIdx === 2) {
-          // 윈드차임 씬: 따뜻한 골든 앰버/브론즈 톤의 실시간 떨림선
-          grad.addColorStop(0, 'rgba(244, 162, 97, 0)');
-          grad.addColorStop(0.2, isSoundOn ? 'rgba(244, 162, 97, 0.75)' : 'rgba(244, 162, 97, 0.4)');
-          grad.addColorStop(0.5, isSoundOn ? 'rgba(255, 235, 205, 0.98)' : 'rgba(244, 162, 97, 0.8)');
-          grad.addColorStop(0.8, isSoundOn ? 'rgba(244, 162, 97, 0.75)' : 'rgba(244, 162, 97, 0.4)');
-          grad.addColorStop(1, 'rgba(244, 162, 97, 0)');
-        } else if (currentPeaceIdx === 1) {
-          // 벨벳 씬: 원과 같은 옅은 푸른빛, 더 흐리게
-          grad.addColorStop(0, 'rgba(138, 180, 248, 0)');
-          grad.addColorStop(0.2, 'rgba(138, 180, 248, 0.3)');
-          grad.addColorStop(0.5, isSoundOn ? 'rgba(200, 220, 255, 0.6)' : 'rgba(138, 180, 248, 0.45)');
-          grad.addColorStop(0.8, 'rgba(138, 180, 248, 0.3)');
-          grad.addColorStop(1, 'rgba(138, 180, 248, 0)');
-        } else {
-          // 파도 씬: 청량한 틸/아쿠아 톤의 실시간 떨림선
-          grad.addColorStop(0, 'rgba(158, 192, 196, 0)');
-          grad.addColorStop(0.2, isSoundOn ? 'rgba(158, 192, 196, 0.65)' : 'rgba(158, 192, 196, 0.35)');
-          grad.addColorStop(0.5, isSoundOn ? 'rgba(224, 242, 244, 0.95)' : 'rgba(158, 192, 196, 0.7)');
-          grad.addColorStop(0.8, isSoundOn ? 'rgba(158, 192, 196, 0.65)' : 'rgba(158, 192, 196, 0.35)');
-          grad.addColorStop(1, 'rgba(158, 192, 196, 0)');
-        }
+        const dim = sc.kind === 'velvet' ? 0.6 : 1;
+        grad.addColorStop(0, `rgba(${c}, 0)`);
+        grad.addColorStop(0.2, `rgba(${c}, ${(isSoundOn ? 0.7 : 0.38) * dim})`);
+        grad.addColorStop(0.5, isSoundOn ? `rgba(${lc}, ${0.95 * dim})` : `rgba(${c}, ${0.75 * dim})`);
+        grad.addColorStop(0.8, `rgba(${c}, ${(isSoundOn ? 0.7 : 0.38) * dim})`);
+        grad.addColorStop(1, `rgba(${c}, 0)`);
 
         ctx.strokeStyle = grad;
         ctx.lineWidth = isSoundOn ? 2.2 : 1.5;
@@ -1047,7 +1055,7 @@
           const level = Math.min(1, Math.sqrt(sum / bufferLength) * 4);
           scopeLevel += (level - scopeLevel) * 0.03;
           scopePhase += 0.018;
-          const amp = h * 0.4 * scopeLevel * (currentPeaceIdx === 1 ? 0.5 : 1);
+          const amp = h * 0.4 * scopeLevel * sc.scopeAmp;
           for (let i = 0; i <= points; i++) {
             const ratio = i / points;
             const x = i * slice;
@@ -1060,7 +1068,7 @@
           // 소리가 꺼져 있을 때도 은은하게 숨쉬는 수평 잔물결 라인
           scopeLevel *= 0.97; // 소리를 끄면 출렁임도 서서히 가라앉는다
           const t = Date.now() / 1000;
-          const breathAmp = (1.0 + Math.sin(t * (Math.PI / 4)) * 0.8) * (currentPeaceIdx === 1 ? 0.6 : 1);
+          const breathAmp = (1.0 + Math.sin(t * (Math.PI / 4)) * 0.8) * (sc.kind === 'velvet' ? 0.6 : 1);
           for (let i = 0; i <= points; i++) {
             const ratio = i / points;
             const x = i * slice;
@@ -1212,16 +1220,32 @@
       stopMeditationSound(0.9); // 앞 장면 소리는 0.9초에 걸쳐 사라지고, 새 장면이 겹쳐 스며든다
 
       try {
-        const sceneIndex = idx % 3;
+        const kind = peaceScenes[idx % peaceScenes.length].kind;
         const now = audioCtx.currentTime;
         const gen = soundGen;
         currentSceneBus = audioCtx.createGain();
         currentSceneBus.gain.setValueAtTime(0.0001, now);
         currentSceneBus.gain.exponentialRampToValueAtTime(1, now + 1.8);
         currentSceneBus.connect(peaceAudioTarget || audioCtx.destination);
+        // 소리 크기나 높이를 아주 천천히 출렁이게 하는 도우미
+        const addLfo = (param, rate, depth) => {
+          const o = audioCtx.createOscillator();
+          o.frequency.setValueAtTime(rate, now);
+          const g = audioCtx.createGain();
+          g.gain.setValueAtTime(depth, now);
+          o.connect(g); g.connect(param); o.start(now);
+          meditationActiveNodes.push(o, g);
+        };
+        const noiseSrc = (offset) => {
+          const n = audioCtx.createBufferSource();
+          n.buffer = getPinkNoiseBuffer(); n.loop = true;
+          n.start(now, offset || 0);
+          meditationActiveNodes.push(n);
+          return n;
+        };
 
         // 0. 실제 해변 파도 & 티베트 싱잉볼 (8초 호흡 동기화)
-        if (sceneIndex === 0) {
+        if (kind === 'wave') {
           const noiseBuf = getPinkNoiseBuffer();
           const noiseSource = audioCtx.createBufferSource();
           noiseSource.buffer = noiseBuf;
@@ -1292,7 +1316,7 @@
         }
 
         // 1. 포근한 벨벳 화음 패드 (잡음 없음)
-        else if (sceneIndex === 1) {
+        else if (kind === 'velvet') {
           const notes = [87.31, 130.81, 220.00, 261.63, 329.63, 392.00]; // Major 9th
           const padMasterFilter = audioCtx.createBiquadFilter();
           padMasterFilter.type = 'lowpass';
@@ -1353,7 +1377,7 @@
         }
 
         // 2. 새벽 숲의 산들바람과 크리스탈 윈드차임
-        else if (sceneIndex === 2) {
+        else if (kind === 'chime') {
           const noiseBuf = getPinkNoiseBuffer();
           const wind = audioCtx.createBufferSource();
           wind.buffer = noiseBuf;
@@ -1414,6 +1438,281 @@
           }
           scheduleChime(true);
         }
+
+        // 빨강: 해 질 녘 노을 — 낮게 깔리는 저녁 바람과 아주 느린 따뜻한 화음
+        else if (kind === 'sunset') {
+          const wf = audioCtx.createBiquadFilter(); wf.type = 'lowpass'; wf.frequency.setValueAtTime(300, now);
+          const wg = audioCtx.createGain(); wg.gain.setValueAtTime(0.08, now);
+          noiseSrc(0.7).connect(wf); wf.connect(wg); wg.connect(sceneOut());
+          const cf = audioCtx.createBiquadFilter(); cf.type = 'lowpass'; cf.frequency.setValueAtTime(700, now);
+          const cg = audioCtx.createGain(); cg.gain.setValueAtTime(0.09, now);
+          cf.connect(cg); cg.connect(sceneOut());
+          meditationActiveNodes.push(wf, wg, cf, cg);
+          [110.00, 164.81, 220.00, 277.18].forEach((f, i) => {
+            const o = audioCtx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(f, now);
+            const g = audioCtx.createGain(); g.gain.setValueAtTime(0.32 / (i + 1), now);
+            o.connect(g); g.connect(cf); o.start(now);
+            meditationActiveNodes.push(o, g);
+          });
+          function breatheSunset() {
+            if (gen !== soundGen || !audioCtx || !isSoundOn) return;
+            const t = audioCtx.currentTime;
+            [wg.gain, wf.frequency, cg.gain].forEach(p => p.cancelScheduledValues(t));
+            wg.gain.setValueAtTime(0.06, t); wg.gain.linearRampToValueAtTime(0.16, t + 4); wg.gain.linearRampToValueAtTime(0.06, t + 8);
+            wf.frequency.setValueAtTime(260, t); wf.frequency.linearRampToValueAtTime(480, t + 4); wf.frequency.linearRampToValueAtTime(260, t + 8);
+            cg.gain.setValueAtTime(0.08, t); cg.gain.linearRampToValueAtTime(0.14, t + 4); cg.gain.linearRampToValueAtTime(0.08, t + 8);
+          }
+          breatheSunset();
+          meditationIntervals.push(setInterval(breatheSunset, 8000));
+        }
+
+        // 노랑: 봄 아침 개나리 — 바닥의 아주 옅은 밝은 화음과, 멀리서 가끔 들리는 작은 새소리
+        else if (kind === 'spring') {
+          const bf = audioCtx.createBiquadFilter(); bf.type = 'lowpass'; bf.frequency.setValueAtTime(1800, now);
+          const bg = audioCtx.createGain(); bg.gain.setValueAtTime(0.04, now);
+          bf.connect(bg); bg.connect(sceneOut());
+          meditationActiveNodes.push(bf, bg);
+          [392.00, 493.88, 587.33].forEach(f => {
+            const o = audioCtx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(f, now);
+            const g = audioCtx.createGain(); g.gain.setValueAtTime(0.25, now);
+            o.connect(g); g.connect(bf); o.start(now);
+            meditationActiveNodes.push(o, g);
+          });
+          function breatheBed() {
+            if (gen !== soundGen || !audioCtx || !isSoundOn) return;
+            const t = audioCtx.currentTime;
+            bg.gain.cancelScheduledValues(t);
+            bg.gain.setValueAtTime(0.05, t); bg.gain.linearRampToValueAtTime(0.09, t + 4); bg.gain.linearRampToValueAtTime(0.05, t + 8);
+          }
+          breatheBed();
+          meditationIntervals.push(setInterval(breatheBed, 8000));
+
+          const birdOut = audioCtx.createBiquadFilter(); birdOut.type = 'lowpass'; birdOut.frequency.setValueAtTime(5000, now);
+          birdOut.connect(sceneOut());
+          meditationActiveNodes.push(birdOut);
+          function chirp(when, base, vol, pan) {
+            const o = audioCtx.createOscillator(); o.type = 'sine';
+            const g = audioCtx.createGain();
+            o.frequency.setValueAtTime(base, when);
+            o.frequency.exponentialRampToValueAtTime(base * 1.3, when + 0.05);
+            o.frequency.exponentialRampToValueAtTime(base * 0.95, when + 0.11);
+            g.gain.setValueAtTime(0.0001, when);
+            g.gain.linearRampToValueAtTime(vol, when + 0.015);
+            g.gain.exponentialRampToValueAtTime(0.0001, when + 0.13);
+            o.connect(g);
+            if (audioCtx.createStereoPanner) {
+              const p = audioCtx.createStereoPanner(); p.pan.setValueAtTime(pan, when);
+              g.connect(p); p.connect(birdOut);
+            } else {
+              g.connect(birdOut);
+            }
+            o.start(when); o.stop(when + 0.16);
+          }
+          function birdPhrase() {
+            const t = audioCtx.currentTime + 0.05;
+            const base = 2600 + Math.random() * 1200;
+            const n = 2 + Math.floor(Math.random() * 3);
+            const vol = 0.02 + Math.random() * 0.025;
+            const pan = Math.random() * 1.2 - 0.6;
+            for (let i = 0; i < n; i++) {
+              chirp(t + i * (0.14 + Math.random() * 0.06), base * (1 + (Math.random() - 0.5) * 0.08), vol * (i === n - 1 ? 0.7 : 1), pan);
+            }
+          }
+          function scheduleBird(first) {
+            const waitMs = first ? 1500 : 3500 + Math.random() * 5500; // 3.5~9초 사이 불규칙
+            meditationIntervals.push(setTimeout(() => {
+              if (gen !== soundGen || !audioCtx || !isSoundOn) return;
+              birdPhrase();
+              if (Math.random() < 0.25) {
+                meditationIntervals.push(setTimeout(() => { if (gen === soundGen) birdPhrase(); }, 600 + Math.random() * 700));
+              }
+              scheduleBird(false);
+            }, waitMs));
+          }
+          scheduleBird(true);
+        }
+
+        // 번외: 모닥불 — 낮게 웅웅 타는 소리와, 가끔 작게 타닥거리는 소리
+        else if (kind === 'fire') {
+          const rf = audioCtx.createBiquadFilter(); rf.type = 'lowpass'; rf.frequency.setValueAtTime(380, now);
+          const rg = audioCtx.createGain(); rg.gain.setValueAtTime(0.12, now);
+          noiseSrc(1.7).connect(rf); rf.connect(rg); rg.connect(sceneOut());
+          meditationActiveNodes.push(rf, rg);
+          addLfo(rg.gain, 0.37, 0.03); // 불길이 일렁이듯 크기가 조금씩 출렁인다
+          function breatheFire() {
+            if (gen !== soundGen || !audioCtx || !isSoundOn) return;
+            const t = audioCtx.currentTime;
+            rf.frequency.cancelScheduledValues(t);
+            rf.frequency.setValueAtTime(340, t); rf.frequency.linearRampToValueAtTime(520, t + 4); rf.frequency.linearRampToValueAtTime(340, t + 8);
+          }
+          breatheFire();
+          meditationIntervals.push(setInterval(breatheFire, 8000));
+          const crackOut = audioCtx.createBiquadFilter(); crackOut.type = 'highpass'; crackOut.frequency.setValueAtTime(1200, now);
+          crackOut.connect(sceneOut());
+          meditationActiveNodes.push(crackOut);
+          // 타닥: 아주 짧은 잡음 한 조각
+          function crack(when, vol, len) {
+            const n = audioCtx.createBufferSource(); n.buffer = getPinkNoiseBuffer();
+            const g = audioCtx.createGain();
+            g.gain.setValueAtTime(0.0001, when);
+            g.gain.linearRampToValueAtTime(vol, when + 0.002);
+            g.gain.exponentialRampToValueAtTime(0.0001, when + len);
+            n.connect(g);
+            if (audioCtx.createStereoPanner) {
+              const pn = audioCtx.createStereoPanner(); pn.pan.setValueAtTime(Math.random() * 0.8 - 0.4, when);
+              g.connect(pn); pn.connect(crackOut);
+            } else {
+              g.connect(crackOut);
+            }
+            n.start(when, Math.random() * 4); n.stop(when + len + 0.02);
+          }
+          function scheduleCrack() {
+            const waitMs = 350 + Math.random() * 1600; // 0.35~2초 사이 불규칙, 한 번에 1~3번
+            meditationIntervals.push(setTimeout(() => {
+              if (gen !== soundGen || !audioCtx || !isSoundOn) return;
+              const t = audioCtx.currentTime + 0.02;
+              const n = 1 + Math.floor(Math.random() * 3);
+              for (let i = 0; i < n; i++) {
+                crack(t + i * (0.03 + Math.random() * 0.09), 0.05 + Math.random() * 0.12, 0.012 + Math.random() * 0.03);
+              }
+              scheduleCrack();
+            }, waitMs));
+          }
+          scheduleCrack();
+        }
+
+        // 번외: 단풍길 — 옅은 가을바람, 천천히 낙엽을 밟는 발소리, 가끔 멀리서 들리는 새소리
+        else if (kind === 'maple') {
+          const wf = audioCtx.createBiquadFilter(); wf.type = 'bandpass'; wf.frequency.setValueAtTime(600, now); wf.Q.setValueAtTime(0.9, now);
+          const wg = audioCtx.createGain(); wg.gain.setValueAtTime(0.08, now);
+          noiseSrc(0.4).connect(wf); wf.connect(wg); wg.connect(sceneOut());
+          meditationActiveNodes.push(wf, wg);
+          function breatheAutumn() {
+            if (gen !== soundGen || !audioCtx || !isSoundOn) return;
+            const t = audioCtx.currentTime;
+            wg.gain.cancelScheduledValues(t);
+            wg.gain.setValueAtTime(0.05, t); wg.gain.linearRampToValueAtTime(0.13, t + 4); wg.gain.linearRampToValueAtTime(0.05, t + 8);
+          }
+          breatheAutumn();
+          meditationIntervals.push(setInterval(breatheAutumn, 8000));
+
+          const stepOut = audioCtx.createBiquadFilter(); stepOut.type = 'bandpass'; stepOut.frequency.setValueAtTime(2600, now); stepOut.Q.setValueAtTime(0.7, now);
+          stepOut.connect(sceneOut());
+          const birdOut = audioCtx.createBiquadFilter(); birdOut.type = 'lowpass'; birdOut.frequency.setValueAtTime(4500, now);
+          birdOut.connect(sceneOut());
+          meditationActiveNodes.push(stepOut, birdOut);
+          const panTo = (node, v, when) => {
+            if (!audioCtx.createStereoPanner) return node;
+            const pn = audioCtx.createStereoPanner(); pn.pan.setValueAtTime(v, when); node.connect(pn); return pn;
+          };
+          // 발걸음 한 번: 짧게 부서지는 잡음 조각 몇 개 (바스락)
+          function step(when, side, vol) {
+            const pieces = 4 + Math.floor(Math.random() * 4);
+            const dur = 0.14 + Math.random() * 0.1;
+            for (let i = 0; i < pieces; i++) {
+              const w = when + (i / pieces) * dur + Math.random() * 0.015;
+              const n = audioCtx.createBufferSource(); n.buffer = getPinkNoiseBuffer();
+              const g = audioCtx.createGain();
+              const len = 0.015 + Math.random() * 0.03;
+              g.gain.setValueAtTime(0.0001, w);
+              g.gain.linearRampToValueAtTime(vol * (0.5 + Math.random() * 0.5), w + 0.003);
+              g.gain.exponentialRampToValueAtTime(0.0001, w + len);
+              n.connect(g); panTo(g, side, w).connect(stepOut);
+              n.start(w, Math.random() * 4); n.stop(w + len + 0.02);
+            }
+          }
+          // 여섯~열 걸음 느긋하게 걷고, 4~8초 쉬었다가 다시 걷는다
+          function walk(first, lastWalkMs) {
+            // 앞 걸음이 다 끝난 뒤 4~8초 쉬었다가 다시 걷는다
+            const waitMs = first ? 1500 : (lastWalkMs || 0) + 4000 + Math.random() * 4000;
+            meditationIntervals.push(setTimeout(() => {
+              if (gen !== soundGen || !audioCtx || !isSoundOn) return;
+              const t = audioCtx.currentTime + 0.05;
+              const steps = 6 + Math.floor(Math.random() * 5);
+              const gap = 0.95 + Math.random() * 0.25;
+              for (let i = 0; i < steps; i++) {
+                const fade = Math.sin(Math.PI * (i + 0.5) / steps); // 다가왔다 멀어지듯
+                step(t + i * gap + Math.random() * 0.06, i % 2 ? 0.15 : -0.15, 0.05 + 0.06 * fade);
+              }
+              walk(false, steps * gap * 1000);
+            }, waitMs));
+          }
+          walk(true);
+          // 잔잔한 새소리: 멀리서, 아주 가끔
+          function chirp(when, base, vol, side) {
+            const o = audioCtx.createOscillator(); o.type = 'sine';
+            const g = audioCtx.createGain();
+            o.frequency.setValueAtTime(base, when);
+            o.frequency.exponentialRampToValueAtTime(base * 1.25, when + 0.05);
+            o.frequency.exponentialRampToValueAtTime(base * 0.95, when + 0.11);
+            g.gain.setValueAtTime(0.0001, when);
+            g.gain.linearRampToValueAtTime(vol, when + 0.015);
+            g.gain.exponentialRampToValueAtTime(0.0001, when + 0.13);
+            o.connect(g); panTo(g, side, when).connect(birdOut);
+            o.start(when); o.stop(when + 0.16);
+          }
+          function scheduleBird() {
+            meditationIntervals.push(setTimeout(() => {
+              if (gen !== soundGen || !audioCtx || !isSoundOn) return;
+              const t = audioCtx.currentTime + 0.05;
+              const base = 2400 + Math.random() * 1000, n = 2 + Math.floor(Math.random() * 2), side = Math.random() * 1.2 - 0.6;
+              for (let i = 0; i < n; i++) chirp(t + i * 0.17, base * (1 + (Math.random() - 0.5) * 0.06), 0.015 + Math.random() * 0.015, side);
+              scheduleBird();
+            }, 6000 + Math.random() * 7000));
+          }
+          scheduleBird();
+        }
+
+        // 초록: 오월의 숲 — 나뭇잎 스치는 바람과 작은 시냇물
+        else if (kind === 'forest') {
+          const lf = audioCtx.createBiquadFilter(); lf.type = 'bandpass'; lf.frequency.setValueAtTime(2400, now); lf.Q.setValueAtTime(0.6, now);
+          const lg = audioCtx.createGain(); lg.gain.setValueAtTime(0.05, now);
+          noiseSrc(0).connect(lf); lf.connect(lg); lg.connect(sceneOut());
+          const rf = audioCtx.createBiquadFilter(); rf.type = 'bandpass'; rf.frequency.setValueAtTime(1100, now); rf.Q.setValueAtTime(1.4, now);
+          const rg = audioCtx.createGain(); rg.gain.setValueAtTime(0.12, now);
+          noiseSrc(2.3).connect(rf); rf.connect(rg); rg.connect(sceneOut());
+          meditationActiveNodes.push(lf, lg, rf, rg);
+          // 시냇물: 크기와 높이가 조금씩 다른 빠르기로 출렁여 졸졸 흐르는 느낌
+          addLfo(rg.gain, 0.73, 0.035);
+          addLfo(rg.gain, 1.9, 0.02);
+          addLfo(rf.frequency, 0.31, 180);
+          function breatheLeaves() {
+            if (gen !== soundGen || !audioCtx || !isSoundOn) return;
+            const t = audioCtx.currentTime;
+            lg.gain.cancelScheduledValues(t); lf.frequency.cancelScheduledValues(t);
+            lg.gain.setValueAtTime(0.07, t); lg.gain.linearRampToValueAtTime(0.22, t + 4); lg.gain.linearRampToValueAtTime(0.07, t + 8);
+            lf.frequency.setValueAtTime(2200, t); lf.frequency.linearRampToValueAtTime(3000, t + 4); lf.frequency.linearRampToValueAtTime(2200, t + 8);
+          }
+          breatheLeaves();
+          meditationIntervals.push(setInterval(breatheLeaves, 8000));
+        }
+
+        // 파랑: 맑은 하늘 — 높고 넓게 퍼지는 바람과 옅게 떠도는 맑은 화음
+        else if (kind === 'sky') {
+          const af = audioCtx.createBiquadFilter(); af.type = 'lowpass'; af.frequency.setValueAtTime(1000, now); af.Q.setValueAtTime(0.5, now);
+          const ag = audioCtx.createGain(); ag.gain.setValueAtTime(0.05, now);
+          noiseSrc(1.1).connect(af); af.connect(ag); ag.connect(sceneOut());
+          const pf = audioCtx.createBiquadFilter(); pf.type = 'lowpass'; pf.frequency.setValueAtTime(2400, now);
+          const pg = audioCtx.createGain(); pg.gain.setValueAtTime(0.05, now);
+          pf.connect(pg); pg.connect(sceneOut());
+          meditationActiveNodes.push(af, ag, pf, pg);
+          [523.25, 659.25, 783.99, 987.77].forEach((f, i) => {
+            const o = audioCtx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(f, now);
+            const g = audioCtx.createGain(); g.gain.setValueAtTime(0.18, now);
+            addLfo(g.gain, 0.05 + i * 0.023, 0.12); // 음마다 다른 느린 빠르기로 떠올랐다 가라앉는다
+            o.connect(g); g.connect(pf); o.start(now);
+            meditationActiveNodes.push(o, g);
+          });
+          function breatheSky() {
+            if (gen !== soundGen || !audioCtx || !isSoundOn) return;
+            const t = audioCtx.currentTime;
+            ag.gain.cancelScheduledValues(t); af.frequency.cancelScheduledValues(t);
+            ag.gain.setValueAtTime(0.04, t); ag.gain.linearRampToValueAtTime(0.11, t + 4); ag.gain.linearRampToValueAtTime(0.04, t + 8);
+            af.frequency.setValueAtTime(900, t); af.frequency.linearRampToValueAtTime(1700, t + 4); af.frequency.linearRampToValueAtTime(900, t + 8);
+          }
+          breatheSky();
+          meditationIntervals.push(setInterval(breatheSky, 8000));
+        }
       } catch (e) {
         console.warn('Meditation audio error:', e);
       }
@@ -1467,7 +1766,7 @@
     // 파도 장면: 원이 커질 때 '들이쉬고', 작아질 때 '내쉬고'가 옅게 번갈아 뜬다 (⑦)
     function updatePeaceBreathGuide() {
       const q = document.getElementById('peaceSceneQuote');
-      if (!q || currentPeaceIdx !== 0) return;
+      if (!q || peaceScenes[currentPeaceIdx].kind !== 'wave') return;
       const phase = ((performance.now() - peaceBreathStart) % 8000) < 4000 ? 'in' : 'out';
       if (phase === peaceGuidePhase) return;
       const first = peaceGuidePhase === null;
@@ -1475,7 +1774,10 @@
       const text = phase === 'in' ? '천천히 들이쉬고' : '천천히 내쉬고';
       if (first) { q.textContent = text; q.style.opacity = '1'; return; }
       q.style.opacity = '0';
-      setTimeout(() => { q.textContent = text; q.style.opacity = '1'; }, 450);
+      setTimeout(() => {
+        if (peaceScenes[currentPeaceIdx].kind !== 'wave') return; // 그새 다른 장면으로 바꿨으면 그대로 둔다
+        q.textContent = text; q.style.opacity = '1';
+      }, 450);
     }
     function startPeaceBreathGuide() {
       if (peaceGuideTimer) clearInterval(peaceGuideTimer);
@@ -2019,31 +2321,81 @@
       hideControls();
     }
 
-    let currentPeaceIdx = 0;
+    // 빨주노초파남보 일곱 장면 + 번외 두 장면(모닥불·단풍길). 처음 열면 남색(파도)부터.
+    let currentPeaceIdx = 5;
     const peaceScenes = [
       {
-        id: 0,
-        title: '해변의 파도',
-        soundName: '해변의 파도와 싱잉볼',
-        message: '파도의 호흡에 맞춰 천천히\n숨을 들이쉬고... 내쉬어 보세요.',
-        quote: '천천히 들이쉬고',
-        visualHtml: '<div class="flex flex-col items-center justify-center -mt-2"><div class="w-28 h-28 rounded-full bg-[#7fa7aa]/30 border-2 border-[#9ec0c4]/70 anim-breath flex items-center justify-center shadow-[0_0_40px_rgba(158,192,196,0.3)]"><div class="w-16 h-16 rounded-full bg-[#9ec0c4]/20 border border-[#9ec0c4]/50"></div></div><div class="h-6 flex items-center justify-center mt-10"><canvas id="peaceScopeCanvas" width="128" height="24" class="w-32 h-6 pointer-events-none drop-shadow-[0_0_8px_rgba(158,192,196,0.5)]"></canvas></div></div>'
+        kind: 'sunset', dot: '#d98a72', rgb: [217, 138, 114], light: [246, 214, 200], scopeAmp: 0.8,
+        title: '해 질 녘 노을',
+        soundName: '노을 지는 저녁 바람',
+        message: '하루가 천천히 저물어요.\n붉은 해가 물 위로 내려앉아요.',
+        quote: '천천히 내려앉는 해를 바라봐요',
+        visualHtml: '<div class="flex flex-col items-center justify-center -mt-2"><svg viewBox="0 0 160 112" class="w-36" style="height:100px;overflow:visible"><defs><radialGradient id="sunGlow"><stop offset="0%" stop-color="#e8a088" stop-opacity="0.5"/><stop offset="100%" stop-color="#e8a088" stop-opacity="0"/></radialGradient><clipPath id="sunClip"><rect x="0" y="0" width="160" height="80"/></clipPath></defs><circle cx="80" cy="70" r="60" fill="url(#sunGlow)" class="anim-breath" style="transform-box:fill-box;transform-origin:center;"/><g clip-path="url(#sunClip)"><circle class="anim-sun-sink" cx="80" cy="64" r="30" fill="#d98a72" fill-opacity="0.75"/></g><line x1="14" y1="80" x2="146" y2="80" stroke="#d98a72" stroke-opacity="0.5" stroke-width="1.2"/><line x1="40" y1="90" x2="120" y2="90" stroke="#d98a72" stroke-opacity="0.25"/><line x1="60" y1="99" x2="100" y2="99" stroke="#d98a72" stroke-opacity="0.14"/></svg><div class="h-6 flex items-center justify-center mt-10"><canvas id="peaceScopeCanvas" width="128" height="24" class="w-32 h-6 pointer-events-none"></canvas></div></div>'
       },
       {
-        id: 1,
-        title: '벨벳 앰비언트',
-        soundName: '포근한 벨벳 화음',
-        message: '따뜻한 하모닉스 화음이\n지친 마음을 부드럽게 감싸 안습니다.',
-        quote: '몸의 긴장을 가만히 내려놓으세요',
-        visualHtml: '<div class="flex flex-col items-center justify-center"><div class="relative w-32 h-32 flex items-center justify-center"><div class="absolute inset-0 rounded-full bg-[#8ab4f8]/15 blur-md anim-breath" style="animation-duration: 8s;"></div><div class="absolute w-28 h-28 rounded-full border border-[#8ab4f8]/40 anim-breath" style="animation-duration: 8s; animation-delay: 0.4s;"></div><div class="absolute w-20 h-20 rounded-full bg-gradient-to-tr from-[#8ab4f8]/30 to-[#c58af9]/30 border border-[#8ab4f8]/60 anim-breath" style="animation-duration: 8s;"></div><div class="w-10 h-10 rounded-full bg-white/40 blur-[1px] anim-breath shadow-[0_0_20px_#8ab4f8]" style="animation-duration: 8s;"></div></div><div class="h-6 flex items-center justify-center mt-8"><canvas id="peaceScopeCanvas" width="128" height="24" class="w-28 h-6 pointer-events-none"></canvas></div></div>'
-      },
-      {
-        id: 2,
+        kind: 'chime', dot: '#e9a35f', rgb: [244, 162, 97], light: [255, 235, 205], scopeAmp: 1,
         title: '숲과 윈드차임',
         soundName: '새벽 숲의 산들바람과 윈드차임',
         message: '살랑이는 산들바람과\n영롱한 윈드차임 맑은 풍경소리.',
         quote: '맑은 바람결에 생각을 흘려보내요',
         visualHtml: '<div class="flex flex-col items-center justify-center -mt-2"><svg viewBox="0 0 160 190" class="w-32 h-40 drop-shadow-[0_0_20px_rgba(244,162,97,0.35)]" style="overflow: visible;"><defs><linearGradient id="bronzeTubeGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#7A4218" /><stop offset="25%" stop-color="#E09F3E" /><stop offset="50%" stop-color="#F4A261" /><stop offset="75%" stop-color="#DDA15E" /><stop offset="100%" stop-color="#5C3317" /></linearGradient><linearGradient id="walnutGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#A06040" /><stop offset="50%" stop-color="#8C5332" /><stop offset="100%" stop-color="#5C3317" /></linearGradient><linearGradient id="sailGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#F4A261" /><stop offset="50%" stop-color="#BC6C25" /><stop offset="100%" stop-color="#6F3D2E" /></linearGradient></defs><circle cx="80" cy="10" r="4.5" fill="none" stroke="#DDA15E" stroke-width="2" /><line x1="80" y1="14" x2="56" y2="28" stroke="#D4A373" stroke-width="1.2" stroke-opacity="0.8" /><line x1="80" y1="14" x2="80" y2="28" stroke="#D4A373" stroke-width="1.2" stroke-opacity="0.8" /><line x1="80" y1="14" x2="104" y2="28" stroke="#D4A373" stroke-width="1.2" stroke-opacity="0.8" /><ellipse cx="80" cy="30" rx="34" ry="7" fill="url(#walnutGrad)" stroke="#4A2810" stroke-width="1.2" /><ellipse cx="80" cy="28.5" rx="32" ry="5.5" fill="none" stroke="#DDA15E" stroke-width="0.8" stroke-opacity="0.4" /><g class="anim-chime-real-1"><line x1="54" y1="30" x2="54" y2="38" stroke="#D4A373" stroke-width="1" stroke-opacity="0.7" /><rect x="51" y="38" width="6" height="52" rx="3" fill="url(#bronzeTubeGrad)" stroke="#5C3317" stroke-width="0.5" /><ellipse cx="54" cy="90" rx="3" ry="1" fill="#4A2810" /></g><g class="anim-chime-real-2"><line x1="67" y1="30" x2="67" y2="38" stroke="#D4A373" stroke-width="1" stroke-opacity="0.7" /><rect x="64" y="38" width="6" height="68" rx="3" fill="url(#bronzeTubeGrad)" stroke="#5C3317" stroke-width="0.5" /><ellipse cx="67" cy="106" rx="3" ry="1" fill="#4A2810" /></g><g class="anim-chime-real-3"><line x1="80" y1="30" x2="80" y2="38" stroke="#D4A373" stroke-width="1" stroke-opacity="0.7" /><rect x="77" y="38" width="6" height="82" rx="3" fill="url(#bronzeTubeGrad)" stroke="#5C3317" stroke-width="0.5" /><ellipse cx="80" cy="120" rx="3" ry="1" fill="#4A2810" /></g><g class="anim-chime-real-4"><line x1="93" y1="30" x2="93" y2="38" stroke="#D4A373" stroke-width="1" stroke-opacity="0.7" /><rect x="90" y="38" width="6" height="62" rx="3" fill="url(#bronzeTubeGrad)" stroke="#5C3317" stroke-width="0.5" /><ellipse cx="93" cy="100" rx="3" ry="1" fill="#4A2810" /></g><g class="anim-chime-real-5"><line x1="106" y1="30" x2="106" y2="38" stroke="#D4A373" stroke-width="1" stroke-opacity="0.7" /><rect x="103" y="38" width="6" height="48" rx="3" fill="url(#bronzeTubeGrad)" stroke="#5C3317" stroke-width="0.5" /><ellipse cx="106" cy="86" rx="3" ry="1" fill="#4A2810" /></g><g class="anim-chime-pendulum"><line x1="80" y1="30" x2="80" y2="76" stroke="#D4A373" stroke-width="1.2" stroke-dasharray="2,1" stroke-opacity="0.9" /><ellipse cx="80" cy="76" rx="10" ry="4.5" fill="url(#walnutGrad)" stroke="#4A2810" stroke-width="1" /><circle cx="80" cy="76" r="2.5" fill="#DDA15E" /><line x1="80" y1="76" x2="80" y2="136" stroke="#D4A373" stroke-width="1.2" stroke-opacity="0.8" /><g class="anim-wind-sail-leaf"><path d="M80 136 C68 148, 66 162, 80 174 C94 162, 92 148, 80 136 Z" fill="url(#sailGrad)" stroke="#5C3317" stroke-width="1.2" /><path d="M80 140 L80 168" stroke="#DDA15E" stroke-width="0.8" stroke-opacity="0.6" /></g></g></svg><div class="h-6 flex items-center justify-center mt-2"><canvas id="peaceScopeCanvas" width="128" height="24" class="w-32 h-6 pointer-events-none drop-shadow-[0_0_8px_rgba(244,162,97,0.6)]"></canvas></div></div>'
+      },
+      {
+        kind: 'spring', dot: '#f2d16b', rgb: [242, 209, 107], light: [255, 244, 205], scopeAmp: 0.8,
+        title: '봄 아침 개나리',
+        soundName: '멀리서 들리는 봄 새소리',
+        message: '노란 개나리 사이로\n작은 새들이 조용히 지저귀어요.',
+        quote: '따뜻한 햇살을 가만히 느껴 보세요',
+        visualHtml: '<div class="flex flex-col items-center justify-center -mt-2"><svg viewBox="0 0 120 120" class="w-32 h-32" style="overflow:visible"><circle cx="60" cy="60" r="54" fill="#f2d16b" fill-opacity="0.13" class="anim-breath" style="transform-box:fill-box;transform-origin:center;"/><g class="anim-breath" style="transform-box:fill-box;transform-origin:center;"><g class="anim-petal-turn" style="transform-origin:60px 60px"><ellipse cx="60" cy="37" rx="11" ry="21" fill="#f4d675" fill-opacity="0.8" transform="rotate(0 60 60)"/><ellipse cx="60" cy="37" rx="11" ry="21" fill="#f4d675" fill-opacity="0.8" transform="rotate(90 60 60)"/><ellipse cx="60" cy="37" rx="11" ry="21" fill="#f4d675" fill-opacity="0.8" transform="rotate(180 60 60)"/><ellipse cx="60" cy="37" rx="11" ry="21" fill="#f4d675" fill-opacity="0.8" transform="rotate(270 60 60)"/><circle cx="60" cy="60" r="6.5" fill="#e9b949"/></g></g></svg><div class="h-6 flex items-center justify-center mt-10"><canvas id="peaceScopeCanvas" width="128" height="24" class="w-32 h-6 pointer-events-none"></canvas></div></div>'
+      },
+      {
+        kind: 'forest', dot: '#a8d672', rgb: [168, 214, 114], light: [228, 245, 205], scopeAmp: 0.8,
+        title: '오월의 숲',
+        soundName: '나뭇잎 바람과 작은 시냇물',
+        message: '연둣빛 잎사귀 사이로\n시냇물이 졸졸 흘러요.',
+        quote: '숲의 숨결을 따라 쉬어 가요',
+        visualHtml: '<div class="flex flex-col items-center justify-center -mt-2"><svg viewBox="0 0 120 130" class="w-32" style="height:136px;overflow:visible"><circle cx="60" cy="64" r="52" fill="#a8d672" fill-opacity="0.12" class="anim-breath" style="transform-box:fill-box;transform-origin:center;"/><g class="anim-leaf-sway" style="transform-origin:60px 114px"><path d="M60 114 C60 92 60 70 60 22" stroke="#8cbf5a" stroke-width="1.6" fill="none" stroke-opacity="0.8"/><path d="M60 22 C88 40 92 78 60 104 C28 78 32 40 60 22 Z" fill="#b5dd7d" fill-opacity="0.55" stroke="#9ccc65" stroke-width="1.2"/><path d="M60 50 L74 40 M60 66 L78 54 M60 82 L74 74 M60 50 L46 40 M60 66 L42 54 M60 82 L46 74" stroke="#e6f5cf" stroke-opacity="0.45" stroke-width="1"/></g></svg><div class="h-6 flex items-center justify-center mt-10"><canvas id="peaceScopeCanvas" width="128" height="24" class="w-32 h-6 pointer-events-none"></canvas></div></div>'
+      },
+      {
+        kind: 'sky', dot: '#8cc8ec', rgb: [140, 200, 236], light: [215, 238, 250], scopeAmp: 0.8,
+        title: '맑은 하늘',
+        soundName: '높은 하늘의 바람',
+        message: '구름 한 점이\n하늘을 천천히 지나가요.',
+        quote: '생각을 구름처럼 흘려보내요',
+        visualHtml: '<div class="flex flex-col items-center justify-center -mt-2"><div class="relative w-32 h-32 flex items-center justify-center"><div class="absolute inset-0 rounded-full anim-breath" style="background:radial-gradient(circle, rgba(140,200,236,0.35), rgba(140,200,236,0) 70%);"></div><div class="w-24 h-24 rounded-full anim-breath" style="background:rgba(140,200,236,0.18);border:1.5px solid rgba(160,212,242,0.6);"></div><svg viewBox="0 0 60 26" class="absolute anim-cloud-drift" style="width:64px;top:44px;left:32px;"><path d="M12 22 C3 22 3 11 12 12 C13 4 25 3 27 10 C31 5 41 7 41 14 C48 13 50 22 43 22 Z" fill="#ffffff" fill-opacity="0.55"/></svg></div><div class="h-6 flex items-center justify-center mt-10"><canvas id="peaceScopeCanvas" width="128" height="24" class="w-32 h-6 pointer-events-none"></canvas></div></div>'
+      },
+      {
+        kind: 'wave', dot: '#7d8ad6', rgb: [143, 155, 227], light: [222, 226, 250], scopeAmp: 1,
+        title: '해변의 파도',
+        soundName: '해변의 파도와 싱잉볼',
+        message: '파도의 호흡에 맞춰 천천히\n숨을 들이쉬고... 내쉬어 보세요.',
+        quote: '천천히 들이쉬고',
+        visualHtml: '<div class="flex flex-col items-center justify-center -mt-2"><div class="w-28 h-28 rounded-full bg-[#6c7bc4]/30 border-2 border-[#8f9be3]/70 anim-breath flex items-center justify-center shadow-[0_0_40px_rgba(143,155,227,0.3)]"><div class="w-16 h-16 rounded-full bg-[#8f9be3]/20 border border-[#8f9be3]/50"></div></div><div class="h-6 flex items-center justify-center mt-10"><canvas id="peaceScopeCanvas" width="128" height="24" class="w-32 h-6 pointer-events-none drop-shadow-[0_0_8px_rgba(143,155,227,0.5)]"></canvas></div></div>'
+      },
+      {
+        kind: 'velvet', dot: '#ad94ea', rgb: [169, 154, 240], light: [225, 215, 255], scopeAmp: 0.5,
+        title: '벨벳 앰비언트',
+        soundName: '포근한 벨벳 화음',
+        message: '따뜻한 하모닉스 화음이\n지친 마음을 부드럽게 감싸 안습니다.',
+        quote: '몸의 긴장을 가만히 내려놓으세요',
+        visualHtml: '<div class="flex flex-col items-center justify-center"><div class="relative w-32 h-32 flex items-center justify-center"><div class="absolute inset-0 rounded-full bg-[#a99af0]/15 blur-md anim-breath" style="animation-duration: 8s;"></div><div class="absolute w-28 h-28 rounded-full border border-[#a99af0]/40 anim-breath" style="animation-duration: 8s; animation-delay: 0.4s;"></div><div class="absolute w-20 h-20 rounded-full bg-gradient-to-tr from-[#a99af0]/30 to-[#c58af9]/30 border border-[#a99af0]/60 anim-breath" style="animation-duration: 8s;"></div><div class="w-10 h-10 rounded-full bg-white/40 blur-[1px] anim-breath shadow-[0_0_20px_#a99af0]" style="animation-duration: 8s;"></div></div><div class="h-6 flex items-center justify-center mt-10"><canvas id="peaceScopeCanvas" width="128" height="24" class="w-28 h-6 pointer-events-none"></canvas></div></div>'
+      },
+      // ── 번외 ──
+      {
+        kind: 'fire', dot: '#e0884a', rgb: [235, 160, 90], light: [255, 228, 190], scopeAmp: 0.8, extra: true,
+        title: '모닥불',
+        soundName: '타닥타닥 모닥불',
+        message: '작은 모닥불이\n조용히 타닥거려요.',
+        quote: '불빛을 가만히 바라봐요',
+        visualHtml: '<div class="flex flex-col items-center justify-center -mt-2"><svg viewBox="0 0 120 120" class="w-32 h-32" style="overflow:visible"><circle cx="60" cy="66" r="52" fill="#eba25a" fill-opacity="0.13" class="anim-breath" style="transform-box:fill-box;transform-origin:center;"/><g style="transform-origin:60px 92px" class="anim-flame-a"><path d="M60 30 C76 52 82 66 76 80 C72 90 48 90 44 80 C38 66 46 50 60 30 Z" fill="#e0884a" fill-opacity="0.55"/></g><g style="transform-origin:60px 92px" class="anim-flame-b"><path d="M60 44 C71 58 74 70 70 80 C67 87 53 87 50 80 C46 70 50 58 60 44 Z" fill="#f2b45e" fill-opacity="0.75"/></g><g style="transform-origin:60px 92px" class="anim-flame-c"><path d="M60 58 C66 66 67 74 65 80 C63 84 57 84 55 80 C53 74 55 66 60 58 Z" fill="#fbe1a0" fill-opacity="0.85"/></g><rect x="34" y="86" width="52" height="7" rx="3.5" fill="#7a4a2a" transform="rotate(-12 60 89)"/><rect x="34" y="86" width="52" height="7" rx="3.5" fill="#8c5a36" transform="rotate(12 60 89)"/></svg><div class="h-6 flex items-center justify-center mt-10"><canvas id="peaceScopeCanvas" width="128" height="24" class="w-32 h-6 pointer-events-none"></canvas></div></div>'
+      },
+      {
+        kind: 'maple', dot: '#c9624a', rgb: [201, 98, 74], light: [246, 205, 190], scopeAmp: 0.8, extra: true,
+        title: '단풍길',
+        soundName: '낙엽 밟는 소리와 잔잔한 새소리',
+        message: '붉게 물든 숲길을\n천천히 걸어요.',
+        quote: '한 걸음씩, 천천히',
+        visualHtml: '<div class="flex flex-col items-center justify-center -mt-2"><svg viewBox="0 0 100 110" class="w-32" style="height:140px;overflow:visible"><circle cx="50" cy="52" r="46" fill="#c9624a" fill-opacity="0.12" class="anim-breath" style="transform-box:fill-box;transform-origin:center;"/><g class="anim-maple-drift" style="transform-origin:50px 52px"><path d="M50 8 L56 26 L68 18 L64 36 L82 32 L72 46 L88 54 L68 58 L72 72 L56 64 L52 84 L48 84 L44 64 L28 72 L32 58 L12 54 L28 46 L18 32 L36 36 L32 18 L44 26 Z" fill="#c9624a" fill-opacity="0.72" stroke="#d9805f" stroke-width="1" stroke-linejoin="round"/><path d="M50 84 L50 98 M50 70 L50 22 M50 56 L72 40 M50 56 L28 40 M50 66 L66 62 M50 66 L34 62" stroke="#f0c2a8" stroke-opacity="0.45" stroke-width="1" fill="none"/></g><path d="M14 104 Q50 96 86 104" stroke="#c9624a" stroke-opacity="0.35" stroke-width="1.2" fill="none"/><ellipse cx="28" cy="102" rx="4" ry="2" fill="#d9805f" fill-opacity="0.55" transform="rotate(-20 28 102)"/><ellipse cx="66" cy="101" rx="3.5" ry="1.8" fill="#e09a5a" fill-opacity="0.5" transform="rotate(25 66 101)"/><ellipse cx="78" cy="104" rx="3" ry="1.6" fill="#c9624a" fill-opacity="0.5"/></svg><div class="h-6 flex items-center justify-center mt-10"><canvas id="peaceScopeCanvas" width="128" height="24" class="w-32 h-6 pointer-events-none"></canvas></div></div>'
       }
     ];
 
@@ -2067,15 +2419,10 @@
       peaceGuidePhase = null;
       updatePeaceBreathGuide();
 
-      // 3가지 소리 탭 활성화 상태 즉시 동기화
-      [0, 1, 2].forEach(i => {
+      // 고른 색 동그라미만 또렷하게
+      peaceScenes.forEach((_, i) => {
         const tab = document.getElementById(`sceneTab-${i}`);
-        if (!tab) return;
-        if (i === (idx % peaceScenes.length)) {
-          tab.className = "flex-1 py-1 px-1.5 text-[10.5px] rounded-lg border border-[#9ec0c4]/60 bg-[#9ec0c4]/25 text-[#9ec0c4] font-bold transition text-center truncate cursor-pointer shadow-[0_0_10px_rgba(158,192,196,0.2)]";
-        } else {
-          tab.className = "flex-1 py-1 px-1.5 text-[10.5px] rounded-lg border border-white/10 bg-white/5 text-white/60 hover:text-white transition text-center truncate cursor-pointer";
-        }
+        if (tab) tab.classList.toggle('on', i === (idx % peaceScenes.length));
       });
     }
 
