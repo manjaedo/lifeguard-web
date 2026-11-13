@@ -501,6 +501,21 @@
               <span>🔔</span> 알림 미리보기 (기록되지 않음)
             </button>
           </div>
+          <!-- 아이폰: 단축어 자동화로 매일 알림 (웹에서만 표시, 안드로이드 앱에서는 숨김) -->
+          <details id="iosShortcutGuide" class="hidden pt-1 text-[11px] leading-relaxed">
+            <summary class="cursor-pointer font-semibold py-1 select-none">📱 아이폰에서 매일 알림 받기</summary>
+            <ol class="list-decimal pl-4 space-y-1 mt-1.5 opacity-90">
+              <li><b>단축어</b> 앱 → 아래 <b>자동화</b> → <b>＋</b> → <b>특정 시간</b></li>
+              <li>시각을 정하고 <b>매일</b>, <b>즉시 실행</b>을 고른 뒤 다음</li>
+              <li><b>URL 열기</b>를 고르고 아래 주소를 붙여넣기</li>
+              <li>완료. 정한 시각에 기분 선택창이 열립니다.</li>
+            </ol>
+            <div class="flex items-center gap-1.5 mt-2">
+              <code id="iosShortcutUrl" class="flex-1 min-w-0 truncate rounded-lg px-2 py-1.5 text-[10px]" style="background: color-mix(in srgb, currentColor 8%, transparent);"></code>
+              <button type="button" onclick="copyIosShortcutUrl()" class="shrink-0 rounded-lg px-2.5 py-1.5 font-semibold border border-current/20 cursor-pointer active:scale-95" style="border-color: color-mix(in srgb, currentColor 25%, transparent);">주소 복사</button>
+            </div>
+            <p class="mt-1.5 opacity-70">기록은 이 기기의 사파리에 저장됩니다. 평소에도 사파리에서 이 주소로 열어 주세요. 홈 화면에 추가한 아이콘과는 기록이 따로 보관됩니다.</p>
+          </details>
         </div>
 
         <!-- 터치 효과 선택 영역 (가로 3칸) -->
@@ -2317,7 +2332,36 @@
       }
     }
 
+    function getCheckinUrl() {
+      return location.origin + location.pathname + '?checkin=1';
+    }
+    function copyIosShortcutUrl() {
+      const url = getCheckinUrl();
+      const done = () => showToast('주소를 복사했어요');
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(done, () => fallbackCopy(url, done));
+          return;
+        }
+      } catch (_) {}
+      fallbackCopy(url, done);
+    }
+    function fallbackCopy(text, done) {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (_) {}
+      ta.remove();
+    }
+
     function updateAlarmSettingUI() {
+      const iosGuide = document.getElementById('iosShortcutGuide');
+      if (iosGuide) {
+        const isWeb = !window.AndroidBridge && /^https?:$/.test(location.protocol);
+        iosGuide.classList.toggle('hidden', !isWeb);
+        const urlEl = document.getElementById('iosShortcutUrl');
+        if (urlEl) urlEl.textContent = getCheckinUrl();
+      }
       const effective = getEffectiveTheme(currentTheme);
       const isDark = effective === 'dark';
       const isNeutral = effective === 'neutral';
