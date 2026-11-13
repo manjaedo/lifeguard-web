@@ -51,7 +51,6 @@
     #phoneScreen[data-font-step="5"] #fontBtn-1,
     #phoneScreen[data-font-step="5"] #fontBtn-3,
     #phoneScreen[data-font-step="5"] #fontBtn-5,
-    #phoneScreen[data-font-step="5"] #alarmPreviewModalBtn,
     #phoneScreen[data-font-step="5"] #alarmTestNotifyBtn {
       font-size: 12px !important;
       white-space: nowrap !important;
@@ -184,7 +183,16 @@
       animation: starTwinkle 3s ease-in-out infinite;
     }
     .corner-btn {
-      transition: opacity 300ms cubic-bezier(0.2, 0.8, 0.2, 1), transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+      transition: opacity 300ms cubic-bezier(0.2, 0.8, 0.2, 1), transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1), background-color 200ms ease;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    /* 누르는 순간: 쏙 들어가며(0.86배) 100%로 깨어나고 뒤에 옅은 원. 손을 떼면 부드럽게 튀어 돌아온다 */
+    .corner-btn.is-pressed {
+      opacity: 1 !important;
+      transform: scale(0.86);
+      background-color: color-mix(in srgb, currentColor 12%, transparent);
+      transition: opacity 80ms ease-out, transform 90ms ease-out, background-color 80ms ease-out;
     }
     @keyframes floatFeedback {
       0% { opacity: 0; transform: translateY(0); }
@@ -236,7 +244,7 @@
     <div id="topCorners" class="w-full flex justify-between items-center text-xs z-20">
       
       <!-- Top Left: Hospital Report / Clinical Summary (좌측 상단 함께 보는 기록) -->
-      <button onclick="event.stopPropagation(); openReportModal()" class="corner-btn w-9 h-9 rounded-full opacity-30 hover:opacity-100 active:opacity-100 hover:bg-black/5 flex items-center justify-center text-current active:scale-105" title="함께 보는 기록 (선생님과 나눌 기록)">
+      <button onclick="event.stopPropagation(); openReportModal()" class="corner-btn w-9 h-9 rounded-full opacity-30 hover:opacity-100 active:opacity-100 hover:bg-black/5 flex items-center justify-center text-current" title="함께 보는 기록 (선생님과 나눌 기록)">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
           <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-linecap="round" stroke-linejoin="round"/>
           <path d="M9 14l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/>
@@ -244,7 +252,7 @@
       </button>
 
       <!-- Top Right: Settings (우측 상단 설정: 철학 / 연출4종 / 배경3종) -->
-      <button onclick="event.stopPropagation(); openSettingsModal()" class="corner-btn w-9 h-9 rounded-full opacity-30 hover:opacity-100 active:opacity-100 hover:bg-black/5 flex items-center justify-center text-current active:scale-105" title="설정 및 철학 안내">
+      <button onclick="event.stopPropagation(); openSettingsModal()" class="corner-btn w-9 h-9 rounded-full opacity-30 hover:opacity-100 active:opacity-100 hover:bg-black/5 flex items-center justify-center text-current" title="설정 및 철학 안내">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
           <path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
@@ -325,14 +333,14 @@
     <div id="bottomCorners" class="w-full flex justify-between items-center text-xs z-20">
       
       <!-- Bottom Left: Memo (좌측 하단 한줄 메모) -->
-      <button onclick="event.stopPropagation(); openMemoModal()" class="corner-btn w-9 h-9 rounded-full opacity-30 hover:opacity-100 active:opacity-100 hover:bg-black/5 flex items-center justify-center text-current active:scale-105" title="의사 선생님께 드릴 한 줄 메모">
+      <button onclick="event.stopPropagation(); openMemoModal()" class="corner-btn w-9 h-9 rounded-full opacity-30 hover:opacity-100 active:opacity-100 hover:bg-black/5 flex items-center justify-center text-current" title="의사 선생님께 드릴 한 줄 메모">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
           <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
 
       <!-- Bottom Right: Peace / Emergency (우측 하단 구명튜브: 마음의 평화 10선) -->
-      <button onclick="event.stopPropagation(); openPeaceModal()" class="corner-btn w-9 h-9 rounded-full opacity-30 hover:opacity-100 active:opacity-100 hover:bg-[#d9534f]/10 flex items-center justify-center text-[#d9534f] active:scale-105" title="마음의 평화 (힐링 명상 & 사운드)">
+      <button onclick="event.stopPropagation(); openPeaceModal()" class="corner-btn w-9 h-9 rounded-full opacity-30 hover:opacity-100 active:opacity-100 hover:bg-[#d9534f]/10 flex items-center justify-center text-[#d9534f]" title="마음의 평화 (힐링 명상 & 사운드)">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="9" stroke-linecap="round" stroke-linejoin="round"/>
           <circle cx="12" cy="12" r="4" stroke-linecap="round" stroke-linejoin="round"/>
@@ -362,28 +370,40 @@
           <span id="periodText" class="font-semibold text-xs truncate">새 진료 주기 시작 · 오늘 1일차</span>
         </div>
 
-        <!-- 기분 궤적 곡선 (진료기간 바로 아래, 조증 울증 문구 상기 방지 삭제) -->
+        <!-- 기분 기록 막대그래프 (진료기간 바로 아래, 조증 울증 문구 상기 방지 삭제) -->
         <div id="reportChartCard" class="bg-white rounded-xl p-3 border border-gray-100 shadow-sm mb-3 transition-colors">
           <div class="flex justify-between items-center text-[10px] text-[#597075] font-semibold mb-2">
-            <span id="chartLabel">기분 궤적</span>
-            <span class="text-gray-400">우측: 최근</span>
+            <span id="chartLabel">기분 기록</span>
+            <div id="chartModeSwitch" class="flex items-center rounded-full p-0.5 text-[10px] font-semibold" style="background: rgba(127,167,170,0.14);">
+              <button type="button" data-mode="bar" onclick="setChartMode('bar', event)" class="chart-mode-btn px-2 py-0.5 rounded-full transition">막대</button>
+              <button type="button" data-mode="curve" onclick="setChartMode('curve', event)" class="chart-mode-btn px-2 py-0.5 rounded-full transition">곡선</button>
+            </div>
           </div>
           <svg class="w-full h-24" viewBox="0 0 260 90">
-            <line x1="0" y1="45" x2="260" y2="45" stroke="#7fa7aa" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.4"/>
-            <path id="chartPath" d="M 10 45 L 250 45" fill="none" stroke="#597075" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="22" y1="45" x2="256" y2="45" stroke="#7fa7aa" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.4"/>
+            <g id="chartGrid"></g>
+            <g id="chartTicks"></g>
+            <path id="chartPath" d="" fill="none" stroke="#597075" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>
+            <g id="chartDots"></g>
             <circle id="chartCircle" cx="250" cy="45" r="4" fill="#597075" opacity="0" />
           </svg>
+          <div class="flex justify-between text-[10px] text-gray-400 mt-0.5 px-1">
+            <span id="chartStartLabel"></span>
+            <span id="chartEndLabel">오늘</span>
+          </div>
         </div>
 
-        <!-- 핵심 지표 (복약 일수 단독 표기 - 평시 비율은 연구 후 보완을 위해 임시 숨김) -->
+        <!-- 핵심 지표 (복약 기록 사용 시에만 복약 일수 표기 - 평시 비율은 연구 후 보완을 위해 임시 숨김) -->
         <div id="reportStatsCard" class="bg-white rounded-xl p-2.5 shadow-sm border border-gray-100 mb-3 text-center transition-colors">
+          <div class="flex items-stretch">
           <div id="statEvenBox" class="hidden">
             <div class="text-[10px] text-gray-400">🌿 평시(○)</div>
             <div id="statEven" class="text-sm font-bold text-[#597075] mt-0.5">-</div>
           </div>
-          <div id="statBorder" class="w-full">
+          <div id="statBorder" class="flex-1">
             <div class="text-[10px] text-gray-400">💊 복약 일수</div>
             <div id="statMed" class="text-sm font-bold text-[#597075] mt-0.5">0 / 1일</div>
+          </div>
           </div>
         </div>
 
@@ -427,13 +447,13 @@
           </p>
         </div>
 
-        <!-- 환자 이름 / 닉네임 설정 (선택사항) -->
+        <!-- 이름 / 닉네임 설정 (선택사항) -->
         <div id="settingsPatientCard" class="bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2 transition-colors">
           <div id="settingsPatientTitle" class="font-bold text-[#597075] text-[13px] flex items-center gap-1.5">
-            <span>👤</span> 환자 이름 또는 닉네임 (선택)
+            <span>👤</span> 이름 또는 닉네임 (선택)
           </div>
           <p class="leading-relaxed text-[11px] text-gray-500">
-            진료실에서 선생님과 함께 보는 화면에 표시됩니다. 외부 서버로 전송되지 않고 오직 이 기기에만 안전하게 보관됩니다.
+            외부 서버로 전송되지 않고 오직 이 기기에만 안전하게 보관됩니다.
           </p>
           <div class="pt-1">
             <input id="settingsPatientNameInput" type="text" value="" placeholder="이름 또는 닉네임 입력 (미입력 시 비움)"
@@ -454,7 +474,7 @@
           </div>
           <div id="medSettingStatusText" class="text-xs font-semibold text-gray-500">현재: 복약 기록 끔 (기분만 기록)</div>
           <p id="settingsMedDesc" class="leading-relaxed text-[11px] text-gray-500">
-            복약 치료를 받지 않으시거나 복약 체크가 필요 없으신 경우 기능을 끄면, 첫 화면과 함께보기에서 복약 정보가 숨겨지고 <strong>기분 궤적만 단독으로 표시</strong>됩니다.
+            복약 치료를 받지 않으시거나 복약 체크가 필요 없으신 경우 기능을 끄면, 첫 화면과 함께보기에서 복약 정보가 숨겨지고 <strong>기분 기록만 단독으로 표시</strong>됩니다.
           </p>
         </div>
 
@@ -476,53 +496,46 @@
           <p id="settingsAlarmDesc" class="leading-relaxed text-[11px] text-gray-500">
             하루 한 번 지정한 시각(기본 저녁 6시)에 알림이 울립니다. 알림을 터치하면 <strong>5가지 기분 도형 선택창</strong>이 바로 열려 터치 한 번으로 기록할 수 있습니다.
           </p>
-          <div class="grid grid-cols-2 gap-1.5 pt-0.5">
-            <button id="alarmPreviewModalBtn" type="button" onclick="openDailyCheckinModal(true)" class="py-2 px-2 rounded-xl bg-[#597075]/10 hover:bg-[#597075]/20 text-[#597075] text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap">
-              <span>✨</span> 기분 선택창 보기
-            </button>
-            <button id="alarmTestNotifyBtn" type="button" onclick="testDailyAlarmNow()" class="py-2 px-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap">
-              <span>🔔</span> 지금 알림 테스트
+          <div class="pt-0.5">
+            <button id="alarmTestNotifyBtn" type="button" onclick="testDailyAlarmNow()" class="w-full py-2 px-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap">
+              <span>🔔</span> 알림 미리보기 (기록되지 않음)
             </button>
           </div>
         </div>
 
-        <!-- 터치 효과 선택 (3가지) 영역 -->
+        <!-- 터치 효과 선택 영역 (가로 3칸) -->
         <div class="mb-4">
           <div class="text-xs font-bold mb-2 flex items-center justify-between">
-            <span id="settingsTouchTitle" class="text-[#597075]">터치 효과 선택 (3가지)</span>
-            <span id="activeStyleBadge" class="text-[10px] text-[#597075] font-semibold bg-[#597075]/10 px-2 py-0.5 rounded-full transition-colors">2. 숨결 적용 중 (기본)</span>
+            <span id="settingsTouchTitle" class="text-[#597075]">터치 효과</span>
           </div>
-          <div id="touchStyleContainer" class="space-y-1.5">
+          <div id="touchStyleContainer" class="grid grid-cols-3 gap-1.5">
             <!-- 1. 수면의 파문 -->
-            <button id="styleBtn-ripple" onclick="setTouchStyle('ripple')" class="w-full border border-gray-200 bg-white rounded-xl p-2.5 text-left flex items-start justify-between hover:border-[#597075] transition">
+            <button id="styleBtn-ripple" onclick="setTouchStyle('ripple')" class="w-full border border-gray-200 bg-white rounded-xl px-1 py-2.5 text-center flex flex-wrap items-center justify-center gap-1 hover:border-[#597075] transition">
               <div>
-                <div class="font-semibold text-xs flex items-center gap-1.5">
-                  1. 수면의 파문 (물결)
+                <div class="font-semibold text-xs flex flex-wrap items-center justify-center gap-1" style="word-break: keep-all;">
+                  1. 수면의 파문
                 </div>
-                <div class="text-[10px] opacity-60 mt-0.5">고요한 물결이 퍼지며 수면 위로 피어오릅니다</div>
               </div>
               <span id="check-ripple" class="text-xs font-bold hidden">✓</span>
             </button>
 
             <!-- 2. 숨결 (호흡·안개) - 디폴트 (기본) -->
-            <button id="styleBtn-breath" onclick="setTouchStyle('breath')" class="w-full border-2 border-[#597075] bg-[#597075]/10 rounded-xl p-2.5 text-left flex items-start justify-between transition">
+            <button id="styleBtn-breath" onclick="setTouchStyle('breath')" class="w-full border-2 border-[#597075] bg-[#597075]/10 rounded-xl px-1 py-2.5 text-center flex flex-wrap items-center justify-center gap-1 transition">
               <div>
-                <div class="font-semibold text-xs flex items-center gap-1.5">
-                  2. 숨결 (호흡·안개)
+                <div class="font-semibold text-xs flex flex-wrap items-center justify-center gap-1" style="word-break: keep-all;">
+                  2. 숨결
                   <span id="styleBadge-breath" class="bg-[#597075] text-white text-[9px] px-1.5 py-0.2 rounded font-bold">기본</span>
                 </div>
-                <div class="text-[10px] opacity-60 mt-0.5">깊은 호흡처럼 부풀어 올랐다 공기 중으로 사르르 소멸</div>
               </div>
               <span id="check-breath" class="text-xs font-bold">✓</span>
             </button>
 
             <!-- 3. 찰나의 별빛 -->
-            <button id="styleBtn-star" onclick="setTouchStyle('star')" class="w-full border border-gray-200 bg-white rounded-xl p-2.5 text-left flex items-start justify-between hover:border-[#597075] transition">
+            <button id="styleBtn-star" onclick="setTouchStyle('star')" class="w-full border border-gray-200 bg-white rounded-xl px-1 py-2.5 text-center flex flex-wrap items-center justify-center gap-1 hover:border-[#597075] transition">
               <div>
-                <div class="font-semibold text-xs flex items-center gap-1.5">
-                  3. 찰나의 별빛 (잔상)
+                <div class="font-semibold text-xs flex flex-wrap items-center justify-center gap-1" style="word-break: keep-all;">
+                  3. 찰나의 별빛
                 </div>
-                <div class="text-[10px] opacity-60 mt-0.5">별빛처럼 맑게 점등되고 한 점으로 빨려 들어가듯 닫힘</div>
               </div>
               <span id="check-star" class="text-xs font-bold hidden">✓</span>
             </button>
@@ -532,7 +545,7 @@
         <!-- 배경 및 화면 테마 선택 (시스템 연동 / 순백 / 중간톤 / 다크) -->
         <div class="mb-4">
           <div id="settingsThemeTitle" class="text-xs font-bold text-[#597075] mb-2 flex items-center justify-between gap-2">
-            <span>배경 및 화면 테마</span>
+            <span>테마 선택</span>
             <span id="themeSystemLiveBadge" class="text-[10px] text-[#597075] bg-[#597075]/10 px-2 py-0.5 rounded-full font-semibold shrink-0">시스템 연동 중</span>
           </div>
           <div class="space-y-1.5">
@@ -550,7 +563,7 @@
             <div class="grid grid-cols-3 gap-2 text-center text-xs pt-1">
               <button id="themeBtn-white" onclick="setPreviewTheme('white')" class="border border-gray-200 bg-[#fbfcfc] text-gray-700 rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center">순백</button>
               <button id="themeBtn-neutral" onclick="setPreviewTheme('neutral')" class="border border-gray-200 bg-[#ecefea] text-gray-700 rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center">한지 미색</button>
-              <button id="themeBtn-dark" onclick="setPreviewTheme('dark')" class="border border-gray-200 bg-[#141718] text-white rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center">다크 (밤)</button>
+              <button id="themeBtn-dark" onclick="setPreviewTheme('dark')" class="border border-gray-200 bg-[#141718] text-white rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center">다크</button>
             </div>
           </div>
         </div>
@@ -562,9 +575,9 @@
             <span id="fontStepLiveBadge" class="text-[10px] text-[#597075] bg-[#597075]/10 px-2 py-0.5 rounded-full font-semibold shrink-0">1단계 (기본)</span>
           </div>
           <div class="grid grid-cols-3 gap-2 text-center text-xs">
-            <button id="fontBtn-1" type="button" onclick="setFontStep(1)" class="border-2 border-[#597075] bg-[#597075]/15 text-[#597075] font-bold rounded-xl py-2 shadow-sm transition flex items-center justify-center cursor-pointer active:scale-95">1 (기본)</button>
-            <button id="fontBtn-3" type="button" onclick="setFontStep(3)" class="border border-gray-200 bg-white text-gray-700 rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center cursor-pointer active:scale-95">3 (크게)</button>
-            <button id="fontBtn-5" type="button" onclick="setFontStep(5)" class="border border-gray-200 bg-white text-gray-700 rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center cursor-pointer active:scale-95">5 (아주 크게)</button>
+            <button id="fontBtn-1" type="button" onclick="setFontStep(1)" class="border-2 border-[#597075] bg-[#597075]/15 text-[#597075] font-bold rounded-xl py-2 shadow-sm transition flex items-center justify-center cursor-pointer active:scale-95">기본</button>
+            <button id="fontBtn-3" type="button" onclick="setFontStep(3)" class="border border-gray-200 bg-white text-gray-700 rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center cursor-pointer active:scale-95">크게</button>
+            <button id="fontBtn-5" type="button" onclick="setFontStep(5)" class="border border-gray-200 bg-white text-gray-700 rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center cursor-pointer active:scale-95">아주 크게</button>
           </div>
         </div>
 
@@ -604,7 +617,7 @@
           </a>
         </div>
       </div>
-      <div id="settingsVersion" class="text-center text-[10px] text-gray-400">Life Guard v1.2.0-alpha (알파판)</div>
+      <div id="settingsVersion" class="text-center text-[10px] text-gray-400">Life Guard v1.2.1-alpha (알파판)</div>
     </div>
 
     <!-- Modal 3: Peace Screen (마음의 평화: 호흡의 파도 & 실시간 명상 배경음 / 10초 후 중앙 이미지 외 페이드아웃, 탭 시 복귀) -->
@@ -629,9 +642,6 @@
             <h3 id="peaceSceneTitle" class="text-sm font-semibold text-white/90 truncate">1. 해변의 파도</h3>
             <p id="peaceSceneDesc" class="text-[11px] text-white/50 mt-0.5 leading-relaxed truncate">파도의 호흡에 맞춰 천천히 숨을 들이쉬고... 내쉬어 보세요.</p>
           </div>
-          <button id="peaceCycleBtn" type="button" onclick="cyclePeaceScene(event)" class="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-[11px] text-[#9ec0c4] font-medium flex items-center gap-1 transition active:scale-95 shrink-0 cursor-pointer pointer-events-auto">
-            <span>다음</span> <span>›</span>
-          </button>
         </div>
 
         <!-- 3가지 소리/애니메이션 전환 탭 (번갈아가며 들을 수 있는 구성) -->
@@ -722,18 +732,10 @@
     </div>
 
     <!-- Modal 7: 데일리요(Daylio) 스타일 원터치 기분 선택창 (알림 터치 진입 시 또는 미리보기 시 바로 팝업) -->
-    <div id="dailyCheckinModal" onclick="closeDailyCheckinModal(event)" class="absolute inset-0 bg-black/45 backdrop-blur-md z-50 flex items-center justify-center p-5 opacity-0 pointer-events-none transition-all duration-200 hidden" style="display: none;">
+    <div id="dailyCheckinModal" onclick="event.stopPropagation()" class="absolute inset-0 bg-black/45 backdrop-blur-md z-50 flex items-center justify-center p-5 opacity-0 pointer-events-none transition-all duration-200 hidden" style="display: none;">
       <div id="dailyCheckinCard" onclick="event.stopPropagation()" class="bg-white rounded-3xl p-5 shadow-2xl w-full max-w-[288px] text-center transform scale-95 transition-all duration-200 border border-gray-100 cursor-default">
-        <div class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#597075]/10 text-[#597075] mb-2" id="dailyCheckinBadge">
-          <span>🔔</span> <span id="dailyCheckinBadgeText">오늘의 마음 기록</span>
-        </div>
-        <h4 id="dailyCheckinTitle" class="text-sm font-bold text-[#597075] mb-1">오늘 하루, 마음은 어떠셨나요?</h4>
-        <p id="dailyCheckinDesc" class="text-[11px] text-gray-500 leading-relaxed mb-3.5">
-          지금 마음에 가장 가까운 도형 하나를 눌러주세요.
-        </p>
-
         <!-- 5가지 기분 도형 원터치 선택 그리드 (점수 비노출, 직관적 도형) -->
-        <div id="dailyCheckinShapeGrid" class="grid grid-cols-5 gap-1.5 mb-3">
+        <div id="dailyCheckinShapeGrid" class="grid grid-cols-5 gap-1.5 mb-3 mt-1">
           <!-- ▲ (Filled Up Triangle) -->
           <button type="button" onclick="recordMoodFromCheckin('▲', 2, 0, event)" class="checkin-shape-btn h-12 rounded-2xl border border-gray-200 bg-[#f4f7f8] hover:border-[#597075] flex items-center justify-center text-[#597075] transition active:scale-90 cursor-pointer" title="기분 선택 ▲">
             <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
@@ -768,16 +770,20 @@
 
         <!-- 복약 기록 켜져 있을 때만 노출되는 원터치 약 복용 동시 체크 옵션 -->
         <div id="dailyCheckinMedWrap" class="mb-3 hidden">
-          <button id="dailyCheckinMedBtn" type="button" onclick="toggleDailyCheckinMed(event)" class="w-full py-2 px-3 rounded-xl border border-gray-200 bg-[#f4f7f8] text-gray-600 text-[11px] font-medium flex items-center justify-between transition cursor-pointer active:scale-95">
-            <span class="flex items-center gap-1.5">
-              <span>💊</span> <span>오늘 약 복용도 함께 체크</span>
-            </span>
-            <span id="dailyCheckinMedCheckIcon" class="w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center text-[10px]"></span>
+          <button id="dailyCheckinMedBtn" type="button" onclick="toggleDailyCheckinMed(event)" aria-label="복약 함께 체크" class="mx-auto w-16 h-11 rounded-2xl flex items-center justify-center transition cursor-pointer active:scale-95">
+            <!-- 첫 화면과 같은 2톤 캡슐 아이콘. 글자 없이 눌린 상태만 테두리로 보여준다 -->
+            <svg class="w-10 h-6" viewBox="0 0 44 26">
+              <clipPath id="checkinPillLeftClip"><rect x="1" y="1" width="21" height="24" /></clipPath>
+              <rect x="1" y="1" width="42" height="24" rx="12" ry="12" fill="currentColor" clip-path="url(#checkinPillLeftClip)" />
+              <rect x="1" y="1" width="42" height="24" rx="12" ry="12" fill="none" stroke="currentColor" stroke-width="1.8" />
+              <line x1="22" y1="1" x2="22" y2="25" stroke="currentColor" stroke-width="1.8" />
+            </svg>
+            <span id="dailyCheckinMedCheckIcon" class="hidden"></span>
           </button>
         </div>
 
-        <button id="dailyCheckinLaterBtn" type="button" onclick="closeDailyCheckinModal(event)" class="w-full py-2 rounded-xl text-[11px] text-gray-400 hover:text-gray-600 font-medium transition cursor-pointer">
-          나중에 기록하기
+        <button id="dailyCheckinLaterBtn" type="button" onclick="dismissDailyCheckin(event)" class="w-full py-2 rounded-xl text-[11px] text-gray-400 hover:text-gray-600 font-medium transition cursor-pointer">
+          알림 닫기
         </button>
       </div>
     </div>
@@ -804,20 +810,52 @@
 
   <div id="demoFooterDesc" class="mt-3 text-xs text-gray-500 max-w-sm text-center leading-relaxed">
     <span class="font-bold text-gray-700">🌿 시연 안내:</span><br>
-    • <strong>14일 샘플 데이터 채우기:</strong> 위 버튼을 터치하면 14일간의 기분 궤적 곡선과 복약 통계, 메모가 한 번에 채워져 겹친 그래프를 즉시 테스트할 수 있습니다.<br>
+    • <strong>14일 샘플 데이터 채우기:</strong> 위 버튼을 터치하면 14일간의 기분 기록 막대그래프와 복약 통계, 메모가 한 번에 채워져 겹친 그래프를 즉시 테스트할 수 있습니다.<br>
     • <strong>터치 효과 3가지:</strong> 설정에서 <strong>1.수면파문 / 2.숨결(기본) / 3.별빛</strong> 선택 시 도형들의 피어남과 사르르 녹아내리는 극적 연출이 완벽히 적용됩니다.<br>
     • <strong>아이폰 PWA 홈 바로가기:</strong> 사파리 [홈 화면에 추가] 시 앱스토어 설치 없이 주소창 없는 온전한 앱으로 구동됩니다.
   </div>
 
   <script>
+    let iosHapticLabel = null;
+    function iosHaptic() {
+      // iOS 18 사파리/홈 화면 앱: <input type="checkbox" switch>를 누르면 시스템이 짧은 햅틱을 준다
+      if (!iosHapticLabel) {
+        const label = document.createElement('label');
+        label.setAttribute('aria-hidden', 'true');
+        label.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;';
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.setAttribute('switch', '');
+        input.tabIndex = -1;
+        label.appendChild(input);
+        label.addEventListener('click', e => e.stopPropagation());
+        document.body.appendChild(label);
+        iosHapticLabel = label;
+      }
+      iosHapticLabel.click();
+    }
+
     function triggerHaptic() {
       try {
         if (window.AndroidBridge && typeof window.AndroidBridge.haptic === 'function') {
           window.AndroidBridge.haptic();
         } else if (navigator.vibrate) {
-          navigator.vibrate(10);
+          navigator.vibrate(12);
+        } else if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+          iosHaptic();
         }
       } catch (_) {}
+    }
+
+    // 귀퉁이 버튼: 손가락이 닿는 순간 눌린 모양 + 살짝 진동
+    function bindCornerPress() {
+      document.querySelectorAll('.corner-btn').forEach(btn => {
+        const release = () => setTimeout(() => btn.classList.remove('is-pressed'), 90);
+        btn.addEventListener('pointerdown', () => { btn.classList.add('is-pressed'); triggerHaptic(); });
+        btn.addEventListener('pointerup', release);
+        btn.addEventListener('pointercancel', release);
+        btn.addEventListener('pointerleave', release);
+      });
     }
 
     function isMobileFullScreenViewport() {
@@ -1318,30 +1356,30 @@
 
         if (s === style) {
           if (isDark) {
-            btn.className = "w-full border-2 border-[#9ec0c4] bg-[#2d3336] rounded-xl p-2.5 text-left flex items-start justify-between transition text-[#9ec0c4] shadow-sm";
+            btn.className = "w-full border-2 border-[#9ec0c4] bg-[#2d3336] rounded-xl px-1 py-2.5 text-center flex flex-wrap items-center justify-center gap-1 transition text-[#9ec0c4] shadow-sm";
             check.className = "text-xs text-[#9ec0c4] font-bold";
             if (badge) badge.className = "bg-[#9ec0c4] text-[#141718] text-[9px] px-1.5 py-0.2 rounded font-bold";
           } else if (isNeutral) {
-            btn.className = "w-full border-2 border-[#455a5c] bg-[#455a5c]/10 rounded-xl p-2.5 text-left flex items-start justify-between transition text-[#455a5c] shadow-sm";
+            btn.className = "w-full border-2 border-[#455a5c] bg-[#455a5c]/10 rounded-xl px-1 py-2.5 text-center flex flex-wrap items-center justify-center gap-1 transition text-[#455a5c] shadow-sm";
             check.className = "text-xs text-[#455a5c] font-bold";
             if (badge) badge.className = "bg-[#455a5c] text-white text-[9px] px-1.5 py-0.2 rounded font-bold";
           } else {
-            btn.className = "w-full border-2 border-[#597075] bg-[#597075]/10 rounded-xl p-2.5 text-left flex items-start justify-between transition text-[#597075] shadow-sm";
+            btn.className = "w-full border-2 border-[#597075] bg-[#597075]/10 rounded-xl px-1 py-2.5 text-center flex flex-wrap items-center justify-center gap-1 transition text-[#597075] shadow-sm";
             check.className = "text-xs text-[#597075] font-bold";
             if (badge) badge.className = "bg-[#597075] text-white text-[9px] px-1.5 py-0.2 rounded font-bold";
           }
           check.classList.remove('hidden');
         } else {
           if (isDark) {
-            btn.className = "w-full border border-[#333a3d] bg-[#222628] rounded-xl p-2.5 text-left flex items-start justify-between hover:border-[#9ec0c4] transition text-white/70";
+            btn.className = "w-full border border-[#333a3d] bg-[#222628] rounded-xl px-1 py-2.5 text-center flex flex-wrap items-center justify-center gap-1 hover:border-[#9ec0c4] transition text-white/70";
             check.className = "text-xs text-[#9ec0c4] font-bold hidden";
             if (badge) badge.className = "bg-white/20 text-white/70 text-[9px] px-1.5 py-0.2 rounded font-bold";
           } else if (isNeutral) {
-            btn.className = "w-full border border-[#dce2dc] bg-white/70 rounded-xl p-2.5 text-left flex items-start justify-between hover:border-[#455a5c] transition text-gray-700";
+            btn.className = "w-full border border-[#dce2dc] bg-white/70 rounded-xl px-1 py-2.5 text-center flex flex-wrap items-center justify-center gap-1 hover:border-[#455a5c] transition text-gray-700";
             check.className = "text-xs text-[#455a5c] font-bold hidden";
             if (badge) badge.className = "bg-[#455a5c]/20 text-[#455a5c] text-[9px] px-1.5 py-0.2 rounded font-bold";
           } else {
-            btn.className = "w-full border border-gray-200 bg-white rounded-xl p-2.5 text-left flex items-start justify-between hover:border-[#597075] transition text-gray-700";
+            btn.className = "w-full border border-gray-200 bg-white rounded-xl px-1 py-2.5 text-center flex flex-wrap items-center justify-center gap-1 hover:border-[#597075] transition text-gray-700";
             check.className = "text-xs text-[#597075] font-bold hidden";
             if (badge) badge.className = "bg-[#597075]/15 text-[#597075] text-[9px] px-1.5 py-0.2 rounded font-bold";
           }
@@ -1984,7 +2022,7 @@
     function handlePeaceModalTap(e) {
       if (e) e.stopPropagation();
       // 만약 소리 토글이나 닫기/장면전환 버튼을 직접 눌렀다면 이벤트 버블링에 의한 화면 토글은 제외
-      if (e && e.target && e.target.closest('#soundToggleBtn, #peaceCloseBtn, #peaceCycleBtn, #peaceSceneTabs')) {
+      if (e && e.target && e.target.closest('#soundToggleBtn, #peaceCloseBtn, #peaceSceneTabs')) {
         startPeaceChromeTimer();
         return;
       }
@@ -2118,13 +2156,17 @@
       });
     })();
 
-    function getDefaultStartDate() {
-      const d = new Date();
-      // 기본값은 오늘(새 진료 주기 시작 1일차)
+    // 기기 현지 시간 기준 날짜(YYYY-MM-DD). toISOString()은 UTC라 한국에서는 오전 9시 전 기록이 전날로 넘어간다.
+    function localDateKey(d) {
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
       return `${y}-${m}-${day}`;
+    }
+
+    function getDefaultStartDate() {
+      // 기본값은 오늘(새 진료 주기 시작 1일차)
+      return localDateKey(new Date());
     }
 
     let lastVisitDate = (function() {
@@ -2153,7 +2195,7 @@
     }
 
     function editPatientNameSim() {
-      const res = prompt('환자 이름 또는 닉네임을 입력하세요 (선택사항, 비우면 숨김):', patientName);
+      const res = prompt('이름 또는 닉네임을 입력하세요 (선택사항, 비우면 숨김):', patientName);
       if (res !== null) {
         updatePatientNameSim(res);
       }
@@ -2197,6 +2239,13 @@
         reportStatsCard.style.display = isMedicationEnabled ? 'block' : 'none';
       }
 
+      // 안드로이드 홈 위젯의 캡슐도 같은 설정을 따른다
+      try {
+        if (window.AndroidBridge && typeof window.AndroidBridge.setMedicationEnabled === 'function') {
+          window.AndroidBridge.setMedicationEnabled(!!isMedicationEnabled);
+        }
+      } catch (_) {}
+
       if (!isMedicationEnabled) {
         const pillSection = document.getElementById('pillSection');
         if (pillSection) {
@@ -2239,6 +2288,7 @@
     })();
 
     let dailyCheckinMedChecked = false;
+    let dailyCheckinMood = null; // { sym, score, idx } : 고른 도형 (아직 저장 전)
 
     function formatAlarmTimeKorean(timeStr) {
       const parts = (timeStr || '18:00').split(':');
@@ -2284,7 +2334,6 @@
       const statusText = document.getElementById('alarmSettingStatusText');
       const timeInput = document.getElementById('alarmTimeInput');
       const desc = document.getElementById('settingsAlarmDesc');
-      const previewBtn = document.getElementById('alarmPreviewModalBtn');
       const testBtn = document.getElementById('alarmTestNotifyBtn');
 
       if (card) {
@@ -2334,16 +2383,13 @@
       if (desc) {
         desc.className = isDark ? "leading-relaxed text-[11px] text-white/50" : "leading-relaxed text-[11px] text-gray-500";
       }
-      if (previewBtn && testBtn) {
+      if (testBtn) {
         if (isDark) {
-          previewBtn.className = "py-2 px-2 rounded-xl bg-[#9ec0c4]/15 border border-[#9ec0c4]/30 hover:bg-[#9ec0c4]/25 text-[#9ec0c4] text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap";
-          testBtn.className = "py-2 px-2 rounded-xl border border-[#333a3d] bg-[#191d1e] hover:bg-white/5 text-white/80 text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap";
+          testBtn.className = "w-full py-2 px-2 rounded-xl border border-[#333a3d] bg-[#191d1e] hover:bg-white/5 text-white/80 text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap";
         } else if (isNeutral) {
-          previewBtn.className = "py-2 px-2 rounded-xl bg-[#455a5c]/10 border border-[#455a5c]/20 hover:bg-[#455a5c]/20 text-[#455a5c] text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap";
-          testBtn.className = "py-2 px-2 rounded-xl border border-[#dce2dc] bg-white hover:bg-gray-50 text-gray-700 text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap";
+          testBtn.className = "w-full py-2 px-2 rounded-xl border border-[#dce2dc] bg-white hover:bg-gray-50 text-gray-700 text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap";
         } else {
-          previewBtn.className = "py-2 px-2 rounded-xl bg-[#597075]/10 hover:bg-[#597075]/20 text-[#597075] text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap";
-          testBtn.className = "py-2 px-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap";
+          testBtn.className = "w-full py-2 px-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap";
         }
       }
 
@@ -2430,12 +2476,11 @@
       triggerHaptic();
       if (window.AndroidBridge && typeof window.AndroidBridge.testDailyAlarmNow === 'function') {
         window.AndroidBridge.testDailyAlarmNow();
-        showToast('상단 알림창에 기분 선택 알림을 띄웠습니다! 위에서 쓸어내려 확인해 보세요 🔔');
+        showToast('미리보기 알림을 띄웠어요. 눌러도 기록되지 않아요 🔔');
         return;
       }
       // 웹 브라우저 환경에서는 데일리요 스타일 기분 선택창을 바로 띄워 시연
       openDailyCheckinModal(true);
-      showToast('알림 터치 시 나타나는 기분 선택창입니다 ✨');
     }
 
     function updateDailyCheckinMedUI() {
@@ -2454,28 +2499,20 @@
       const isDark = effective === 'dark';
       const isNeutral = effective === 'neutral';
 
+      const c = isDark ? '#9ec0c4' : (isNeutral ? '#455a5c' : '#597075');
+      const base = "mx-auto w-16 h-11 rounded-2xl flex items-center justify-center transition cursor-pointer active:scale-95 ";
+      btn.style.color = c;
+      btn.setAttribute('aria-pressed', dailyCheckinMedChecked ? 'true' : 'false');
       if (dailyCheckinMedChecked) {
-        btn.className = isDark
-          ? "w-full py-2 px-3 rounded-xl border-2 border-[#9ec0c4] bg-[#9ec0c4]/15 text-[#9ec0c4] text-[11px] font-bold flex items-center justify-between transition cursor-pointer active:scale-95"
-          : (isNeutral
-            ? "w-full py-2 px-3 rounded-xl border-2 border-[#455a5c] bg-[#455a5c]/15 text-[#455a5c] text-[11px] font-bold flex items-center justify-between transition cursor-pointer active:scale-95"
-            : "w-full py-2 px-3 rounded-xl border-2 border-[#597075] bg-[#597075]/15 text-[#597075] text-[11px] font-bold flex items-center justify-between transition cursor-pointer active:scale-95");
-        icon.className = isDark
-          ? "w-4 h-4 rounded-full bg-[#9ec0c4] text-[#141718] flex items-center justify-center text-[10px] font-bold"
-          : (isNeutral
-            ? "w-4 h-4 rounded-full bg-[#455a5c] text-white flex items-center justify-center text-[10px] font-bold"
-            : "w-4 h-4 rounded-full bg-[#597075] text-white flex items-center justify-center text-[10px] font-bold");
-        icon.textContent = '✓';
+        btn.className = base + "border-2";
+        btn.style.borderColor = c;
+        btn.style.backgroundColor = isDark ? 'rgba(158,192,196,0.15)' : 'rgba(89,112,117,0.12)';
+        btn.style.opacity = '1';
       } else {
-        btn.className = isDark
-          ? "w-full py-2 px-3 rounded-xl border border-[#333a3d] bg-[#191d1e] text-white/70 text-[11px] font-medium flex items-center justify-between transition cursor-pointer active:scale-95"
-          : (isNeutral
-            ? "w-full py-2 px-3 rounded-xl border border-[#dce2dc] bg-white text-gray-600 text-[11px] font-medium flex items-center justify-between transition cursor-pointer active:scale-95"
-            : "w-full py-2 px-3 rounded-xl border border-gray-200 bg-[#f4f7f8] text-gray-600 text-[11px] font-medium flex items-center justify-between transition cursor-pointer active:scale-95");
-        icon.className = isDark
-          ? "w-4 h-4 rounded-full border border-white/30 flex items-center justify-center text-[10px]"
-          : "w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center text-[10px]";
-        icon.textContent = '';
+        btn.className = base + "border";
+        btn.style.borderColor = isDark ? '#333a3d' : '#e5e7eb';
+        btn.style.backgroundColor = 'transparent';
+        btn.style.opacity = '0.45';
       }
     }
 
@@ -2484,18 +2521,21 @@
       triggerHaptic();
       dailyCheckinMedChecked = !dailyCheckinMedChecked;
       updateDailyCheckinMedUI();
+      if (dailyCheckinMedChecked && dailyCheckinMood) finishDailyCheckin();
     }
 
+    let dailyCheckinIsPreview = false;
+
     function openDailyCheckinModal(fromPreview) {
+      hideIntro();
       triggerHaptic();
       dailyCheckinMedChecked = false;
       updateDailyCheckinMedUI();
 
-      const badgeText = document.getElementById('dailyCheckinBadgeText');
-      if (badgeText) {
-        const now = new Date();
-        badgeText.textContent = `${now.getMonth() + 1}월 ${now.getDate()}일 · 마음 체크인`;
-      }
+      // 미리보기로 열면 도형을 눌러도 실제 기록하지 않는다
+      dailyCheckinIsPreview = !!fromPreview;
+      dailyCheckinMood = null;
+      updateDailyCheckinShapeUI();
 
       const modal = document.getElementById('dailyCheckinModal');
       const card = document.getElementById('dailyCheckinCard');
@@ -2531,65 +2571,131 @@
       }, 220);
     }
 
+    // 고른 도형만 테두리로 표시 (글자 없음)
+    function updateDailyCheckinShapeUI() {
+      const effective = getEffectiveTheme(currentTheme);
+      const c = effective === 'dark' ? '#9ec0c4' : (effective === 'neutral' ? '#455a5c' : '#597075');
+      document.querySelectorAll('#dailyCheckinShapeGrid .checkin-shape-btn').forEach((b, i) => {
+        const on = !!dailyCheckinMood && dailyCheckinMood.idx === i;
+        b.style.boxShadow = on ? `inset 0 0 0 2px ${c}` : '';
+        b.style.opacity = dailyCheckinMood && !on ? '0.45' : '';
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+    }
+
+    // 도형을 고른다. 복약 기록을 쓰면 약(캡슐)까지 눌러야 저장되고 닫힌다.
     function recordMoodFromCheckin(sym, score, clickedIdx, e) {
       if (e && e.stopPropagation) e.stopPropagation();
       triggerHaptic();
+      dailyCheckinMood = { sym, score, idx: clickedIdx };
+      updateDailyCheckinShapeUI();
+      if (!isMedicationEnabled || dailyCheckinMedChecked) finishDailyCheckin();
+    }
 
+    // 입력한 것만 저장하고 창을 닫는다. 미리보기는 아무것도 저장하지 않는다.
+    function saveDailyCheckinEntries() {
+      if (dailyCheckinIsPreview) return false;
+      const wantMed = isMedicationEnabled && dailyCheckinMedChecked;
+      if (!dailyCheckinMood && !wantMed) return false;
       try {
         const nowIso = new Date().toISOString();
-        moodRecords.push({ sym, score, time: nowIso });
-        localStorage.setItem('lifeguard_mood_records', JSON.stringify(moodRecords));
-
-        let recordedMedToo = false;
-        if (isMedicationEnabled && dailyCheckinMedChecked) {
+        if (dailyCheckinMood) {
+          moodRecords.push({ sym: dailyCheckinMood.sym, score: dailyCheckinMood.score, time: nowIso });
+          localStorage.setItem('lifeguard_mood_records', JSON.stringify(moodRecords));
+        }
+        if (wantMed) {
           pillRecords.push({ time: nowIso });
           localStorage.setItem('lifeguard_pill_records', JSON.stringify(pillRecords));
-          recordedMedToo = true;
         }
         renderReportData();
+      } catch (err) {
+        console.warn('saveDailyCheckinEntries error:', err);
+      }
+      return true;
+    }
 
+    function finishDailyCheckin() {
+      const wasPreview = dailyCheckinIsPreview;
+      const saved = saveDailyCheckinEntries();
+      dailyCheckinMood = null;
+      // 고른 표시가 잠깐 보이고 나서 사르르 닫히게
+      setTimeout(() => {
         closeDailyCheckinModal();
         closeSettingsModal();
         hideControls();
-
+        if (wasPreview) { showToast('미리보기라서 기록되지 않았어요'); return; }
+        if (!saved) return;
+        // 글자 안내 없이 첫 화면과 같은 파문 피드백만 (주변에 기분·복약이 드러나지 않게)
         const screen = document.getElementById('phoneScreen');
         if (screen) {
           const rect = screen.getBoundingClientRect();
           triggerTouchEffect(rect.left + rect.width / 2, rect.top + rect.height * 0.48, true);
         }
-
         const fb = document.getElementById('moodFeedback');
         if (fb) {
           fb.classList.remove('opacity-0', 'anim-feedback');
           void fb.offsetWidth;
           fb.classList.add('anim-feedback');
         }
+      }, 220);
+    }
 
-        showToast(recordedMedToo
-          ? `오늘의 기분(${sym})과 약 복용이 함께 기록되었습니다 🌿`
-          : `오늘의 기분(${sym})이 기록되었습니다 🌿`);
-      } catch (err) {
-        console.warn('recordMoodFromCheckin error:', err);
+    // '알림 닫기' (안드로이드 뒤로가기도 같음): 그때까지 입력한 것은 버리지 않고 저장하고 닫는다
+    function dismissDailyCheckin(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      triggerHaptic();
+      if (dailyCheckinMood || (isMedicationEnabled && dailyCheckinMedChecked)) {
+        finishDailyCheckin();
+      } else {
+        closeDailyCheckinModal();
       }
     }
 
+    // 안드로이드 홈 위젯의 캡슐을 누르면: 캡슐이 눌린 채로 선택창을 열고, 도형을 고르면 저장
+    window.openDailyCheckinWithMedFromNative = function() {
+      closeSettingsModal(); closeReportModal(); closePeaceModal(); saveAndCloseMemo();
+      setTimeout(() => {
+        openDailyCheckinModal(false);
+        if (isMedicationEnabled) {
+          dailyCheckinMedChecked = true;
+          updateDailyCheckinMedUI();
+        }
+      }, 120);
+    };
+
     // 안드로이드 상단 알림 본문 터치 시 호출: 데일리요 스타일 기분 선택창 즉시 오픈
-    window.openDailyCheckinModalFromNative = function() {
+    window.openDailyCheckinModalFromNative = function(isPreview) {
       closeSettingsModal();
       closeReportModal();
       closePeaceModal();
       saveAndCloseMemo();
       setTimeout(() => {
-        openDailyCheckinModal(false);
+        openDailyCheckinModal(!!isPreview);
       }, 120);
     };
 
     // 안드로이드 상단 알림 내부 5개 도형(▲ △ ○ ▽ ▼) 직접 터치 시 호출: 즉시 기록 & 파문 연출
-    window.recordMoodFromNativeNotification = function(scoreNum) {
+    window.recordMoodFromNativeNotification = function(scoreNum, isPreview) {
       const s = Number(scoreNum);
       const symMap = { '2': '▲', '1': '△', '0': '○', '-1': '▽', '-2': '▼' };
       const sym = symMap[String(s)] || '○';
       const validScore = [2, 1, 0, -1, -2].includes(s) ? s : 0;
+
+      // 복약 기록을 쓰면 알림에서 고른 도형을 미리 고른 채로 선택창을 열어, 약까지 누르면 저장되게 한다
+      if (isMedicationEnabled) {
+        closeSettingsModal(); closeReportModal(); closePeaceModal(); saveAndCloseMemo();
+        setTimeout(() => {
+          openDailyCheckinModal(!!isPreview);
+          dailyCheckinMood = { sym, score: validScore, idx: [2, 1, 0, -1, -2].indexOf(validScore) };
+          updateDailyCheckinShapeUI();
+        }, 120);
+        return;
+      }
+      if (isPreview) {
+        hideControls();
+        showToast('미리보기 알림이라서 기록되지 않았어요');
+        return;
+      }
 
       try {
         moodRecords.push({ sym, score: validScore, time: new Date().toISOString() });
@@ -2615,7 +2721,6 @@
           void fb.offsetWidth;
           fb.classList.add('anim-feedback');
         }
-        showToast(`알림창에서 선택하신 기분(${sym})이 기록되었습니다 🌿`);
       }, 180);
     };
 
@@ -3023,12 +3128,11 @@
       hideControls();
     }
 
-    // 모든 실제 데이터 초기화 (백지 상태 복귀)
+    // 모든 기록 초기화 (백지 상태 복귀). 복약 기록 설정은 사용자가 정한 그대로 둔다.
     function performDataReset() {
       moodRecords = [];
       pillRecords = [];
       doctorNotes = [];
-      isMedicationEnabled = false;
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       lastVisitDate = todayStr;
@@ -3037,7 +3141,6 @@
         localStorage.setItem('lifeguard_pill_records', '[]');
         localStorage.setItem('lifeguard_doctor_notes', '[]');
         localStorage.setItem('lifeguard_last_visit_date', todayStr);
-        localStorage.setItem('lifeguard_med_enabled', 'false');
       } catch(e) {}
       updateMedicationSettingUI();
       renderDoctorNotes();
@@ -3080,6 +3183,20 @@
           hideControls();
         }, 400);
       }, 1100);
+    }
+
+    // 보고서 그래프 보기 방식: 'bar'(기본, 기록 그대로) / 'curve'(흐름). 이 기기에만 기억한다.
+    let chartMode = (function() {
+      try { return localStorage.getItem('lifeguard_chart_mode') === 'curve' ? 'curve' : 'bar'; }
+      catch (_) { return 'bar'; }
+    })();
+
+    function setChartMode(mode, e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      chartMode = mode === 'curve' ? 'curve' : 'bar';
+      try { localStorage.setItem('lifeguard_chart_mode', chartMode); } catch (_) {}
+      triggerHaptic();
+      renderReportData();
     }
 
     function formatPeriodDuration(days) {
@@ -3148,60 +3265,160 @@
         if (statMedEl) {
           const uniqueDates = new Set(
             (pillRecords || []).map(p => {
-              const t = (typeof p === 'string' ? p : p?.time) || '';
-              return t.slice(0, 10);
+              const t = new Date((typeof p === 'string' ? p : p?.time) || '');
+              if (isNaN(t.getTime()) || t < d1) return '';
+              return localDateKey(t);
             }).filter(Boolean)
           ).size;
-          statMedEl.textContent = `${uniqueDates} / ${diffDays}일`;
+          statMedEl.textContent = `${Math.min(uniqueDates, diffDays)} / ${diffDays}일`;
         }
 
-        // 4. 기분 궤적 곡선
+        // 4. 기분 기록 막대그래프 (기록 하나 = 막대 하나)
         const chartLabelEl = document.getElementById('chartLabel');
         const chartPathEl = document.getElementById('chartPath');
         const chartCircleEl = document.getElementById('chartCircle');
 
         if (chartLabelEl) {
           chartLabelEl.textContent = (!moodRecords || moodRecords.length === 0)
-            ? '기분 궤적 (기록 없음)'
-            : `${diffDays}일간 기분 궤적`;
+            ? '기분 기록 (아직 없음)'
+            : `${diffDays}일간 기분 기록`;
         }
 
+        const startLabelEl = document.getElementById('chartStartLabel');
+        if (startLabelEl) startLabelEl.textContent = diffDays > 1 ? fmt(d1) : '';
+
         if (chartPathEl && chartCircleEl) {
-          if (!moodRecords || moodRecords.length === 0) {
-            chartPathEl.setAttribute('d', 'M 10 45 L 250 45');
-            chartCircleEl.setAttribute('opacity', '0');
-          } else if (moodRecords.length === 1) {
-            const score = typeof moodRecords[0]?.score === 'number' ? moodRecords[0].score : 0;
-            const y = 45 - (score * 15);
-            chartPathEl.setAttribute('d', `M 10 ${y} L 250 ${y}`);
-            chartCircleEl.setAttribute('opacity', '1');
-            chartCircleEl.setAttribute('cx', '250');
-            chartCircleEl.setAttribute('cy', `${y}`);
-          } else {
-            const pts = moodRecords.map((m, idx) => {
-              const x = 10 + (idx / (moodRecords.length - 1)) * 240;
-              const score = typeof m?.score === 'number' && !isNaN(m.score) ? m.score : 0;
-              const y = 45 - (score * 15);
-              return { x, y };
+          const SVG_NS = 'http://www.w3.org/2000/svg';
+          const color = chartPathEl.getAttribute('stroke') || '#597075';
+          const X0 = 22, X1 = 254;
+          const LEVEL = 15; // 도형 한 칸의 높이 (○ 기준선 y=45, ▲ y=15, ▼ y=75)
+          // 가로축: 지난 진료일 0시 ~ 오늘 자정. 하루가 같은 폭을 가진다.
+          const dayW = (X1 - X0) / diffDays;
+          const dayStartX = (i) => X0 + i * dayW;
+
+          // 세로 눈금: 다섯 도형의 높이를 옅은 선과 기호로 표시
+          const gridEl = document.getElementById('chartGrid');
+          if (gridEl) {
+            gridEl.textContent = '';
+            [[2, '▲'], [1, '△'], [0, '○'], [-1, '▽'], [-2, '▼']].forEach(([score, sym]) => {
+              const y = 45 - score * LEVEL;
+              if (score !== 0) {
+                const ln = document.createElementNS(SVG_NS, 'line');
+                ln.setAttribute('x1', String(X0)); ln.setAttribute('x2', String(X1));
+                ln.setAttribute('y1', String(y)); ln.setAttribute('y2', String(y));
+                ln.setAttribute('stroke', color); ln.setAttribute('stroke-width', '0.6');
+                ln.setAttribute('opacity', '0.12');
+                gridEl.appendChild(ln);
+              }
+              const tx = document.createElementNS(SVG_NS, 'text');
+              tx.setAttribute('x', '9'); tx.setAttribute('y', String(y + 3));
+              tx.setAttribute('text-anchor', 'middle'); tx.setAttribute('font-size', '8');
+              tx.setAttribute('fill', color); tx.setAttribute('opacity', '0.55');
+              tx.textContent = sym;
+              gridEl.appendChild(tx);
             });
-            let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
-            for (let i = 0; i < pts.length - 1; i++) {
-              const p0 = pts[Math.max(0, i - 1)];
-              const p1 = pts[i];
-              const p2 = pts[i + 1];
-              const p3 = pts[Math.min(pts.length - 1, i + 2)];
-              const cp1x = p1.x + (p2.x - p0.x) / 6;
-              const cp1y = p1.y + (p2.y - p0.y) / 6;
-              const cp2x = p2.x - (p3.x - p1.x) / 6;
-              const cp2y = p2.y - (p3.y - p1.y) / 6;
-              d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
-            }
-            chartPathEl.setAttribute('d', d);
-            const lastPt = pts[pts.length - 1];
-            chartCircleEl.setAttribute('opacity', '1');
-            chartCircleEl.setAttribute('cx', `${lastPt.x.toFixed(1)}`);
-            chartCircleEl.setAttribute('cy', `${lastPt.y.toFixed(1)}`);
           }
+
+          // 날짜 눈금 (기록 없는 날도 빈 칸으로 보이게)
+          const ticksEl = document.getElementById('chartTicks');
+          if (ticksEl) {
+            ticksEl.textContent = '';
+            const step = Math.max(1, Math.ceil(diffDays / 31));
+            for (let i = 0; i <= diffDays; i += step) {
+              const x = dayStartX(i);
+              const ln = document.createElementNS(SVG_NS, 'line');
+              ln.setAttribute('x1', x.toFixed(1)); ln.setAttribute('x2', x.toFixed(1));
+              ln.setAttribute('y1', '84'); ln.setAttribute('y2', '88');
+              ln.setAttribute('stroke', color); ln.setAttribute('stroke-width', '1');
+              ln.setAttribute('opacity', '0.35');
+              ticksEl.appendChild(ln);
+            }
+          }
+
+          // 기록 하나 = 막대 하나. 누른 순간의 높이를 가공 없이 그대로 세운다.
+          // 같은 날의 기록은 그날 칸 안에 시간 순서대로 나란히 놓아, 겹쳐서 가려지는 기록이 없게 한다.
+          const byDay = new Map();
+          (moodRecords || []).forEach(m => {
+            const t = new Date(m?.time || '');
+            if (isNaN(t.getTime())) return;
+            const day = Math.round((new Date(t.getFullYear(), t.getMonth(), t.getDate()) - d1) / 86400000);
+            if (day < 0 || day >= diffDays) return;
+            const score = [2, 1, 0, -1, -2].includes(m?.score) ? m.score : 0;
+            if (!byDay.has(day)) byDay.set(day, []);
+            byDay.get(day).push({ t: t.getTime(), score });
+          });
+
+          // 막대와 곡선은 같은 기록·같은 위치를 쓴다. 바꿔 봐도 기록의 자리는 움직이지 않는다.
+          const pts = [];
+          byDay.forEach((recs, day) => {
+            recs.sort((p, q) => p.t - q.t);
+            const sub = dayW / recs.length;
+            recs.forEach((r, i) => {
+              pts.push({ t: r.t, score: r.score, x: dayStartX(day) + (i + 0.5) * sub, y: 45 - r.score * LEVEL, sub });
+            });
+          });
+          pts.sort((p, q) => p.t - q.t);
+
+          const dotsEl = document.getElementById('chartDots');
+          if (dotsEl) dotsEl.textContent = '';
+          chartPathEl.setAttribute('d', '');
+          chartCircleEl.setAttribute('opacity', '0');
+
+          if (dotsEl && chartMode === 'curve') {
+            // 곡선: 흐름을 보기 좋게 잇는다. 기록 사이의 선은 실제 기록이 아니다.
+            pts.forEach(p => {
+              const c = document.createElementNS(SVG_NS, 'circle');
+              c.setAttribute('cx', p.x.toFixed(2)); c.setAttribute('cy', p.y.toFixed(2));
+              c.setAttribute('r', Math.max(1, Math.min(2.4, p.sub * 0.35)).toFixed(2));
+              c.setAttribute('fill', color);
+              dotsEl.appendChild(c);
+            });
+            if (pts.length > 1) {
+              const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+              let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+              for (let i = 0; i < pts.length - 1; i++) {
+                const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+                // 간격이 고르지 않아도 곡선이 뒤로 말리거나 ▲·▼ 밖으로 넘치지 않게 제한
+                const cp1x = clamp(p1.x + (p2.x - p0.x) / 6, p1.x, p2.x);
+                const cp1y = clamp(p1.y + (p2.y - p0.y) / 6, 15, 75);
+                const cp2x = clamp(p2.x - (p3.x - p1.x) / 6, p1.x, p2.x);
+                const cp2y = clamp(p2.y - (p3.y - p1.y) / 6, 15, 75);
+                d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+              }
+              chartPathEl.setAttribute('d', d);
+            }
+          } else if (dotsEl) {
+            // 막대(기본): 기록 하나 = 막대 하나. 누른 순간의 높이를 가공 없이 그대로 세운다.
+            pts.forEach(p => {
+              const barW = Math.min(5, Math.max(1, p.sub * 0.55));
+              if (p.score === 0) {
+                // ○ 평시: 높이가 0이므로 기준선 위에 점으로 표시
+                const c = document.createElementNS(SVG_NS, 'circle');
+                c.setAttribute('cx', p.x.toFixed(2)); c.setAttribute('cy', '45');
+                c.setAttribute('r', Math.max(1, Math.min(2.2, barW * 0.55)).toFixed(2));
+                c.setAttribute('fill', color);
+                dotsEl.appendChild(c);
+              } else {
+                const h = Math.abs(p.score) * LEVEL;
+                const rect = document.createElementNS(SVG_NS, 'rect');
+                rect.setAttribute('x', (p.x - barW / 2).toFixed(2));
+                rect.setAttribute('y', (p.score > 0 ? 45 - h : 45).toFixed(2));
+                rect.setAttribute('width', barW.toFixed(2));
+                rect.setAttribute('height', h.toFixed(2));
+                rect.setAttribute('rx', Math.min(1.2, barW / 2).toFixed(2));
+                rect.setAttribute('fill', color);
+                dotsEl.appendChild(rect);
+              }
+            });
+          }
+
+          // 스위치 모양: 고른 쪽만 채운다 (테마 색을 따라감)
+          document.querySelectorAll('#chartModeSwitch .chart-mode-btn').forEach(btn => {
+            const on = btn.dataset.mode === chartMode;
+            btn.style.backgroundColor = on ? color : 'transparent';
+            btn.style.color = on ? (getEffectiveTheme(currentTheme) === 'dark' ? '#141718' : '#ffffff') : color;
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+          });
         }
       } catch (err) {
         console.warn('renderReportData error:', err);
@@ -3213,7 +3430,7 @@
       const now = new Date();
       const start = new Date(now);
       start.setDate(now.getDate() - 13);
-      lastVisitDate = start.toISOString().slice(0, 10);
+      lastVisitDate = localDateKey(start);
       try { localStorage.setItem('lifeguard_last_visit_date', lastVisitDate); } catch(e){}
 
       // 현실적인 양극성장애 14일 기분 파동 궤적
@@ -3245,7 +3462,7 @@
 
       renderDoctorNotes();
       renderReportData();
-      showToast('14일간의 기분 궤적 샘플 데이터가 채워졌습니다! 📊');
+      showToast('14일간의 기분 기록 샘플 데이터가 채워졌습니다! 📊');
     }
 
     function clearAllData() {
@@ -3421,7 +3638,10 @@
               ? "w-full border-2 border-[#455a5c] bg-[#455a5c]/15 text-[#455a5c] rounded-xl p-2.5 text-left flex items-center justify-between transition"
               : "w-full border-2 border-[#597075] bg-[#597075]/10 text-[#597075] rounded-xl p-2.5 text-left flex items-center justify-between transition");
           checkThemeSystem.classList.remove('hidden');
-          if (themeSystemLiveBadge) themeSystemLiveBadge.textContent = effectiveTheme === 'dark' ? '현재: 다크 모드' : '현재: 라이트 모드';
+          if (themeSystemLiveBadge) {
+            themeSystemLiveBadge.style.display = '';
+            themeSystemLiveBadge.textContent = effectiveTheme === 'dark' ? '현재: 다크 모드' : '현재: 라이트 모드';
+          }
         } else {
           themeBtnSystem.className = effectiveTheme === 'dark'
             ? "w-full border border-[#333a3d] bg-[#222628] text-white/70 rounded-xl p-2.5 text-left flex items-center justify-between hover:border-[#9ec0c4] transition"
@@ -3429,7 +3649,7 @@
               ? "w-full border border-[#dce2dc] bg-white/70 text-gray-700 rounded-xl p-2.5 text-left flex items-center justify-between hover:border-[#455a5c] transition"
               : "w-full border border-gray-200 bg-white/70 text-gray-700 rounded-xl p-2.5 text-left flex items-center justify-between hover:border-[#597075] transition");
           checkThemeSystem.classList.add('hidden');
-          if (themeSystemLiveBadge) themeSystemLiveBadge.textContent = '수동 선택 중';
+          if (themeSystemLiveBadge) themeSystemLiveBadge.style.display = 'none';
         }
       }
 
@@ -3484,7 +3704,7 @@
         if (reportStatsCard) reportStatsCard.className = "bg-[#222628] rounded-xl p-2.5 shadow-sm border border-[#333a3d] mb-3 text-center transition-colors text-white";
         if (statEven) statEven.className = "text-sm font-bold text-[#9ec0c4] mt-0.5";
         if (statMed) statMed.className = "text-sm font-bold text-[#9ec0c4] mt-0.5";
-        if (statBorder) statBorder.className = "w-full";
+        if (statBorder) statBorder.className = "flex-1";
 
         if (reportChartCard) reportChartCard.className = "bg-[#222628] rounded-xl p-3 border border-[#333a3d] shadow-sm mb-3 transition-colors text-white";
         if (chartLabel) chartLabel.className = "text-[#9ec0c4]";
@@ -3502,7 +3722,7 @@
         if (settingsCard) settingsCard.className = "bg-[#222628] border border-[#333a3d] rounded-2xl p-3.5 mb-4 text-xs text-white/80 space-y-2 transition-colors";
         if (settingsPhilosophyTitle) settingsPhilosophyTitle.className = "font-bold text-[#9ec0c4] text-[13px] flex items-center gap-1.5";
         
-        // 환자 닉네임 섹션 다크 조화
+        // 이름·닉네임 섹션 다크 조화
         if (settingsPatientCard) settingsPatientCard.className = "bg-[#222628] rounded-2xl p-3.5 mb-4 border border-[#333a3d] shadow-sm text-xs text-white/80 space-y-2 transition-colors";
         if (settingsPatientTitle) settingsPatientTitle.className = "font-bold text-[#9ec0c4] text-[13px] flex items-center gap-1.5";
         if (settingsPatientNameInput) settingsPatientNameInput.className = "w-full text-xs p-2.5 bg-[#191d1e] text-white rounded-xl outline-none border border-[#333a3d] focus:border-[#9ec0c4]/40";
@@ -3559,7 +3779,7 @@
         if (reportStatsCard) reportStatsCard.className = "bg-white/80 rounded-xl p-2.5 shadow-sm border border-[#dce2dc] mb-3 text-center transition-colors";
         if (statEven) statEven.className = "text-sm font-bold text-[#455a5c] mt-0.5";
         if (statMed) statMed.className = "text-sm font-bold text-[#455a5c] mt-0.5";
-        if (statBorder) statBorder.className = "w-full";
+        if (statBorder) statBorder.className = "flex-1";
 
         if (reportChartCard) reportChartCard.className = "bg-white/80 rounded-xl p-3 border border-[#dce2dc] shadow-sm mb-3 transition-colors";
         if (chartLabel) chartLabel.className = "text-[#455a5c]";
@@ -3629,7 +3849,7 @@
         if (reportStatsCard) reportStatsCard.className = "bg-white rounded-xl p-2.5 shadow-sm border border-gray-100 mb-3 text-center transition-colors";
         if (statEven) statEven.className = "text-sm font-bold text-[#597075] mt-0.5";
         if (statMed) statMed.className = "text-sm font-bold text-[#597075] mt-0.5";
-        if (statBorder) statBorder.className = "w-full";
+        if (statBorder) statBorder.className = "flex-1";
 
         if (reportChartCard) reportChartCard.className = "bg-white rounded-xl p-3 border border-gray-100 shadow-sm mb-3 transition-colors";
         if (chartLabel) chartLabel.className = "text-[#597075]";
@@ -3701,6 +3921,71 @@
       setFontStep(currentFontStep);
       updateMedicationSettingUI();
       updateAlarmSettingUI();
+      renderReportData();
+    }
+
+    // ── 인트로: 다섯 도형이 잠깐 보였다가 가운데 ○로 모여 사라진다 ──
+    // 글자·앱 이름 없이, 워터마크처럼 옅게. 화면을 누르면 바로 넘어간다.
+    let introEl = null;
+    function hideIntro() {
+      const el = introEl;
+      if (!el) return;
+      introEl = null;
+      el.style.transition = 'opacity 260ms ease';
+      el.style.opacity = '0';
+      el.style.pointerEvents = 'none';
+      setTimeout(() => el.remove(), 280);
+    }
+
+    function showIntro() {
+      const screen = document.getElementById('phoneScreen');
+      const row = document.getElementById('moodRow');
+      if (!screen || !row) return;
+      const svgs = [...row.querySelectorAll('.shape-btn svg')].slice(0, 5);
+      if (svgs.length !== 5) return;
+
+      // 테마 배경색을 직접 쓴다 (테마 전환 애니메이션 중간색을 읽으면 다크에서 흰색이 번쩍인다)
+      const eff = getEffectiveTheme(currentTheme);
+      const introBg = eff === 'dark' ? '#141718' : (eff === 'neutral' ? '#ecefea' : '#fbfcfc');
+      const overlay = document.createElement('div');
+      overlay.id = 'introOverlay';
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.style.cssText = `position:absolute;inset:0;z-index:45;display:flex;align-items:center;justify-content:center;background:${introBg};color:${getThemeColor()};`;
+      const line = document.createElement('div');
+      line.style.cssText = 'display:flex;align-items:center;gap:22px;opacity:0.4;';
+      const items = svgs.map(svg => {
+        const box = document.createElement('div');
+        box.style.cssText = 'width:22px;height:22px;opacity:0;';
+        const c = svg.cloneNode(true);
+        c.removeAttribute('class');
+        c.style.cssText = 'width:100%;height:100%;';
+        box.appendChild(c);
+        line.appendChild(box);
+        return box;
+      });
+      overlay.appendChild(line);
+      overlay.addEventListener('click', (e) => { e.stopPropagation(); hideIntro(); });
+      screen.appendChild(overlay);
+      introEl = overlay;
+
+      const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduce || !items[0].animate) {
+        items.forEach(b => b.style.opacity = '1');
+        setTimeout(hideIntro, 700);
+        return;
+      }
+      const step = 44; // 도형 폭 22 + 간격 22
+      items.forEach((b, i) => {
+        const dx = (2 - i) * step; // 가운데(○)로 모이는 거리
+        const anim = i === 2
+          ? [ { opacity: 0, transform: 'scale(0.9)' }, { opacity: 1, transform: 'scale(1)', offset: 0.25 },
+              { opacity: 1, offset: 0.7 }, { opacity: 0, transform: 'scale(1)' } ]
+          : [ { opacity: 0, transform: 'translateX(0)' }, { opacity: 1, transform: 'translateX(0)', offset: 0.25 },
+              { opacity: 1, transform: 'translateX(0)', offset: 0.4 }, { opacity: 0, transform: `translateX(${dx}px)`, offset: 0.7 },
+              { opacity: 0, transform: `translateX(${dx}px)` } ];
+        b.animate(anim, { duration: 1500, delay: Math.abs(i - 2) * 40, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' });
+      });
+      setTimeout(hideIntro, 1450);
     }
 
     window.handleAndroidBackButton = function() {
@@ -3708,7 +3993,7 @@
         const el = document.getElementById(id);
         return el && !el.classList.contains('opacity-0') && !el.classList.contains('hidden') && el.style.display !== 'none';
       };
-      if (isOpen('dailyCheckinModal')) { closeDailyCheckinModal(); return true; }
+      if (isOpen('dailyCheckinModal')) { dismissDailyCheckin(); return true; }
       if (isOpen('finishVisitModal')) { closeFinishVisitModal(); return true; }
       if (isOpen('memoModal')) { saveAndCloseMemo(); return true; }
       if (isOpen('peaceModal')) { closePeaceModal(); return true; }
@@ -3739,6 +4024,10 @@
         if (t && ['system', 'white', 'neutral', 'dark'].includes(t)) savedTheme = t;
       } catch (_) {}
       setPreviewTheme(savedTheme);
+      bindCornerPress();
+      try {
+        if (new URLSearchParams(window.location.search).get('checkin') !== '1') showIntro();
+      } catch (_) { showIntro(); }
       checkIosGuide();
       updatePatientNameSim(patientName);
       renderDoctorNotes();
