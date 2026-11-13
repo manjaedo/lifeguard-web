@@ -188,6 +188,22 @@
       touch-action: manipulation;
     }
     /* 누르는 순간: 쏙 들어가며(0.86배) 100%로 깨어나고 뒤에 옅은 원. 손을 떼면 부드럽게 튀어 돌아온다 */
+    /* 닫기 버튼: 보이는 건 옅은 알약, 누르는 범위는 44px 이상. 글자 크기 설정(text-sm)도 따라간다 */
+    .close-btn {
+      position: relative;
+      display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+      min-height: 32px; padding: 6px 12px; border-radius: 9999px;
+      font-weight: 600; white-space: nowrap; cursor: pointer;
+      background-color: color-mix(in srgb, currentColor 9%, transparent);
+      -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+      transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1), background-color 200ms ease;
+    }
+    .close-btn::before { content: ''; position: absolute; inset: -7px -6px; }
+    .close-btn.is-pressed {
+      transform: scale(0.9);
+      background-color: color-mix(in srgb, currentColor 18%, transparent);
+      transition: transform 90ms ease-out, background-color 80ms ease-out;
+    }
     .corner-btn.is-pressed {
       opacity: 1 !important;
       transform: scale(0.86);
@@ -361,7 +377,7 @@
             <span class="shrink-0">📋</span> <span id="reportTitleText" class="truncate">함께 보는 기록</span>
           </h2>
           <div class="flex items-center gap-2 shrink-0">
-            <button id="reportCloseBtn" onclick="closeReportModal(event)" class="text-xs text-gray-400 hover:text-gray-700 p-1">닫기 ✕</button>
+            <button id="reportCloseBtn" onclick="closeReportModal(event)" class="close-btn text-sm text-gray-600">닫기 ✕</button>
           </div>
         </div>
 
@@ -434,7 +450,7 @@
       <div>
         <div class="flex justify-between items-center mb-4">
           <h2 id="settingsTitle" class="text-sm font-bold text-[#597075]">설정 및 안내</h2>
-          <button id="settingsCloseBtn" onclick="closeSettingsModal(event)" class="text-xs text-gray-400 hover:text-gray-700 p-1">닫기 ✕</button>
+          <button id="settingsCloseBtn" onclick="closeSettingsModal(event)" class="close-btn text-sm text-gray-600">닫기 ✕</button>
         </div>
 
         <!-- 철학 안내 카드 -->
@@ -647,7 +663,7 @@
           </button>
           <span id="soundTrackName" class="text-[11px] text-[#9ec0c4] font-medium truncate whitespace-nowrap" style="max-width: 0px; opacity: 0; overflow: hidden; display: inline-block; transition: max-width 0.4s ease, opacity 0.4s ease, margin 0.4s ease; margin-left: 0px;">잔잔한 파도와 432Hz 앰비언트</span>
         </div>
-        <button id="peaceCloseBtn" type="button" onclick="closePeaceModal(event)" class="text-white/60 hover:text-white p-1 shrink-0 cursor-pointer">닫기 ✕</button>
+        <button id="peaceCloseBtn" type="button" onclick="closePeaceModal(event)" class="close-btn text-sm text-white/85 shrink-0">닫기 ✕</button>
       </div>
 
       <!-- 2. 상단 제목 & 설명글 & 3가지 소리 빠른 선택 탭 (45초 후 페이드아웃) -->
@@ -864,7 +880,7 @@
 
     // 귀퉁이 버튼: 손가락이 닿는 순간 눌린 모양 + 살짝 진동
     function bindCornerPress() {
-      document.querySelectorAll('.corner-btn').forEach(btn => {
+      document.querySelectorAll('.corner-btn, .close-btn').forEach(btn => {
         const release = () => setTimeout(() => btn.classList.remove('is-pressed'), 90);
         btn.addEventListener('pointerdown', () => { btn.classList.add('is-pressed'); triggerHaptic(); });
         btn.addEventListener('pointerup', release);
@@ -3735,7 +3751,7 @@
         reportModal.className = `absolute inset-0 bg-[#141718] text-white z-30 p-5 flex flex-col justify-between ${reportVis} transition-all duration-300 overflow-y-auto`;
         if (reportTitle) reportTitle.className = "text-sm font-bold text-white flex items-center gap-1.5 min-w-0 flex-1";
         if (resetCycleBtn) resetCycleBtn.className = "border border-[#9ec0c4]/40 bg-[#9ec0c4]/15 hover:bg-[#9ec0c4] hover:text-[#141718] text-[#9ec0c4] text-xs font-bold px-5 py-2.5 rounded-2xl transition inline-flex items-center gap-1.5 shadow-sm";
-        if (reportCloseBtn) reportCloseBtn.className = "text-xs text-white/50 hover:text-white p-1";
+        if (reportCloseBtn) reportCloseBtn.className = "close-btn text-sm text-white/80";
         
         // 지난 진료 구간 (연필 아이콘과 날짜 밀착)
         if (reportPeriodCard) {
@@ -3762,7 +3778,7 @@
         // Settings Modal Dark (완벽한 다크 조화)
         settingsModal.className = `absolute inset-0 bg-[#141718] text-white z-30 p-5 flex flex-col justify-between ${settingsVis} transition-all duration-300 overflow-y-auto`;
         if (settingsTitle) settingsTitle.className = "text-sm font-bold text-white";
-        if (settingsCloseBtn) settingsCloseBtn.className = "text-xs text-white/50 hover:text-white p-1";
+        if (settingsCloseBtn) settingsCloseBtn.className = "close-btn text-sm text-white/80";
         if (settingsCard) settingsCard.className = "bg-[#222628] border border-[#333a3d] rounded-2xl p-3.5 mb-4 text-xs text-white/80 space-y-2 transition-colors";
         if (settingsPhilosophyTitle) settingsPhilosophyTitle.className = "font-bold text-[#9ec0c4] text-[13px] flex items-center gap-1.5";
         
@@ -3811,7 +3827,7 @@
         reportModal.className = `absolute inset-0 bg-[#ecefea] text-[#2c3e40] z-30 p-5 flex flex-col justify-between ${reportVis} transition-all duration-300 overflow-y-auto`;
         if (reportTitle) reportTitle.className = "text-sm font-bold text-[#455a5c] flex items-center gap-1.5 min-w-0 flex-1";
         if (resetCycleBtn) resetCycleBtn.className = "border border-[#455a5c]/40 bg-[#455a5c]/10 hover:bg-[#455a5c] hover:text-white text-[#455a5c] text-xs font-bold px-5 py-2.5 rounded-2xl transition inline-flex items-center gap-1.5 shadow-sm";
-        if (reportCloseBtn) reportCloseBtn.className = "text-xs text-gray-400 hover:text-gray-700 p-1";
+        if (reportCloseBtn) reportCloseBtn.className = "close-btn text-sm text-gray-600";
 
         if (reportPeriodCard) {
           reportPeriodCard.className = "py-1 px-1 mb-2.5 text-xs flex items-center gap-1 transition-colors text-[#455a5c] cursor-pointer hover:opacity-80";
@@ -3836,7 +3852,7 @@
 
         settingsModal.className = `absolute inset-0 bg-[#ecefea] text-[#2c3e40] z-30 p-5 flex flex-col justify-between ${settingsVis} transition-all duration-300 overflow-y-auto`;
         if (settingsTitle) settingsTitle.className = "text-sm font-bold text-[#455a5c]";
-        if (settingsCloseBtn) settingsCloseBtn.className = "text-xs text-gray-400 hover:text-gray-700 p-1";
+        if (settingsCloseBtn) settingsCloseBtn.className = "close-btn text-sm text-gray-600";
         if (settingsCard) settingsCard.className = "bg-white/70 border border-[#dce2dc] rounded-2xl p-3.5 mb-4 text-xs text-gray-700 space-y-2 transition-colors";
         if (settingsPhilosophyTitle) settingsPhilosophyTitle.className = "font-bold text-[#455a5c] text-[13px] flex items-center gap-1.5";
 
@@ -3881,7 +3897,7 @@
         reportModal.className = `absolute inset-0 bg-[#fbfcfc] text-[#2c3e40] z-30 p-5 flex flex-col justify-between ${reportVis} transition-all duration-300 overflow-y-auto`;
         if (reportTitle) reportTitle.className = "text-sm font-bold text-[#597075] flex items-center gap-1.5 min-w-0 flex-1";
         if (resetCycleBtn) resetCycleBtn.className = "border border-[#597075]/40 bg-[#597075]/10 hover:bg-[#597075] hover:text-white text-[#597075] text-xs font-bold px-5 py-2.5 rounded-2xl transition inline-flex items-center gap-1.5 shadow-sm";
-        if (reportCloseBtn) reportCloseBtn.className = "text-xs text-gray-400 hover:text-gray-700 p-1";
+        if (reportCloseBtn) reportCloseBtn.className = "close-btn text-sm text-gray-600";
 
         if (reportPeriodCard) {
           reportPeriodCard.className = "py-1 px-1 mb-2.5 text-xs flex items-center gap-1 transition-colors text-[#597075] cursor-pointer hover:opacity-80";
@@ -3906,7 +3922,7 @@
 
         settingsModal.className = `absolute inset-0 bg-[#fbfcfc] text-[#2c3e40] z-30 p-5 flex flex-col justify-between ${settingsVis} transition-all duration-300 overflow-y-auto`;
         if (settingsTitle) settingsTitle.className = "text-sm font-bold text-[#597075]";
-        if (settingsCloseBtn) settingsCloseBtn.className = "text-xs text-gray-400 hover:text-gray-700 p-1";
+        if (settingsCloseBtn) settingsCloseBtn.className = "close-btn text-sm text-gray-600";
         if (settingsCard) settingsCard.className = "bg-[#597075]/10 rounded-2xl p-3.5 mb-4 text-xs text-gray-700 space-y-2 transition-colors";
         if (settingsPhilosophyTitle) settingsPhilosophyTitle.className = "font-bold text-[#597075] text-[13px] flex items-center gap-1.5";
 
