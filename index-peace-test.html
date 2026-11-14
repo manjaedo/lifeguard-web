@@ -177,6 +177,8 @@
     .anim-rain-a { animation: rainDrop 1.6s linear infinite; }
     .anim-rain-b { animation: rainDrop 1.9s linear infinite -0.6s; }
     .anim-rain-c { animation: rainDrop 1.75s linear infinite -1.1s; }
+    @keyframes skyShine { 0%, 100% { opacity: 0.75; transform: scale(0.94); } 50% { opacity: 1; transform: scale(1.06); } }
+    .anim-sky-shine { animation: skyShine 8s ease-in-out infinite; }
     @keyframes cloudDrift { 0%, 100% { transform: translateX(-12px); } 50% { transform: translateX(12px); } }
     .anim-cloud-drift { animation: cloudDrift 20s ease-in-out infinite; }
     @keyframes windSailFlutter {
@@ -709,7 +711,7 @@
           <button type="button" onclick="selectPeaceScene(1, event)" id="sceneTab-1" class="scene-dot" aria-label="숲과 윈드차임"><span style="background:#e9a35f;"></span></button>
           <button type="button" onclick="selectPeaceScene(2, event)" id="sceneTab-2" class="scene-dot" aria-label="봄 아침 개나리"><span style="background:#f2d16b;"></span></button>
           <button type="button" onclick="selectPeaceScene(3, event)" id="sceneTab-3" class="scene-dot" aria-label="오월의 숲"><span style="background:#a8d672;"></span></button>
-          <button type="button" onclick="selectPeaceScene(4, event)" id="sceneTab-4" class="scene-dot" aria-label="맑은 하늘"><span style="background:#8cc8ec;"></span></button>
+          <button type="button" onclick="selectPeaceScene(4, event)" id="sceneTab-4" class="scene-dot" aria-label="맑은 하늘"><span style="background:#4fa9ec;"></span></button>
           <button type="button" onclick="selectPeaceScene(5, event)" id="sceneTab-5" class="scene-dot" aria-label="해변의 파도"><span style="background:#7d8ad6;"></span></button>
           <button type="button" onclick="selectPeaceScene(6, event)" id="sceneTab-6" class="scene-dot" aria-label="벨벳 앰비언트"><span style="background:#ad94ea;"></span></button>
           <span aria-hidden="true" style="width:1px;height:16px;background:rgba(255,255,255,0.15);margin:0 2px;"></span>
@@ -1120,7 +1122,7 @@
 
     // fadeSec: 몇 초에 걸쳐 사라질지. 0이면 바로 멈춘다 (앱이 뒤로 갈 때 등)
     // ── 실제 녹음 소리 (Pixabay, 사용자가 골라 준 파일). 못 불러오면 기기가 만든 소리로 대신한다 ──
-    const REAL_SOUNDS = { fire: 'sounds/fire.m4a', spring: 'sounds/birds.m4a', forest: 'sounds/forest.m4a', sky: 'sounds/wind.m4a', rain: 'sounds/rain.m4a' };
+    const REAL_SOUNDS = { fire: 'sounds/fire.m4a', spring: 'sounds/birds.m4a', forest: 'sounds/forest.m4a', sky: 'sounds/wind.m4a', rain: 'sounds/rain.m4a', river: 'sounds/river.m4a' };
     const realSoundLoads = {};
     const realSoundFailed = {};
     function loadRealSound(kind) {
@@ -1133,14 +1135,15 @@
       return realSoundLoads[kind];
     }
     // 녹음을 끝없이 이어 튼다: 한 바퀴가 끝나기 3초 전부터 다음 바퀴를 겹쳐 넣어 이음새가 들리지 않게
-    function startRealSound(kind, gen, idx) {
+    function startRealSound(kind, gen, idx, vol) {
+      vol = vol || 1;
       const bus = currentSceneBus;
       loadRealSound(kind).then(buf => {
         if (gen !== soundGen || !audioCtx || !isSoundOn) return;
         if (!buf) { realSoundFailed[kind] = true; playMeditationSound(idx); return; }
         const XF = 3;
         const N = 64, fadeIn = new Float32Array(N), fadeOut = new Float32Array(N);
-        for (let i = 0; i < N; i++) { const x = i / (N - 1); fadeIn[i] = Math.max(0.0001, Math.sin(x * Math.PI / 2)); fadeOut[i] = Math.max(0.0001, Math.cos(x * Math.PI / 2)); }
+        for (let i = 0; i < N; i++) { const x = i / (N - 1); fadeIn[i] = Math.max(0.0001, vol * Math.sin(x * Math.PI / 2)); fadeOut[i] = Math.max(0.0001, vol * Math.cos(x * Math.PI / 2)); }
         const playOnce = (startAt, offset) => {
           const src = audioCtx.createBufferSource(); src.buffer = buf;
           const g = audioCtx.createGain();
@@ -1272,8 +1275,8 @@
         currentSceneBus = audioCtx.createGain();
         currentSceneBus.gain.setValueAtTime(0.0001, now);
         // 장면마다 들리는 크기가 비슷하도록 맞춘 값
-        const realLevel = { fire: 1.3, spring: 1.9, forest: 1.65, sky: 1.1, rain: 1.5 }; // 실제 녹음 소리일 때의 크기
-        const sceneLevel = (REAL_SOUNDS[kind] && !realSoundFailed[kind]) ? realLevel[kind] : ({ sunset: 0.95, chime: 1.2, spring: 3.3, forest: 3, sky: 3.3, wave: 0.7, velvet: 1, fire: 1.3, maple: 7 })[kind] || 1;
+        const realLevel = { fire: 1.3, spring: 1.9, forest: 1.2, sky: 1.1, rain: 1.05 }; // 실제 녹음 소리일 때의 크기
+        const sceneLevel = (REAL_SOUNDS[kind] && !realSoundFailed[kind]) ? realLevel[kind] : ({ sunset: 2.1, chime: 1.2, spring: 3.3, forest: 3, sky: 3.3, wave: 0.7, velvet: 1, fire: 1.3, maple: 12 })[kind] || 1;
         currentSceneBus.gain.exponentialRampToValueAtTime(sceneLevel, now + 1.8);
         currentSceneBus.connect(peaceAudioTarget || audioCtx.destination);
         // 소리 크기나 높이를 아주 천천히 출렁이게 하는 도우미
@@ -1296,8 +1299,12 @@
         // 0. 실제 해변 파도 & 티베트 싱잉볼 (8초 호흡 동기화)
         if (REAL_SOUNDS[kind] && !realSoundFailed[kind]) {
           startRealSound(kind, gen, idx);
-          // 숲: 녹음에 물소리가 없어서, 그 밑에 시냇물과 물방울을 옅게 깐다
-          if (kind === 'forest') {
+          // 숲: 숲 녹음에 물소리가 없어서, 강물 녹음(사용자가 골라 줌)을 함께 튼다
+          if (kind === 'forest' && !realSoundFailed.river) {
+            startRealSound('river', gen, idx, 0.55);
+          }
+          // 강물 파일을 못 불러오면 기기가 만든 시냇물과 물방울로 대신
+          else if (kind === 'forest') {
             const rf = audioCtx.createBiquadFilter(); rf.type = 'bandpass'; rf.frequency.setValueAtTime(1100, now); rf.Q.setValueAtTime(1.4, now);
             const rg = audioCtx.createGain(); rg.gain.setValueAtTime(0.14, now);
             noiseSrc(2.3).connect(rf); rf.connect(rg); rg.connect(sceneOut());
@@ -1526,32 +1533,84 @@
           scheduleChime(true);
         }
 
-        // 번외: 해 질 녘 노을 — 낮게 깔리는 저녁 바람과 아주 느린 따뜻한 화음
+        // 번외: 해 질 녘 노을 — 노을 진 항구. 배 옆에서 잔잔히 찰랑이는 물결, 옅은 저녁 화음, 아주 멀리서 가끔 뱃고동
         else if (kind === 'sunset') {
-          const wf = audioCtx.createBiquadFilter(); wf.type = 'lowpass'; wf.frequency.setValueAtTime(300, now);
-          const wg = audioCtx.createGain(); wg.gain.setValueAtTime(0.08, now);
-          noiseSrc(0.7).connect(wf); wf.connect(wg); wg.connect(sceneOut());
+          // 1) 바탕: 아주 옅고 고른 물가 소리 (커졌다 작아지지 않는다)
+          const bf = audioCtx.createBiquadFilter(); bf.type = 'lowpass'; bf.frequency.setValueAtTime(700, now);
+          const bg = audioCtx.createGain(); bg.gain.setValueAtTime(0.03, now);
+          noiseSrc(0.7).connect(bf); bf.connect(bg); bg.connect(sceneOut());
+          // 2) 옅은 저녁 화음 (음마다 다른 빠르기로 천천히 떠올랐다 가라앉음)
           const cf = audioCtx.createBiquadFilter(); cf.type = 'lowpass'; cf.frequency.setValueAtTime(900, now);
-          const cg = audioCtx.createGain(); cg.gain.setValueAtTime(0.09, now);
+          const cg = audioCtx.createGain(); cg.gain.setValueAtTime(0.045, now);
           cf.connect(cg); cg.connect(sceneOut());
-          meditationActiveNodes.push(wf, wg, cf, cg);
-          [110.00, 164.81, 220.00, 277.18, 329.63, 440.00].forEach((f, i) => {
+          meditationActiveNodes.push(bf, bg, cf, cg);
+          [110.00, 164.81, 220.00, 277.18, 329.63].forEach((f, i) => {
             const o = audioCtx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(f, now);
             const g = audioCtx.createGain(); g.gain.setValueAtTime(0.32 / (i + 1), now);
-            addLfo(g.gain, 0.035 + i * 0.019, 0.16 / (i + 1)); // 음마다 다른 빠르기로 천천히 떠올랐다 가라앉는다
+            addLfo(g.gain, 0.035 + i * 0.019, 0.16 / (i + 1));
             o.connect(g); g.connect(cf); o.start(now);
             meditationActiveNodes.push(o, g);
           });
-          function breatheSunset() {
-            if (gen !== soundGen || !audioCtx || !isSoundOn) return;
-            const t = audioCtx.currentTime;
-            [wg.gain, wf.frequency, cg.gain].forEach(p => p.cancelScheduledValues(t));
-            wg.gain.setValueAtTime(0.03, t); // 바람은 고르게: 밀려왔다 빠지면 파도처럼 들린다
-            wf.frequency.setValueAtTime(420, t);
-            cg.gain.setValueAtTime(0.08, t); cg.gain.linearRampToValueAtTime(0.14, t + 4); cg.gain.linearRampToValueAtTime(0.08, t + 8);
+          // 3) 찰랑: 짧은 물결이 박자 없이 배 옆을 친다 (파도처럼 8초로 밀려오지 않는다)
+          const lapOut = audioCtx.createGain(); lapOut.gain.setValueAtTime(1, now); lapOut.connect(sceneOut());
+          meditationActiveNodes.push(lapOut);
+          function lap(when, vol) {
+            const n = audioCtx.createBufferSource(); n.buffer = getPinkNoiseBuffer();
+            const f = audioCtx.createBiquadFilter(); f.type = 'bandpass'; f.Q.setValueAtTime(0.9, when);
+            const fc = 450 + Math.random() * 450;
+            f.frequency.setValueAtTime(fc, when); f.frequency.linearRampToValueAtTime(fc * 1.6, when + 0.25); f.frequency.linearRampToValueAtTime(fc * 0.8, when + 1.1);
+            const g = audioCtx.createGain();
+            const up = 0.18 + Math.random() * 0.2, down = 0.7 + Math.random() * 0.7;
+            g.gain.setValueAtTime(0.0001, when);
+            g.gain.linearRampToValueAtTime(vol, when + up);
+            g.gain.exponentialRampToValueAtTime(0.0001, when + up + down);
+            n.connect(f); f.connect(g);
+            if (audioCtx.createStereoPanner) { const pn = audioCtx.createStereoPanner(); pn.pan.setValueAtTime(Math.random() * 0.8 - 0.4, when); g.connect(pn); pn.connect(lapOut); }
+            else g.connect(lapOut);
+            n.start(when, Math.random() * 4); n.stop(when + up + down + 0.05);
           }
-          breatheSunset();
-          meditationIntervals.push(setInterval(breatheSunset, 8000));
+          function scheduleLap() {
+            meditationIntervals.push(setTimeout(() => {
+              if (gen !== soundGen || !audioCtx || !isSoundOn) return;
+              const t = audioCtx.currentTime + 0.02;
+              lap(t, 0.05 + Math.random() * 0.06);
+              if (Math.random() < 0.35) lap(t + 0.3 + Math.random() * 0.4, 0.03 + Math.random() * 0.03);
+              scheduleLap();
+            }, 1100 + Math.random() * 2200));
+          }
+          scheduleLap();
+          // 4) 뱃고동: 아주 멀리서, 작게, 천천히 커졌다 사라진다. 처음엔 20~30초 뒤, 그다음엔 1분 반~2분 반마다
+          const hornOut = audioCtx.createBiquadFilter(); hornOut.type = 'lowpass'; hornOut.frequency.setValueAtTime(520, now);
+          const hornDelay = audioCtx.createDelay(1.0); hornDelay.delayTime.setValueAtTime(0.42, now);
+          const hornFb = audioCtx.createGain(); hornFb.gain.setValueAtTime(0.32, now);
+          const hornWet = audioCtx.createGain(); hornWet.gain.setValueAtTime(0.5, now);
+          hornOut.connect(sceneOut());
+          hornOut.connect(hornDelay); hornDelay.connect(hornFb); hornFb.connect(hornDelay); hornDelay.connect(hornWet); hornWet.connect(sceneOut());
+          meditationActiveNodes.push(hornOut, hornDelay, hornFb, hornWet);
+          function horn(when) {
+            const g = audioCtx.createGain();
+            const hold = 2.2 + Math.random() * 1.0;
+            g.gain.setValueAtTime(0.0001, when);
+            g.gain.linearRampToValueAtTime(0.05, when + 1.4);
+            g.gain.setValueAtTime(0.05, when + 1.4 + hold);
+            g.gain.exponentialRampToValueAtTime(0.0001, when + 1.4 + hold + 2.4);
+            g.connect(hornOut);
+            [[92, 'sawtooth', 0.5], [92.6, 'sawtooth', 0.5], [138.5, 'triangle', 0.25]].forEach(([f, type, v]) => {
+              const o = audioCtx.createOscillator(); o.type = type; o.frequency.setValueAtTime(f, when);
+              const og = audioCtx.createGain(); og.gain.setValueAtTime(v, when);
+              o.connect(og); og.connect(g);
+              o.start(when); o.stop(when + 1.4 + hold + 2.6);
+            });
+          }
+          function scheduleHorn(first) {
+            const waitMs = first ? 20000 + Math.random() * 10000 : 90000 + Math.random() * 60000;
+            meditationIntervals.push(setTimeout(() => {
+              if (gen !== soundGen || !audioCtx || !isSoundOn) return;
+              horn(audioCtx.currentTime + 0.05);
+              scheduleHorn(false);
+            }, waitMs));
+          }
+          scheduleHorn(true);
         }
 
         // 노랑: 봄 아침 개나리 — 바닥의 아주 옅은 밝은 화음과, 멀리서 가끔 들리는 작은 새소리
@@ -1712,22 +1771,19 @@
           crackleLoop();
         }
 
-        // 번외: 단풍길 — 옅은 가을바람, 천천히 낙엽을 밟는 발소리, 가끔 멀리서 들리는 새소리
+        // 번외: 단풍길 — 옅은 가을바람(실제 녹음), 천천히 마른 잎을 밟는 발소리, 가끔 멀리서 들리는 새소리
         else if (kind === 'maple') {
-          const wf = audioCtx.createBiquadFilter(); wf.type = 'bandpass'; wf.frequency.setValueAtTime(600, now); wf.Q.setValueAtTime(0.9, now);
-          const wg = audioCtx.createGain(); wg.gain.setValueAtTime(0.08, now);
-          noiseSrc(0.4).connect(wf); wf.connect(wg); wg.connect(sceneOut());
-          meditationActiveNodes.push(wf, wg);
-          function breatheAutumn() {
-            if (gen !== soundGen || !audioCtx || !isSoundOn) return;
-            const t = audioCtx.currentTime;
-            wg.gain.cancelScheduledValues(t);
-            wg.gain.setValueAtTime(0.012, t);
+          // 가을바람: 하늘 장면의 실제 바람 녹음을 아주 옅게. 못 불러오면 기기가 만든 바람으로
+          if (!realSoundFailed.sky) {
+            startRealSound('sky', gen, idx, 0.06);
+          } else {
+            const wf = audioCtx.createBiquadFilter(); wf.type = 'bandpass'; wf.frequency.setValueAtTime(600, now); wf.Q.setValueAtTime(0.9, now);
+            const wg = audioCtx.createGain(); wg.gain.setValueAtTime(0.012, now);
+            noiseSrc(0.4).connect(wf); wf.connect(wg); wg.connect(sceneOut());
+            meditationActiveNodes.push(wf, wg);
           }
-          breatheAutumn();
-          meditationIntervals.push(setInterval(breatheAutumn, 8000));
 
-          const stepOut = audioCtx.createBiquadFilter(); stepOut.type = 'bandpass'; stepOut.frequency.setValueAtTime(2600, now); stepOut.Q.setValueAtTime(0.7, now);
+          const stepOut = audioCtx.createBiquadFilter(); stepOut.type = 'highpass'; stepOut.frequency.setValueAtTime(900, now);
           stepOut.connect(sceneOut());
           const birdOut = audioCtx.createBiquadFilter(); birdOut.type = 'lowpass'; birdOut.frequency.setValueAtTime(4500, now);
           birdOut.connect(sceneOut());
@@ -1736,21 +1792,24 @@
             if (!audioCtx.createStereoPanner) return node;
             const pn = audioCtx.createStereoPanner(); pn.pan.setValueAtTime(v, when); node.connect(pn); return pn;
           };
-          // 발걸음 한 번: 짧게 부서지는 잡음 조각 몇 개 (바스락)
-          function step(when, side, vol) {
-            const pieces = 4 + Math.floor(Math.random() * 4);
-            const dur = 0.14 + Math.random() * 0.1;
-            for (let i = 0; i < pieces; i++) {
-              const w = when + (i / pieces) * dur + Math.random() * 0.015;
+          // 발걸음 한 번: 뒤꿈치가 닿을 때 한 번, 앞꿈치가 닿을 때 한 번 '바스락'. 알갱이마다 높이가 달라 마른 잎이 부서지는 느낌
+          function crunch(when, dur, grains, side, vol) {
+            for (let i = 0; i < grains; i++) {
+              const w = when + Math.random() * dur;
               const n = audioCtx.createBufferSource(); n.buffer = getPinkNoiseBuffer();
+              const f = audioCtx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.setValueAtTime(1500 + Math.random() * 5000, w); f.Q.setValueAtTime(1.1, w);
               const g = audioCtx.createGain();
-              const len = 0.015 + Math.random() * 0.03;
+              const len = 0.006 + Math.random() * 0.022;
               g.gain.setValueAtTime(0.0001, w);
-              g.gain.linearRampToValueAtTime(vol * (0.5 + Math.random() * 0.5), w + 0.003);
+              g.gain.linearRampToValueAtTime(vol * (0.35 + Math.random() * 0.65), w + 0.002);
               g.gain.exponentialRampToValueAtTime(0.0001, w + len);
-              n.connect(g); panTo(g, side, w).connect(stepOut);
+              n.connect(f); f.connect(g); panTo(g, side, w).connect(stepOut);
               n.start(w, Math.random() * 4); n.stop(w + len + 0.02);
             }
+          }
+          function step(when, side, vol) {
+            crunch(when, 0.09, 9 + Math.floor(Math.random() * 6), side, vol);
+            crunch(when + 0.13 + Math.random() * 0.05, 0.14, 7 + Math.floor(Math.random() * 6), side, vol * 0.8);
           }
           // 여섯~열 걸음 느긋하게 걷고, 4~8초 쉬었다가 다시 걷는다
           function walk(first, lastWalkMs) {
@@ -2523,12 +2582,12 @@
         visualHtml: '<div class="flex flex-col items-center justify-center -mt-2"><svg viewBox="0 0 120 130" class="w-32" style="height:136px;overflow:visible"><circle cx="60" cy="64" r="52" fill="#a8d672" fill-opacity="0.12" class="anim-breath" style="transform-box:fill-box;transform-origin:center;"/><g class="anim-leaf-sway" style="transform-origin:60px 114px"><path d="M60 114 C60 92 60 70 60 22" stroke="#8cbf5a" stroke-width="1.6" fill="none" stroke-opacity="0.8"/><path d="M60 22 C88 40 92 78 60 104 C28 78 32 40 60 22 Z" fill="#b5dd7d" fill-opacity="0.55" stroke="#9ccc65" stroke-width="1.2"/><path d="M60 50 L74 40 M60 66 L78 54 M60 82 L74 74 M60 50 L46 40 M60 66 L42 54 M60 82 L46 74" stroke="#e6f5cf" stroke-opacity="0.45" stroke-width="1"/></g></svg><div class="h-6 flex items-center justify-center mt-10"><canvas id="peaceScopeCanvas" width="128" height="24" class="w-32 h-6 pointer-events-none"></canvas></div></div>'
       },
       {
-        kind: 'sky', dot: '#8cc8ec', rgb: [140, 200, 236], light: [215, 238, 250], scopeAmp: 0.8,
+        kind: 'sky', dot: '#4fa9ec', rgb: [79, 169, 236], light: [205, 234, 252], scopeAmp: 0.8,
         title: '맑은 하늘',
         soundName: '높은 하늘의 고른 바람',
-        message: '아무 일도 일어나지 않는 하늘.\n구름 한 점만 천천히 지나가요.',
-        quote: '생각을 구름처럼 흘려보내요',
-        visualHtml: '<div class="flex flex-col items-center justify-center -mt-2"><div class="relative w-32 h-32 flex items-center justify-center"><div class="absolute inset-0 rounded-full anim-breath" style="background:radial-gradient(circle, rgba(140,200,236,0.35), rgba(140,200,236,0) 70%);"></div><div class="w-24 h-24 rounded-full anim-breath" style="background:rgba(140,200,236,0.18);border:1.5px solid rgba(160,212,242,0.6);"></div><svg viewBox="0 0 60 26" class="absolute anim-cloud-drift" style="width:64px;top:44px;left:32px;"><path d="M12 22 C3 22 3 11 12 12 C13 4 25 3 27 10 C31 5 41 7 41 14 C48 13 50 22 43 22 Z" fill="#ffffff" fill-opacity="0.55"/></svg></div><div class="h-6 flex items-center justify-center mt-10"><canvas id="peaceScopeCanvas" width="128" height="24" class="w-32 h-6 pointer-events-none"></canvas></div></div>'
+        message: '구름 한 점 없는 파란 하늘에\n햇빛이 따스하게 내려와요.',
+        quote: '하늘처럼 넓게 숨 쉬어요',
+        visualHtml: '<div class="flex flex-col items-center justify-center -mt-2"><svg viewBox="0 0 120 120" class="w-32 h-32" style="overflow:visible"><defs><linearGradient id="clearSkyGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2f8fe0"/><stop offset="100%" stop-color="#8fd2f6"/></linearGradient><radialGradient id="clearSunLight" cx="0.5" cy="0.5" r="0.5"><stop offset="0%" stop-color="#fffbe8" stop-opacity="0.95"/><stop offset="40%" stop-color="#fff4c8" stop-opacity="0.45"/><stop offset="100%" stop-color="#fff4c8" stop-opacity="0"/></radialGradient><clipPath id="clearSkyClip"><circle cx="60" cy="60" r="46"/></clipPath></defs><circle cx="60" cy="60" r="56" fill="#4fa9ec" fill-opacity="0.2" class="anim-breath" style="transform-box:fill-box;transform-origin:center;"/><g clip-path="url(#clearSkyClip)"><rect x="0" y="0" width="120" height="120" fill="url(#clearSkyGrad)" fill-opacity="0.9"/><circle cx="80" cy="40" r="34" fill="url(#clearSunLight)" class="anim-sky-shine" style="transform-box:fill-box;transform-origin:center;"/></g><circle cx="80" cy="40" r="8" fill="#fffcee"/><circle cx="60" cy="60" r="46" fill="none" stroke="#c4e8fb" stroke-opacity="0.65" stroke-width="1.2"/></svg><div class="h-6 flex items-center justify-center mt-10"><canvas id="peaceScopeCanvas" width="128" height="24" class="w-32 h-6 pointer-events-none"></canvas></div></div>'
       },
       {
         kind: 'wave', dot: '#7d8ad6', rgb: [143, 155, 227], light: [222, 226, 250], scopeAmp: 1,
@@ -2550,8 +2609,8 @@
       {
         kind: 'sunset', dot: '#d98a72', rgb: [217, 138, 114], light: [246, 214, 200], scopeAmp: 0.8, extra: true,
         title: '해 질 녘 노을',
-        soundName: '노을 지는 저녁 바람',
-        message: '하루가 천천히 저물어요.\n붉은 해가 물 위로 내려앉아요.',
+        soundName: '잔잔한 물결과 먼 뱃고동',
+        message: '노을 진 항구에\n물결이 잔잔히 찰랑여요.',
         quote: '천천히 내려앉는 해를 바라봐요',
         visualHtml: '<div class="flex flex-col items-center justify-center -mt-2"><svg viewBox="0 0 160 112" class="w-36" style="height:100px;overflow:visible"><defs><radialGradient id="sunGlow"><stop offset="0%" stop-color="#e8a088" stop-opacity="0.5"/><stop offset="100%" stop-color="#e8a088" stop-opacity="0"/></radialGradient><clipPath id="sunClip"><rect x="0" y="0" width="160" height="80"/></clipPath></defs><circle cx="80" cy="70" r="60" fill="url(#sunGlow)" class="anim-breath" style="transform-box:fill-box;transform-origin:center;"/><g clip-path="url(#sunClip)"><circle class="anim-sun-sink" cx="80" cy="64" r="30" fill="#d98a72" fill-opacity="0.75"/></g><line x1="14" y1="80" x2="146" y2="80" stroke="#d98a72" stroke-opacity="0.5" stroke-width="1.2"/><line x1="40" y1="90" x2="120" y2="90" stroke="#d98a72" stroke-opacity="0.25"/><line x1="60" y1="99" x2="100" y2="99" stroke="#d98a72" stroke-opacity="0.14"/></svg><div class="h-6 flex items-center justify-center mt-10"><canvas id="peaceScopeCanvas" width="128" height="24" class="w-32 h-6 pointer-events-none"></canvas></div></div>'
       },
