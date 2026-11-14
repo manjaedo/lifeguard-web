@@ -173,6 +173,19 @@
     .anim-petal-turn { animation: petalTurn 12s ease-in-out infinite; }
     @keyframes leafSway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
     .anim-leaf-sway { animation: leafSway 6s ease-in-out infinite; }
+    /* 번외: 양수리 시냇물 — 물결 무늬가 정확히 한 칸만큼 흘러간 뒤 다시 시작해서, 반복돼도 끊겨 보이지 않는다 */
+    @keyframes smFlowA { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -24; } }
+    @keyframes smFlowB { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -30; } }
+    @keyframes smFlowC { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -20; } }
+    .anim-stream-a { stroke-dasharray: 7 17; animation: smFlowA 2.8s linear infinite; }
+    .anim-stream-b { stroke-dasharray: 12 18; animation: smFlowB 3.5s linear infinite; }
+    .anim-stream-c { stroke-dasharray: 5 15; animation: smFlowC 2.3s linear infinite; }
+    @keyframes smFoam { 0%, 100% { transform: scale(0.92); opacity: 0.35; } 50% { transform: scale(1.12); opacity: 0.75; } }
+    .anim-stream-foam { transform-box: fill-box; transform-origin: center; animation: smFoam 4.4s ease-in-out infinite; }
+    @keyframes smGlint { 0%, 100% { opacity: 0.1; } 50% { opacity: 0.9; } }
+    .anim-stream-glint { animation: smGlint 3.8s ease-in-out infinite; }
+    @keyframes smGrass { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+    .anim-stream-grass { animation: smGrass 6.5s ease-in-out infinite; }
     @keyframes rainDrop { 0% { transform: translateY(-4px); opacity: 0; } 25% { opacity: 0.9; } 100% { transform: translateY(26px); opacity: 0; } }
     .anim-rain-a { animation: rainDrop 1.6s linear infinite; }
     .anim-rain-b { animation: rainDrop 1.9s linear infinite -0.6s; }
@@ -739,6 +752,7 @@
           <button type="button" onclick="selectPeaceScene(7, event)" id="sceneTab-7" class="scene-dot" aria-label="해 질 녘 노을 (번외)"><span style="background:#d98a72;"></span></button>
           <button type="button" onclick="selectPeaceScene(8, event)" id="sceneTab-8" class="scene-dot" aria-label="단풍길 (번외)"><span style="background:#c9624a;"></span></button>
           <button type="button" onclick="selectPeaceScene(9, event)" id="sceneTab-9" class="scene-dot" aria-label="비 오는 날 (번외)"><span style="background:#8fa6bf;"></span></button>
+          <button type="button" onclick="selectPeaceScene(10, event)" id="sceneTab-10" class="scene-dot" aria-label="양수리 시냇물 (번외)"><span style="background:#6cc3b4;"></span></button>
         </div>
       </div>
 
@@ -1143,7 +1157,7 @@
 
     // fadeSec: 몇 초에 걸쳐 사라질지. 0이면 바로 멈춘다 (앱이 뒤로 갈 때 등)
     // ── 실제 녹음 소리 (Pixabay, 사용자가 골라 준 파일). 못 불러오면 기기가 만든 소리로 대신한다 ──
-    const REAL_SOUNDS = { fire: 'sounds/fire.m4a', spring: 'sounds/birds.m4a', forest: 'sounds/forest.m4a', rain: 'sounds/rain.m4a', river: 'sounds/river.m4a' };
+    const REAL_SOUNDS = { fire: 'sounds/fire.m4a', spring: 'sounds/birds.m4a', forest: 'sounds/forest.m4a', rain: 'sounds/rain.m4a', river: 'sounds/river.m4a', stream: 'sounds/stream.m4a' };
     const realSoundLoads = {};
     const realSoundFailed = {};
     // 안드로이드 앱에서는 앱이 파일을 대신 읽어 준다 (WebView는 file:// 에서 fetch를 못 씀). 웹에서는 fetch
@@ -1311,7 +1325,7 @@
         currentSceneBus = audioCtx.createGain();
         currentSceneBus.gain.setValueAtTime(0.0001, now);
         // 장면마다 들리는 크기가 비슷하도록 맞춘 값
-        const realLevel = { fire: 1.3, spring: 1.9, forest: 1.2, rain: 1.05 }; // 실제 녹음 소리일 때의 크기
+        const realLevel = { fire: 1.3, spring: 1.9, forest: 1.2, rain: 1.05, stream: 1.05 }; // 실제 녹음 소리일 때의 크기
         const sceneLevel = (REAL_SOUNDS[kind] && !realSoundFailed[kind]) ? realLevel[kind] : ({ sunset: 1.2, chime: 1.2, spring: 3.3, forest: 3, stars: 1.2, wave: 0.7, velvet: 1, fire: 1.3, maple: 1.3 })[kind] || 1;
         currentSceneBus.gain.exponentialRampToValueAtTime(sceneLevel, now + 1.8);
         currentSceneBus.connect(peaceAudioTarget || audioCtx.destination);
@@ -1941,6 +1955,16 @@
           meditationIntervals.push(setInterval(breatheLeaves, 8000));
         }
 
+        // 번외: 양수리 시냇물 — 파일을 못 불러올 때만 쓰는 대신 소리 (졸졸 흐르는 물)
+        else if (kind === 'stream') {
+          const rf = audioCtx.createBiquadFilter(); rf.type = 'bandpass'; rf.frequency.setValueAtTime(1300, now); rf.Q.setValueAtTime(1.1, now);
+          const rg = audioCtx.createGain(); rg.gain.setValueAtTime(0.14, now);
+          noiseSrc(1.7).connect(rf); rf.connect(rg); rg.connect(sceneOut());
+          meditationActiveNodes.push(rf, rg);
+          addLfo(rg.gain, 0.61, 0.035);
+          addLfo(rf.frequency, 0.27, 200);
+        }
+
         // 번외: 비 오는 날 — 파일을 못 불러올 때만 쓰는 대신 소리 (고르게 쏴- 하는 소리)
         else if (kind === 'rain') {
           const rf = audioCtx.createBiquadFilter(); rf.type = 'bandpass'; rf.frequency.setValueAtTime(2500, now); rf.Q.setValueAtTime(0.35, now);
@@ -2556,7 +2580,7 @@
       hideControls();
     }
 
-    // 빨주노초파남보 일곱 장면 + 번외 세 장면(노을·단풍길·비 오는 날). 처음 열면 파랑(파도)부터.
+    // 빨주노초파남보 일곱 장면 + 번외 네 장면(노을·단풍길·비 오는 날·양수리 시냇물). 처음 열면 파랑(파도)부터.
     let currentPeaceIdx = 4;
     const peaceScenes = [
       {
@@ -2639,6 +2663,14 @@
         message: '창밖에 비가\n고르게 내리고 있어요.',
         quote: '빗소리에 생각을 맡겨요',
         visualHtml: '<div class="flex flex-col items-center justify-center -mt-2"><svg viewBox="0 0 120 120" class="w-32 h-32" style="overflow:visible"><circle cx="60" cy="60" r="52" fill="#8fa6bf" fill-opacity="0.12" class="anim-breath" style="transform-box:fill-box;transform-origin:center;"/><path d="M34 52 C24 52 24 38 35 39 C37 28 52 26 56 35 C61 28 76 30 76 41 C86 40 89 52 79 52 Z" fill="#b8c8da" fill-opacity="0.6"/><g stroke="#a9bdd3" stroke-width="1.6" stroke-linecap="round" stroke-opacity="0.75"><line class="anim-rain-a" x1="40" y1="60" x2="38" y2="68"/><line class="anim-rain-b" x1="52" y1="60" x2="50" y2="68"/><line class="anim-rain-c" x1="64" y1="60" x2="62" y2="68"/><line class="anim-rain-a" x1="76" y1="60" x2="74" y2="68" style="animation-delay:-0.5s"/><line class="anim-rain-b" x1="46" y1="72" x2="44" y2="80" style="animation-delay:-0.8s"/><line class="anim-rain-c" x1="70" y1="72" x2="68" y2="80" style="animation-delay:-0.3s"/></g></svg><div class="h-6 flex items-center justify-center mt-10"><canvas id="peaceScopeCanvas" width="128" height="24" class="w-32 h-6 pointer-events-none"></canvas></div></div>'
+      },
+      {
+        kind: 'stream', dot: '#6cc3b4', rgb: [108, 195, 180], light: [214, 244, 238], scopeAmp: 0.8, extra: true,
+        title: '양수리 시냇물',
+        soundName: '양수리 시냇물 소리',
+        message: '맑은 시냇물이\n돌 사이로 졸졸 흘러요.',
+        quote: '흐르는 물에 생각을 띄워 보내요',
+        visualHtml: '<div class="flex flex-col items-center justify-center -mt-2"><svg viewBox="0 0 120 120" class="w-40 h-40" style="overflow:visible"><defs><clipPath id="smClip"><circle cx="60" cy="60" r="50"/></clipPath><linearGradient id="smBank" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a9d9b0"/><stop offset="1" stop-color="#5c9a7c"/></linearGradient><linearGradient id="smWater" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b4ece2"/><stop offset="0.55" stop-color="#7fd0c4"/><stop offset="1" stop-color="#55b2ad"/></linearGradient><radialGradient id="smFade" cx="0.5" cy="0.5" r="0.5"><stop offset="0.75" stop-color="#141718" stop-opacity="0"/><stop offset="1" stop-color="#141718" stop-opacity="0.3"/></radialGradient></defs><circle cx="60" cy="60" r="56" fill="#6cc3b4" fill-opacity="0.12" class="anim-breath" style="transform-box:fill-box;transform-origin:center;"/><g clip-path="url(#smClip)"><rect x="0" y="0" width="120" height="120" fill="url(#smBank)" fill-opacity="0.6"/><path d="M100 0 C80 28 96 48 68 64 C42 78 52 98 22 122" stroke="url(#smWater)" stroke-width="34" fill="none" stroke-linecap="round"/><path d="M100 0 C80 28 96 48 68 64 C42 78 52 98 22 122" stroke="#d8f6f0" stroke-opacity="0.25" stroke-width="20" fill="none" stroke-linecap="round"/><g fill="none" stroke="#ffffff" stroke-linecap="round"><path class="anim-stream-a" d="M93 0 C73 28 89 48 61 64 C35 78 45 98 15 122" stroke-width="1.5" stroke-opacity="0.55"/><path class="anim-stream-b" d="M101 0 C81 28 97 48 69 64 C43 78 53 98 23 122" stroke-width="1.8" stroke-opacity="0.65"/><path class="anim-stream-c" d="M108 0 C88 28 104 48 76 64 C50 78 60 98 30 122" stroke-width="1.3" stroke-opacity="0.5"/><path class="anim-stream-b" d="M97 0 C77 28 93 48 65 64 C39 78 49 98 19 122" stroke-width="1" stroke-opacity="0.4" style="animation-duration:4.1s"/></g><ellipse cx="75" cy="58" rx="6" ry="3.6" fill="#7b938d"/><ellipse class="anim-stream-foam" cx="75" cy="58" rx="8.5" ry="5.2" fill="none" stroke="#ffffff" stroke-width="1" stroke-opacity="0.6"/><ellipse cx="44" cy="90" rx="5" ry="3" fill="#7b938d"/><ellipse class="anim-stream-foam" cx="44" cy="90" rx="7.5" ry="4.6" fill="none" stroke="#ffffff" stroke-width="1" stroke-opacity="0.6" style="animation-delay:-2.2s"/><g fill="#ffffff"><circle class="anim-stream-glint" cx="88" cy="26" r="1.2"/><circle class="anim-stream-glint" cx="62" cy="72" r="1" style="animation-delay:-1.4s"/><circle class="anim-stream-glint" cx="35" cy="106" r="1.1" style="animation-delay:-2.6s"/></g><g stroke="#4f8a68" stroke-width="1.4" stroke-linecap="round" fill="none" class="anim-stream-grass" style="transform-origin:30px 50px"><path d="M24 54 C24 46 22 42 19 38"/><path d="M29 54 C29 45 31 41 34 37"/><path d="M34 55 C33 48 35 44 37 41"/></g><g stroke="#4f8a68" stroke-width="1.4" stroke-linecap="round" fill="none" class="anim-stream-grass" style="transform-origin:96px 90px;animation-delay:-3s"><path d="M92 94 C92 86 90 82 87 78"/><path d="M97 94 C97 85 99 81 102 77"/></g><rect x="0" y="0" width="120" height="120" fill="url(#smFade)"/></g></svg><div class="h-6 flex items-center justify-center mt-8"><canvas id="peaceScopeCanvas" width="128" height="24" class="w-32 h-6 pointer-events-none"></canvas></div></div>'
       }
     ];
 
@@ -4756,7 +4788,7 @@
     const WHATS_NEW_VERSION = '1.2.3';
     // 1.2.3에서 바뀐 것. 세 번째 값 'android'는 안드로이드 앱에서만, 'web'은 웹·아이폰에서만 보여주는 항목
     const WHATS_NEW_ITEMS = [
-      ['🛟', '구명튜브가 빨주노초파남보 일곱 장면과 번외 셋(노을·단풍길·비 오는 날)으로 늘었어요. 위의 색 동그라미로 골라요.'],
+      ['🛟', '구명튜브가 빨주노초파남보 일곱 장면과 번외 넷(노을·단풍길·비 오는 날·양수리 시냇물)으로 늘었어요. 위의 색 동그라미로 골라요.'],
       ['🌲', '모닥불·새소리·숲과 강물·빗소리는 실제로 녹음한 소리예요.'],
       ['🌊', '파도 장면에서는 숨 박자에 맞춰 ‘들이쉬고·내쉬고’가 번갈아 떠요.'],
       ['🔉', '소리가 뚝 끊기지 않고 부드럽게 켜지고 사라져요.'],
