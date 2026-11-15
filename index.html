@@ -4631,6 +4631,12 @@
           const gridEl = document.getElementById('chartGrid');
           if (gridEl) {
             gridEl.textContent = '';
+            // △ ~ ▽ 사이(○ 위아래 한 칸)를 옅게 칠한다: 평시 기분으로 봐도 되는 구간 (1.2.5, 사용자 결정)
+            const band = document.createElementNS(SVG_NS, 'rect');
+            band.setAttribute('x', String(X0)); band.setAttribute('width', String(X1 - X0));
+            band.setAttribute('y', String(45 - LEVEL)); band.setAttribute('height', String(LEVEL * 2));
+            band.setAttribute('fill', color); band.setAttribute('opacity', '0.08');
+            gridEl.appendChild(band);
             [[2, '▲'], [1, '△'], [0, '○'], [-1, '▽'], [-2, '▼']].forEach(([score, sym]) => {
               const y = 45 - score * LEVEL;
               if (score !== 0) {
