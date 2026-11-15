@@ -739,7 +739,7 @@
       <div class="text-center pb-1">
         <button type="button" onclick="event.stopPropagation(); triggerHaptic(); showWhatsNew(true)" class="text-[11px] opacity-60 hover:opacity-100 underline underline-offset-4 transition cursor-pointer" style="color: inherit;">새로워진 점 보기</button>
       </div>
-      <div id="settingsVersion" class="text-center text-[10px] text-gray-400">Life Guard v1.2.4-alpha (알파판)</div>
+      <div id="settingsVersion" class="text-center text-[10px] text-gray-400">Life Guard v1.2.5-alpha (알파판)</div>
     </div>
 
     <!-- Modal 3: Peace Screen (마음의 평화: 호흡의 파도 & 실시간 명상 배경음 / 10초 후 중앙 이미지 외 페이드아웃, 탭 시 복귀) -->
@@ -5287,17 +5287,13 @@
     }
 
     // ── 새로워진 점 안내 (버전별). 저절로는 한 번만 뜬다. 다시 보려면 설정 맨 아래 '새로워진 점 보기' ──
-    const WHATS_NEW_VERSION = '1.2.4';
-    // 1.2.3 + 1.2.4에서 바뀐 것 (휴대폰 앱은 1.2.2에서 바로 올라오므로 합쳐 둔다). 세 번째 값 'android'는 안드로이드 앱에서만, 'web'은 웹·아이폰에서만 보여주는 항목
+    const WHATS_NEW_VERSION = '1.2.5';
+    // 1.2.5에서 바뀐 것. 세 번째 값 'android'는 안드로이드 앱에서만, 'web'은 웹·아이폰에서만 보여주는 항목
     const WHATS_NEW_ITEMS = [
-      ['🛟', '구명튜브가 빨주노초파남보 일곱 장면과 번외 넷(노을·단풍길·비 오는 날·양수리 시냇물)으로 늘었어요. 위의 색 동그라미로 골라요.'],
-      ['🌲', '모닥불·새소리·숲과 강물·빗소리는 실제로 녹음한 소리예요.'],
-      ['🌊', '파도 장면에서는 숨 박자에 맞춰 ‘들이쉬고·내쉬고’가 번갈아 떠요.'],
-      ['🔉', '소리가 뚝 끊기지 않고 부드럽게 켜지고 사라져요.'],
-      ['📝', '함께 보는 기록 맨 아래에서 바로 한 줄 메모를 적을 수 있어요. 진료 때 할 이야기를 정리해 두세요.'],
-      ['🔕', '앱을 켜 둔 채 알림 시각이 되어도 선택창이 저절로 뜨지 않아요.', 'android'],
-      ['👆', '켜고 끄는 스위치를 누르기 쉬워졌어요.'],
-      ['🌙', '설정에 ‘활동 정보’가 생겼어요. 켜면 잠잔 시간·깬 횟수·걸음 수를 함께 보는 기록에서 볼 수 있어요. 처음에는 꺼져 있어요.', 'android'],
+      ['🌙', '구명튜브 아래쪽에 ‘화면 끄고 소리만 듣기’ 버튼이 생겼어요. 화면은 까맣게 두고 소리만 들을 수 있어요. 화면을 누르면 다시 켜져요.'],
+      ['⏲', '구명튜브 소리 옆 타이머로 30분·1시간·계속 중에 고를 수 있어요. 시간이 되면 소리가 천천히 사라져요.'],
+      ['📳', '버튼을 누를 때 진동이 한 번만, 또렷하게 와요.', 'android'],
+      ['👣', '활동 정보에서 이번 기간에 기록이 없는 줄(잠 또는 걸음)은 숨겨요. 기록이 들어오면 다시 보여요.', 'android'],
       ['🌿', '이 안내는 한 번만 떠요. 설정 맨 아래 ‘새로워진 점 보기’에서 다시 볼 수 있어요.']
     ];
     let whatsNewEl = null;
