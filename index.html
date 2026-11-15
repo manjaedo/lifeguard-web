@@ -758,15 +758,6 @@
         <button id="peaceCloseBtn" type="button" onclick="closePeaceModal(event)" class="close-btn text-sm text-white/85 shrink-0">닫기 ✕</button>
       </div>
 
-      <!-- 화면 끔 버튼: 위쪽이 좁아(큰 글자에서 겹침) 아래 빈자리에 둔다. 다른 안내와 함께 사라졌다 나타난다 -->
-      <div id="peaceDarkBtnWrap" class="absolute bottom-[72px] inset-x-0 flex justify-center z-20 transition-opacity duration-700">
-        <button id="peaceDarkBtn" type="button" onclick="enterPeaceDark(event)" class="text-white/70 hover:text-white bg-white/10 px-3 py-1.5 rounded-full text-[11px] flex items-center gap-1 transition cursor-pointer active:scale-95">🌙 화면 끄고 소리만 듣기</button>
-      </div>
-
-      <!-- 화면 끔: 소리만 들을 때. 까만 화면으로 덮고 (앱에서는 밝기도 가장 낮게), 누르면 돌아온다 -->
-      <div id="peaceDarkOverlay" onclick="exitPeaceDark(event)" class="absolute inset-0 z-50 flex items-center justify-center" style="display:none;background:#000;cursor:none;">
-        <span id="peaceDarkHint" class="text-[11px] text-white/30" style="transition:opacity 1.2s ease;">화면을 누르면 다시 켜져요</span>
-      </div>
 
       <!-- 2. 상단 제목 & 설명글 & 3가지 소리 빠른 선택 탭 (45초 후 페이드아웃) -->
       <div id="peaceTopHeader" class="absolute top-[76px] inset-x-5 text-left z-20 pointer-events-auto transition-opacity duration-700">
@@ -2032,23 +2023,27 @@
       } catch (_) { return 30; }
     })();
     let peaceSleepTimer = null;
+    let peaceSleepEndsAt = 0; // 소리가 저절로 꺼질 시각 (0 = 없음). 앱 밖에서는 네이티브가 이 시각에 끈다
     function updatePeaceTimerUI() {
       const btn = document.getElementById('peaceTimerBtn');
       if (btn) btn.textContent = '⏲ ' + (peaceTimerMin === 0 ? '계속' : peaceTimerMin === 60 ? '1시간' : peaceTimerMin + '분');
     }
     function clearPeaceSleepTimer() {
       if (peaceSleepTimer) { clearTimeout(peaceSleepTimer); peaceSleepTimer = null; }
+      peaceSleepEndsAt = 0;
     }
     function startPeaceSleepTimer() {
       clearPeaceSleepTimer();
-      if (!isSoundOn || peaceTimerMin === 0) return;
+      if (!isSoundOn || peaceTimerMin === 0) { syncNativePeaceSound(); return; }
+      peaceSleepEndsAt = Date.now() + peaceTimerMin * 60000;
+      syncNativePeaceSound();
       peaceSleepTimer = setTimeout(() => {
         peaceSleepTimer = null;
+        peaceSleepEndsAt = 0;
         if (!isSoundOn) return;
         isSoundOn = false;
         updateSoundTrackUI();
         stopMeditationSound(4);
-        if (isPeaceDark) setNativeScreenDim(false);
       }, peaceTimerMin * 60000);
     }
     function cyclePeaceSleepTimer(e) {
@@ -2066,6 +2061,7 @@
       if (!isSoundOn) clearPeaceSleepTimer();
       else if (!peaceSleepTimer) startPeaceSleepTimer();
       updatePeaceTimerUI();
+      syncNativePeaceSound();
       const icon = document.getElementById('soundIcon');
       const statusText = document.getElementById('soundStatusText');
       const trackName = document.getElementById('soundTrackName');
@@ -2764,6 +2760,7 @@
       const scene = peaceScenes[idx % peaceScenes.length];
       const title = document.getElementById('peaceSceneTitle');
       if (title) title.textContent = scene.title;
+      if (isSoundOn) setTimeout(syncNativePeaceSound, 0); // 알림의 장면 이름도 바꾼다
       const desc = document.getElementById('peaceSceneDesc');
       if (desc) desc.innerHTML = scene.message.replace(/\n/g, '<br>');
       const quote = document.getElementById('peaceSceneQuote');
@@ -2832,11 +2829,6 @@
       if (quote) {
         quote.style.opacity = opacityVal;
       }
-      const darkWrap = document.getElementById('peaceDarkBtnWrap');
-      if (darkWrap) {
-        darkWrap.style.opacity = opacityVal;
-        darkWrap.style.pointerEvents = pointerVal;
-      }
     }
 
     function startPeaceChromeTimer() {
@@ -2853,7 +2845,7 @@
     function handlePeaceModalTap(e) {
       if (e) e.stopPropagation();
       // 만약 소리 토글이나 닫기/장면전환 버튼을 직접 눌렀다면 이벤트 버블링에 의한 화면 토글은 제외
-      if (e && e.target && e.target.closest('#soundToggleBtn, #peaceTimerBtn, #peaceCloseBtn, #peaceDarkBtn, #peaceDarkOverlay, #peaceSceneTabs')) {
+      if (e && e.target && e.target.closest('#soundToggleBtn, #peaceTimerBtn, #peaceCloseBtn, #peaceSceneTabs')) {
         startPeaceChromeTimer();
         return;
       }
@@ -2872,42 +2864,23 @@
       }
     }
 
-    // ── 화면 끔 (소리만 듣기) ──
-    // 앱은 화면이 꺼지면(onPause) 소리를 멈추게 되어 있어서, 진짜로 끄는 대신 까맣게 덮고 밝기를 가장 낮춘다.
-    let isPeaceDark = false;
-    let peaceDarkHintTimer = null;
-    function setNativeScreenDim(on) {
+    // ── 앱 밖에서도 소리 이어 듣기 (안드로이드 앱) ──
+    // 소리가 켜져 있는 동안 네이티브에 알려, 알림(장면 이름 + 멈춤)과 함께 홈으로 나가거나 화면을 꺼도 소리가 이어지게 한다.
+    function syncNativePeaceSound() {
+      if (!window.AndroidBridge || typeof window.AndroidBridge.peaceSoundState !== 'function') return;
       try {
-        if (window.AndroidBridge && typeof window.AndroidBridge.setScreenDim === 'function') window.AndroidBridge.setScreenDim(!!on);
+        const playing = !!isSoundOn && isWindowOpen('peaceModal');
+        const name = peaceScenes[currentPeaceIdx % peaceScenes.length].title;
+        window.AndroidBridge.peaceSoundState(playing, name, String(playing ? peaceSleepEndsAt : 0));
       } catch (_) {}
     }
-    function enterPeaceDark(e) {
-      if (e) e.stopPropagation();
-      triggerHaptic();
-      if (!isSoundOn) toggleMeditationAudio(); // 소리를 들으려고 끄는 것이니, 꺼져 있으면 켠다
-      const ov = document.getElementById('peaceDarkOverlay');
-      const hint = document.getElementById('peaceDarkHint');
-      if (!ov) return;
-      isPeaceDark = true;
-      if (hint) hint.style.opacity = '1';
-      ov.style.display = 'flex';
-      setNativeScreenDim(true);
-      if (peaceDarkHintTimer) clearTimeout(peaceDarkHintTimer);
-      peaceDarkHintTimer = setTimeout(() => { if (hint) hint.style.opacity = '0'; }, 3000);
-    }
-    function exitPeaceDark(e) {
-      if (e) e.stopPropagation();
-      if (!isPeaceDark) return;
-      isPeaceDark = false;
-      if (peaceDarkHintTimer) { clearTimeout(peaceDarkHintTimer); peaceDarkHintTimer = null; }
-      const ov = document.getElementById('peaceDarkOverlay');
-      if (ov) ov.style.display = 'none';
-      setNativeScreenDim(false);
-      if (e) {
-        setPeaceChromeVisibility(true);
-        startPeaceChromeTimer();
-      }
-    }
+    // 알림의 '멈춤'이나 네이티브 타이머가 부른다
+    window.stopPeaceSoundFromNative = function() {
+      if (!isSoundOn) return;
+      isSoundOn = false;
+      updateSoundTrackUI();
+      stopMeditationSound(2);
+    };
 
     function handlePeaceSoundClick(e) {
       if (e) e.stopPropagation();
@@ -2947,7 +2920,8 @@
         clearTimeout(peaceChromeTimer);
         peaceChromeTimer = null;
       }
-      exitPeaceDark();
+      isSoundOn = false;
+      updateSoundTrackUI();
       stopMeditationSound(1.0); // 창은 사르르 닫히고 소리도 1초에 걸쳐 잦아든다
       stopPeaceBreathGuide();
       syncSystemThemeColor(false);
@@ -5290,7 +5264,7 @@
     const WHATS_NEW_VERSION = '1.2.5';
     // 1.2.5에서 바뀐 것. 세 번째 값 'android'는 안드로이드 앱에서만, 'web'은 웹·아이폰에서만 보여주는 항목
     const WHATS_NEW_ITEMS = [
-      ['🌙', '구명튜브 아래쪽에 ‘화면 끄고 소리만 듣기’ 버튼이 생겼어요. 화면은 까맣게 두고 소리만 들을 수 있어요. 화면을 누르면 다시 켜져요.'],
+      ['🌙', '구명튜브 소리를 켜 두면 홈으로 나가거나 화면을 꺼도 소리가 이어져요. 알림에서 멈출 수 있어요.', 'android'],
       ['⏲', '구명튜브 소리 옆 타이머로 30분·1시간·계속 중에 고를 수 있어요. 시간이 되면 소리가 천천히 사라져요.'],
       ['📳', '버튼을 누를 때 진동이 한 번만, 또렷하게 와요.', 'android'],
       ['👣', '활동 정보에서 이번 기간에 기록이 없는 줄(잠 또는 걸음)은 숨겨요. 기록이 들어오면 다시 보여요.', 'android'],
@@ -5371,7 +5345,6 @@
       if (isWindowOpen('dailyCheckinModal')) { dismissDailyCheckin(); return true; }
       if (isWindowOpen('finishVisitModal')) { closeFinishVisitModal(); return true; }
       if (isWindowOpen('memoModal')) { saveAndCloseMemo(); return true; }
-      if (isPeaceDark) { exitPeaceDark({ stopPropagation() {} }); return true; } // 화면 끔이면 먼저 화면만 켠다
       if (isWindowOpen('peaceModal')) { closePeaceModal(); return true; }
       if (isWindowOpen('settingsModal')) { closeSettingsModal(); return true; }
       if (isWindowOpen('reportModal')) { closeReportModal(); return true; }
@@ -5471,7 +5444,6 @@
       requestActivitySync();
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState !== 'visible') return;
-        if (isPeaceDark) exitPeaceDark({ stopPropagation() {} });
         if (activitySettingsPending && window.AndroidBridge && typeof window.AndroidBridge.checkActivityPermission === 'function') {
           // Health Connect 설정에서 돌아왔다: 창을 다시 띄우지 않고 허락 여부만 확인한다
           activitySettingsPending = false;
