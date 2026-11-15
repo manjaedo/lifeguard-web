@@ -1079,8 +1079,9 @@
         peaceAnalyser.connect(audioCtx.destination);
         peaceAudioTarget = peaceMasterGain;
       }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
+      // 아이폰은 다른 앱에 다녀오면 'suspended'가 아니라 'interrupted'가 되기도 한다
+      if (audioCtx.state !== 'running') {
+        try { audioCtx.resume(); } catch (_) {}
       }
       startPeaceScopeVisualizer();
     }
@@ -1088,6 +1089,12 @@
     // 소리청음실의 호흡 원 아래 실시간 떨리는 파형 선 (원의 지름 길이와 일치)
     let scopeLevel = 0;   // 소리 크기를 아주 천천히 따라가는 값 (0~1)
     let scopePhase = 0;
+    let scopeData = null; // 매 장면마다 새로 만들지 않고 다시 쓴다
+    // 구명튜브를 닫으면 그리기를 멈춘다 (안 보이는데 배터리를 쓰지 않게). 다시 열면 startPeaceScopeVisualizer가 새로 시작한다.
+    function stopPeaceScopeVisualizer() {
+      if (peaceScopeAnimFrame) cancelAnimationFrame(peaceScopeAnimFrame);
+      peaceScopeAnimFrame = null;
+    }
     function startPeaceScopeVisualizer() {
       if (peaceScopeAnimFrame) return;
 
@@ -1125,7 +1132,8 @@
         if (isSoundOn && peaceAnalyser) {
           // 소리의 '크기'만 읽어서 아주 천천히 따라간다. 파형을 그대로 그리면 잘게 떨려 눈이 바빠진다.
           const bufferLength = peaceAnalyser.fftSize;
-          const dataArray = new Uint8Array(bufferLength);
+          if (!scopeData || scopeData.length !== bufferLength) scopeData = new Uint8Array(bufferLength);
+          const dataArray = scopeData;
           peaceAnalyser.getByteTimeDomainData(dataArray);
           let sum = 0;
           for (let i = 0; i < bufferLength; i++) { const v = (dataArray[i] - 128) / 128; sum += v * v; }
@@ -2924,6 +2932,7 @@
       updateSoundTrackUI();
       stopMeditationSound(1.0); // 창은 사르르 닫히고 소리도 1초에 걸쳐 잦아든다
       stopPeaceBreathGuide();
+      stopPeaceScopeVisualizer();
       syncSystemThemeColor(false);
 
       const m = document.getElementById('peaceModal');
@@ -3597,6 +3606,13 @@
     let isReordering = false;
     let draggedIndex = null;
 
+    // 사용자가 쓴 글을 화면에 넣을 때: <, >, & 같은 글자가 태그로 읽히지 않고 그대로 보이게
+    function escapeHtml(text) {
+      return String(text == null ? '' : text)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
     function renderDoctorNotes() {
       const container = document.getElementById('memoItemsContainer');
       if (!container) return;
@@ -3629,7 +3645,7 @@
             <!-- 텍스트 영역 (좌우 스와이프 전용) -->
             <div class="memo-swipe-area flex items-start gap-2 flex-1 pr-2 cursor-pointer" data-idx="${idx}">
               <span class="font-bold text-[11px] min-w-[16px]" style="color: ${cardNum};">${idx + 1}.</span>
-              <span class="flex-1 leading-snug" style="color: ${cardText};">${note}</span>
+              <span class="flex-1 leading-snug" style="color: ${cardText};">${escapeHtml(note)}</span>
             </div>
             <!-- 순서 이동 드래그 핸들 (위아래 드래그 전용) -->
             <div class="memo-drag-handle p-1.5 cursor-grab active:cursor-grabbing shrink-0" data-idx="${idx}" title="터치 후 끌어서 순서 이동">
