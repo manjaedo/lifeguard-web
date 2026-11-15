@@ -656,6 +656,17 @@
           </div>
         </div>
 
+        <!-- 1.2.5 시험: 첫 화면 기분 모양 바꾸기. 기록은 늘 ▲ △ ○ ▽ ▼로 저장하고, 첫 화면에 보이는 모양만 바꾼다 -->
+        <div id="settingsGlyphCard" class="mb-4">
+          <div class="text-xs font-bold mb-2 flex items-center justify-between">
+            <span id="settingsGlyphTitle" class="text-[#597075]">첫 화면 기분 모양</span>
+          </div>
+          <div id="glyphPresetContainer" class="grid grid-cols-4 gap-1.5 mb-2"></div>
+          <div id="glyphSlots" class="grid grid-cols-5 gap-1.5"></div>
+          <input id="glyphImageInput" type="file" accept="image/*" class="hidden" onchange="onGlyphImagePicked(this)">
+          <p id="settingsGlyphDesc" class="text-[10.5px] text-gray-500 mt-1.5 leading-relaxed" style="word-break: keep-all;">칸을 눌러 글자나 이모지로, 🖼을 눌러 그림으로 바꿀 수 있어요. 그림은 이 기기에만 둬요. 기록과 그래프는 그대로예요.</p>
+        </div>
+
         <!-- 배경 및 화면 테마 선택 (시스템 연동 / 순백 / 중간톤 / 다크) -->
         <div class="mb-4">
           <div id="settingsThemeTitle" class="text-xs font-bold text-[#597075] mb-2 flex items-center justify-between gap-2">
@@ -5205,6 +5216,7 @@
       updateAlarmSettingUI();
       updateHapticSettingUI();
       applyActivityTheme();
+      updateMoodGlyphUI();
       renderReportData();
     }
 
@@ -5219,6 +5231,219 @@
       el.style.opacity = '0';
       el.style.pointerEvents = 'none';
       setTimeout(() => el.remove(), 280);
+    }
+
+    // ── 첫 화면 기분 모양 (1.2.5 시험, 첫 화면에만) ──
+    // 다섯 칸 각각: '' = 원래 도형(SVG), 그 밖 = 그 글자·이모지 하나. 기록은 늘 원래 도형 기호(▲ 등)와 점수로 저장한다.
+    const MOOD_CANON = ['▲', '△', '○', '▽', '▼'];
+    const GLYPH_PRESETS = [
+      { id: 'shape', label: '도형', glyphs: ['', '', '', '', ''] },
+      { id: 'face', label: '표정', glyphs: ['@face0', '@face1', '@face2', '@face3', '@face4'] },
+      { id: 'weather', label: '날씨', glyphs: ['☀️', '🌤️', '☁️', '🌧️', '⛈️'] },
+      { id: 'number', label: '숫자', glyphs: ['+2', '+1', '0', '−1', '−2'] }
+    ];
+    let moodGlyphs = (function() {
+      try {
+        const v = JSON.parse(localStorage.getItem('lifeguard_mood_glyphs') || 'null');
+        if (Array.isArray(v) && v.length === 5) return v.map(x => typeof x === 'string' ? x : '');
+      } catch (_) {}
+      return ['', '', '', '', ''];
+    })();
+    // 표정 묶음: 한 가지 색. 아주 좋음·아주 나쁨은 입을 채우고, 약한 쪽은 선으로만 (도형 ▲ △와 같은 생각)
+    const FACE_MOUTHS = [
+      '<path d="M5.4 12.8 Q12 23.6 18.6 12.8 Q12 14.6 5.4 12.8Z" fill="currentColor"/>',
+      '<path d="M7.2 14.6 Q12 19 16.8 14.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+      '<path d="M7.6 16 L16.4 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+      '<path d="M7.2 18 Q12 13.6 16.8 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+      '<path d="M5.4 20.6 Q12 10 18.6 20.6 Q12 18.8 5.4 20.6Z" fill="currentColor"/>'
+    ];
+    function faceSvg(i, sizeCss) {
+      return `<svg viewBox="0 0 24 24" style="${sizeCss}" aria-hidden="true"><circle cx="8.6" cy="8.6" r="1.7" fill="currentColor"/><circle cx="15.4" cy="8.6" r="1.7" fill="currentColor"/>${FACE_MOUTHS[i] || ''}</svg>`;
+    }
+    function isImageGlyph(g) { return /^img:data:image\/(png|webp|jpeg);base64,[A-Za-z0-9+/=]+$/.test(g || ''); }
+    function isSpecialGlyph(g) { return /^@face[0-4]$/.test(g || '') || isImageGlyph(g); }
+    function glyphHtml(g, sizeCss) {
+      if (isImageGlyph(g)) return `<img src="${g.slice(4)}" alt="" style="${sizeCss}object-fit:contain;" draggable="false">`;
+      if (isSpecialGlyph(g)) return faceSvg(parseInt(g.slice(5), 10), sizeCss);
+      return escapeHtml(g);
+    }
+    // 칸에 넣은 것에서 앞의 한 글자(이모지 하나)만. +2, −1처럼 부호로 시작하면 두 글자까지.
+    function firstGlyph(text) {
+      const t = String(text || '').trim();
+      if (!t) return '';
+      try {
+        if (window.Intl && Intl.Segmenter) {
+          const segs = [...new Intl.Segmenter('ko', { granularity: 'grapheme' }).segment(t)].map(x => x.segment);
+          return segs.slice(0, /^[+\-−]/.test(t) ? 2 : 1).join('');
+        }
+      } catch (_) {}
+      return Array.from(t).slice(0, /^[+\-−]/.test(t) ? 2 : 1).join('');
+    }
+    function saveMoodGlyphs() {
+      try { localStorage.setItem('lifeguard_mood_glyphs', JSON.stringify(moodGlyphs)); } catch (_) {}
+    }
+    function applyMoodGlyphs() {
+      for (let i = 0; i < 5; i++) {
+        const btn = document.getElementById('m' + i);
+        if (!btn) continue;
+        const svg = btn.querySelector('svg');
+        let span = btn.querySelector('.mood-glyph');
+        const g = moodGlyphs[i];
+        if (!g) {
+          if (svg) svg.classList.remove('hidden');
+          if (span) span.remove();
+          continue;
+        }
+        if (svg) svg.classList.add('hidden'); // 인트로는 이 SVG를 복사해 쓰므로 지우지 않고 숨긴다
+        if (!span) {
+          span = document.createElement('span');
+          span.className = 'mood-glyph';
+          span.style.cssText = 'font-size:24px;line-height:1;font-weight:700;white-space:nowrap;pointer-events:none;display:flex;align-items:center;justify-content:center;';
+          btn.appendChild(span);
+        }
+        span.innerHTML = glyphHtml(g, isImageGlyph(g) ? 'width:34px;height:34px;' : 'width:28px;height:28px;');
+      }
+      updateMoodGlyphUI();
+    }
+    function setMoodGlyphPreset(id) {
+      const p = GLYPH_PRESETS.find(x => x.id === id);
+      if (!p) return;
+      triggerHaptic();
+      moodGlyphs = p.glyphs.slice();
+      saveMoodGlyphs();
+      applyMoodGlyphs();
+    }
+    // 그림으로 바꾸기: 고른 그림을 96×96 안에 맞춰 줄여 이 기기에만 둔다 (텔레그램 스티커를 사진으로 저장해 넣는 것 등)
+    let glyphImageSlot = -1;
+    function pickGlyphImage(i, e) {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      triggerHaptic();
+      glyphImageSlot = i;
+      const inp = document.getElementById('glyphImageInput');
+      if (inp) { inp.value = ''; inp.click(); }
+    }
+    function onGlyphImagePicked(inp) {
+      const file = inp && inp.files && inp.files[0];
+      const slot = glyphImageSlot;
+      glyphImageSlot = -1;
+      if (!file || slot < 0 || slot > 4) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const N = 96;
+            const c = document.createElement('canvas');
+            c.width = N; c.height = N;
+            const ctx = c.getContext('2d');
+            const k = Math.min(N / img.width, N / img.height);
+            const w = img.width * k, h = img.height * k;
+            ctx.drawImage(img, (N - w) / 2, (N - h) / 2, w, h);
+            let url = c.toDataURL('image/webp', 0.85);
+            if (!/^data:image\/webp/.test(url)) url = c.toDataURL('image/png');
+            moodGlyphs[slot] = 'img:' + url;
+            saveMoodGlyphs();
+            applyMoodGlyphs();
+          } catch (err) {
+            showToast('그림을 넣지 못했어요');
+          }
+        };
+        img.onerror = () => showToast('그림을 열지 못했어요');
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function setMoodGlyphSlot(i, text) {
+      moodGlyphs[i] = firstGlyph(text);
+      saveMoodGlyphs();
+      applyMoodGlyphs();
+    }
+    function updateMoodGlyphUI() {
+      const presetBox = document.getElementById('glyphPresetContainer');
+      const slotBox = document.getElementById('glyphSlots');
+      if (!presetBox || !slotBox) return;
+      const eff = getEffectiveTheme(currentTheme);
+      const isDark = eff === 'dark', isNeutral = eff === 'neutral';
+      const accent = isDark ? '#9ec0c4' : (isNeutral ? '#455a5c' : '#597075');
+      const cardBg = isDark ? '#222628' : (isNeutral ? 'rgba(255,255,255,0.7)' : '#ffffff');
+      const border = isDark ? '#333a3d' : (isNeutral ? '#dce2dc' : '#e5e7eb');
+      const text = isDark ? 'rgba(255,255,255,0.85)' : '#374151';
+      const title = document.getElementById('settingsGlyphTitle');
+      if (title) title.style.color = accent;
+      const desc = document.getElementById('settingsGlyphDesc');
+      if (desc) desc.style.color = isDark ? 'rgba(255,255,255,0.5)' : '#6b7280';
+
+      const current = GLYPH_PRESETS.find(p => p.glyphs.every((g, i) => g === moodGlyphs[i]));
+      presetBox.textContent = '';
+      GLYPH_PRESETS.forEach(p => {
+        const on = current && current.id === p.id;
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'w-full rounded-xl px-1 py-2 text-center text-xs font-semibold transition active:scale-95';
+        b.style.cssText = `background:${on ? accent + '1a' : cardBg};border:${on ? 2 : 1}px solid ${on ? accent : border};color:${on ? accent : text};`;
+        const sample = p.id === 'shape' ? escapeHtml(MOOD_CANON.join(''))
+          : p.glyphs.map(g => glyphHtml(g, 'width:11px;height:11px;display:inline-block;vertical-align:-1px;')).join(isSpecialGlyph(p.glyphs[0]) ? '' : ' ');
+        b.innerHTML = `<div>${escapeHtml(p.label)}</div><div style="font-size:10px;opacity:0.75;margin-top:2px;white-space:nowrap;overflow:hidden;">${sample}</div>`;
+        b.addEventListener('click', e => { e.stopPropagation(); setMoodGlyphPreset(p.id); });
+        presetBox.appendChild(b);
+      });
+
+      // 칸이 이미 있으면 입력 중인 칸을 다시 만들지 않는다 (글자 입력이 끊기지 않게)
+      if (slotBox.children.length !== 5) {
+        slotBox.textContent = '';
+        for (let i = 0; i < 5; i++) {
+          const wrap = document.createElement('label');
+          wrap.className = 'flex flex-col items-center gap-0.5 relative';
+          const inp = document.createElement('input');
+          inp.type = 'text';
+          inp.id = 'glyphSlot' + i;
+          inp.setAttribute('aria-label', MOOD_CANON[i] + ' 자리 모양');
+          inp.autocomplete = 'off';
+          inp.className = 'w-full h-10 rounded-xl text-center outline-none';
+          inp.addEventListener('click', e => e.stopPropagation());
+          inp.addEventListener('focus', () => { try { inp.select(); } catch (_) {} });
+          inp.addEventListener('change', () => setMoodGlyphSlot(i, inp.value));
+          inp.addEventListener('focus', () => { const ov = document.getElementById('glyphSlotPic' + i); if (ov) ov.style.display = 'none'; });
+          inp.addEventListener('blur', () => setTimeout(updateMoodGlyphUI, 0));
+          const pic = document.createElement('span');
+          pic.id = 'glyphSlotPic' + i;
+          pic.className = 'absolute inset-x-0 top-0 h-10 flex items-center justify-center pointer-events-none';
+          const cap = document.createElement('div');
+          cap.className = 'flex items-center gap-1 text-[10px]';
+          const capSym = document.createElement('span');
+          capSym.style.opacity = '0.55';
+          capSym.textContent = MOOD_CANON[i];
+          const picBtn = document.createElement('button');
+          picBtn.type = 'button';
+          picBtn.className = 'px-1 rounded active:scale-90';
+          picBtn.setAttribute('aria-label', MOOD_CANON[i] + ' 자리를 그림으로');
+          picBtn.textContent = '🖼';
+          picBtn.addEventListener('click', e => pickGlyphImage(i, e));
+          cap.appendChild(capSym);
+          cap.appendChild(picBtn);
+          wrap.appendChild(inp);
+          wrap.appendChild(pic);
+          wrap.appendChild(cap);
+          slotBox.appendChild(wrap);
+        }
+      }
+      for (let i = 0; i < 5; i++) {
+        const inp = document.getElementById('glyphSlot' + i);
+        if (!inp) continue;
+        // 표정처럼 그림인 칸은 글자로 보여 줄 수 없어 칸은 비워 두고 이름만 흐리게
+        if (document.activeElement !== inp) inp.value = isSpecialGlyph(moodGlyphs[i]) ? '' : (moodGlyphs[i] || MOOD_CANON[i]);
+        const pic = document.getElementById('glyphSlotPic' + i);
+        if (pic) {
+          const show = isSpecialGlyph(moodGlyphs[i]) && document.activeElement !== inp;
+          pic.style.display = show ? 'flex' : 'none';
+          pic.style.color = text;
+          pic.innerHTML = show ? glyphHtml(moodGlyphs[i], 'width:22px;height:22px;') : '';
+        }
+        inp.style.cssText = `font-size:18px;font-weight:700;background:${cardBg};border:1px solid ${moodGlyphs[i] ? accent : border};color:${text};`;
+        const cap = pic ? pic.nextElementSibling : null;
+        if (cap) cap.style.color = text;
+      }
     }
 
     function showIntro() {
@@ -5453,6 +5678,7 @@
 
       // 활동 정보: 앱을 열 때, 다시 앞으로 올라올 때 다시 읽는다 (백그라운드 동기화 없음)
       updateActivitySettingUI();
+      applyMoodGlyphs(); // 첫 화면 기분 모양 (설정에서 고른 것)
       requestActivitySync();
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState !== 'visible') return;
