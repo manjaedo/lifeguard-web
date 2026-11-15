@@ -982,8 +982,13 @@
       triggerHaptic(); // 켰을 때만 한 번 울려 알려준다
     }
 
+    // 한 번 누를 때 여러 곳에서 불려도 한 번만 울리게 (귀퉁이·닫기 버튼이 두 번 울리던 문제)
+    let lastHapticAt = 0;
     function triggerHaptic() {
       if (!isHapticEnabled) return;
+      const now = Date.now();
+      if (now - lastHapticAt < 150) return;
+      lastHapticAt = now;
       try {
         if (window.AndroidBridge && typeof window.AndroidBridge.haptic === 'function') {
           window.AndroidBridge.haptic();
@@ -3290,18 +3295,15 @@
       if (dailyCheckinMedChecked && dailyCheckinMood) finishDailyCheckin();
     }
 
-    let dailyCheckinIsPreview = false;
     let dailyCheckinStep = 'mood';     // 'mood': 도형 고르는 차례, 'med': 캡슐 차례
     let dailyCheckinClosing = false;   // 저장하고 닫히는 중. 이때 누른 것은 받지 않는다 (두 번 눌러 기록이 두 개 생기지 않게)
 
-    function openDailyCheckinModal(fromPreview) {
+    function openDailyCheckinModal() {
       hideIntro();
       triggerHaptic();
       dailyCheckinMedChecked = false;
       updateDailyCheckinMedUI();
 
-      // 미리보기로 열면 도형을 눌러도 실제 기록하지 않는다
-      dailyCheckinIsPreview = !!fromPreview;
       dailyCheckinMood = null;
       dailyCheckinStep = 'mood';
       dailyCheckinClosing = false;
@@ -3348,7 +3350,7 @@
       const btn = document.getElementById('dailyCheckinLaterBtn');
       if (!btn) return;
       const hasInput = !!dailyCheckinMood || (isMedicationEnabled && dailyCheckinMedChecked);
-      btn.textContent = (hasInput && !dailyCheckinIsPreview) ? '이대로 저장하고 닫기' : '닫기';
+      btn.textContent = hasInput ? '이대로 저장하고 닫기' : '닫기';
     }
 
     // 고른 도형만 테두리로 표시 (글자 없음)
@@ -3388,9 +3390,8 @@
       updateDailyCheckinMedUI();
     }
 
-    // 입력한 것만 저장하고 창을 닫는다. 미리보기는 아무것도 저장하지 않는다.
+    // 입력한 것만 저장하고 창을 닫는다.
     function saveDailyCheckinEntries() {
-      if (dailyCheckinIsPreview) return false;
       const wantMed = isMedicationEnabled && dailyCheckinMedChecked;
       if (!dailyCheckinMood && !wantMed) return false;
       try {
@@ -3413,7 +3414,6 @@
     function finishDailyCheckin() {
       if (dailyCheckinClosing) return;
       dailyCheckinClosing = true;
-      const wasPreview = dailyCheckinIsPreview;
       const saved = saveDailyCheckinEntries();
       dailyCheckinMood = null;
       // 고른 표시가 잠깐 보이고 나서 사르르 닫히게
@@ -3421,7 +3421,6 @@
         closeDailyCheckinModal();
         closeSettingsModal();
         hideControls();
-        if (wasPreview) { showToast('미리보기라서 기록되지 않았어요'); return; }
         if (!saved) return;
         // 글자 안내 없이 첫 화면과 같은 파문 피드백만 (주변에 기분·복약이 드러나지 않게)
         const screen = document.getElementById('phoneScreen');
@@ -3461,7 +3460,7 @@
       if (isDailyCheckinInProgress()) return;
       closeSettingsModal(); closeReportModal(); closePeaceModal(); saveAndCloseMemo();
       setTimeout(() => {
-        openDailyCheckinModal(false);
+        openDailyCheckinModal();
         if (isMedicationEnabled) {
           dailyCheckinMedChecked = true;
           updateDailyCheckinMedUI();
@@ -3470,19 +3469,19 @@
     };
 
     // 안드로이드 상단 알림 본문 터치 시 호출: 데일리요 스타일 기분 선택창 즉시 오픈
-    window.openDailyCheckinModalFromNative = function(isPreview) {
+    window.openDailyCheckinModalFromNative = function() {
       if (isDailyCheckinInProgress()) return;
       closeSettingsModal();
       closeReportModal();
       closePeaceModal();
       saveAndCloseMemo();
       setTimeout(() => {
-        openDailyCheckinModal(!!isPreview);
+        openDailyCheckinModal();
       }, 120);
     };
 
     // 안드로이드 상단 알림 내부 5개 도형(▲ △ ○ ▽ ▼) 직접 터치 시 호출: 즉시 기록 & 파문 연출
-    window.recordMoodFromNativeNotification = function(scoreNum, isPreview) {
+    window.recordMoodFromNativeNotification = function(scoreNum) {
       const s = Number(scoreNum);
       const symMap = { '2': '▲', '1': '△', '0': '○', '-1': '▽', '-2': '▼' };
       const sym = symMap[String(s)] || '○';
@@ -3492,15 +3491,10 @@
       if (isMedicationEnabled) {
         closeSettingsModal(); closeReportModal(); closePeaceModal(); saveAndCloseMemo();
         setTimeout(() => {
-          openDailyCheckinModal(!!isPreview);
+          openDailyCheckinModal();
           dailyCheckinMood = { sym, score: validScore, idx: [2, 1, 0, -1, -2].indexOf(validScore) };
           showDailyCheckinMedStep(); // 도형은 이미 골랐으니 캡슐 차례부터
         }, 120);
-        return;
-      }
-      if (isPreview) {
-        hideControls();
-        showToast('미리보기 알림이라서 기록되지 않았어요');
         return;
       }
 
@@ -5367,7 +5361,7 @@
       try {
         const params = new URLSearchParams(window.location.search);
         if (params.get('checkin') === '1') {
-          setTimeout(() => openDailyCheckinModal(false), 300);
+          setTimeout(() => openDailyCheckinModal(), 300);
         }
       } catch (_) {}
 
