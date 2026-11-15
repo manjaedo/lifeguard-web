@@ -5319,28 +5319,83 @@
       } catch (_) {}
       return Array.from(t).slice(0, /^[+\-−]/.test(t) ? 2 : 1).join('');
     }
-    // 내 묶음: 칸을 직접 바꾼(글자·이모지·그림) 다섯 칸. 다른 묶음을 골라도 지우지 않고 남겨 두어 다시 고를 수 있다.
-    let moodGlyphsCustom = (function() {
+    // 내 묶음들: 칸을 직접 바꾼(글자·이모지·그림) 다섯 칸 묶음. 여러 개 만들 수 있고, 다른 묶음을 골라도 지워지지 않는다.
+    // { id: 'c1', name: '내 묶음 1', glyphs: [...] }. 지금 고른 것은 moodGlyphActive (기본 묶음 id 또는 내 묶음 id)
+    let moodGlyphSets = (function() {
       try {
-        const v = JSON.parse(localStorage.getItem('lifeguard_mood_glyphs_custom') || 'null');
-        if (Array.isArray(v) && v.length === 5) return v.map(x => typeof x === 'string' ? x : '');
+        const v = JSON.parse(localStorage.getItem('lifeguard_mood_glyph_sets') || 'null');
+        if (Array.isArray(v)) return v.filter(x => x && typeof x.id === 'string' && Array.isArray(x.glyphs) && x.glyphs.length === 5)
+          .map(x => ({ id: x.id, name: String(x.name || '내 묶음'), glyphs: x.glyphs.map(g => typeof g === 'string' ? g : '') }));
       } catch (_) {}
-      // 예전에 이미 직접 바꿔 둔 것이 있으면 그것을 내 묶음으로
-      return GLYPH_PRESETS.some(p => p.glyphs.every((g, i) => g === moodGlyphs[i])) ? null : moodGlyphs.slice();
+      // 예전(내 묶음 하나) 것이나, 직접 바꿔 둔 지금 모양을 첫 내 묶음으로 옮긴다
+      let old = null;
+      try { old = JSON.parse(localStorage.getItem('lifeguard_mood_glyphs_custom') || 'null'); } catch (_) {}
+      if (!Array.isArray(old) || old.length !== 5) {
+        old = GLYPH_PRESETS.some(p => p.glyphs.every((g, i) => g === moodGlyphs[i])) ? null : moodGlyphs.slice();
+      }
+      return old ? [{ id: 'c1', name: '내 묶음 1', glyphs: old }] : [];
+    })();
+    let moodGlyphActive = (function() {
+      try {
+        const v = localStorage.getItem('lifeguard_mood_glyph_active');
+        if (v) return v;
+      } catch (_) {}
+      const pre = GLYPH_PRESETS.find(p => p.glyphs.every((g, i) => g === moodGlyphs[i]));
+      if (pre) return pre.id;
+      const mine = moodGlyphSets.find(x => x.glyphs.every((g, i) => g === moodGlyphs[i]));
+      return mine ? mine.id : 'shape';
     })();
     function saveMoodGlyphs() {
-      try { localStorage.setItem('lifeguard_mood_glyphs', JSON.stringify(moodGlyphs)); } catch (_) {}
+      try {
+        localStorage.setItem('lifeguard_mood_glyphs', JSON.stringify(moodGlyphs));
+        localStorage.setItem('lifeguard_mood_glyph_sets', JSON.stringify(moodGlyphSets));
+        localStorage.setItem('lifeguard_mood_glyph_active', moodGlyphActive);
+      } catch (_) {
+        showToast('저장할 자리가 모자라요. 쓰지 않는 묶음을 지워 주세요');
+      }
     }
+    function nextGlyphSetName() {
+      let n = 1;
+      while (moodGlyphSets.some(x => x.name === '내 묶음 ' + n)) n++;
+      return { id: 'c' + Date.now().toString(36), name: '내 묶음 ' + n };
+    }
+    // 칸을 바꿨다: 내 묶음을 보고 있으면 그 묶음을 고치고, 기본 묶음을 보고 있으면 새 내 묶음을 만든다
     function rememberCustomGlyphs() {
-      moodGlyphsCustom = moodGlyphs.slice();
-      try { localStorage.setItem('lifeguard_mood_glyphs_custom', JSON.stringify(moodGlyphsCustom)); } catch (_) {}
+      let set = moodGlyphSets.find(x => x.id === moodGlyphActive);
+      if (!set) {
+        set = Object.assign(nextGlyphSetName(), { glyphs: [] });
+        moodGlyphSets.push(set);
+        moodGlyphActive = set.id;
+      }
+      set.glyphs = moodGlyphs.slice();
+      saveMoodGlyphs();
+    }
+    function addGlyphSet(e) {
+      if (e) e.stopPropagation();
+      triggerHaptic();
+      const set = Object.assign(nextGlyphSetName(), { glyphs: ['', '', '', '', ''] });
+      moodGlyphSets.push(set);
+      moodGlyphActive = set.id;
+      moodGlyphs = set.glyphs.slice();
+      saveMoodGlyphs();
+      applyMoodGlyphs();
+      showToast(`${set.name}을 만들었어요. 아래 칸을 바꿔 채워 주세요`);
+    }
+    function deleteGlyphSet(id, e) {
+      if (e) e.stopPropagation();
+      const set = moodGlyphSets.find(x => x.id === id);
+      if (!set) return;
+      if (!confirm(`${set.name}을 지울까요?`)) return;
+      moodGlyphSets = moodGlyphSets.filter(x => x.id !== id);
+      if (moodGlyphActive === id) {
+        moodGlyphActive = 'shape';
+        moodGlyphs = ['', '', '', '', ''];
+      }
+      saveMoodGlyphs();
+      applyMoodGlyphs();
     }
     function allGlyphPresets() {
-      const list = GLYPH_PRESETS.slice();
-      if (moodGlyphsCustom && !GLYPH_PRESETS.some(p => p.glyphs.every((g, i) => g === moodGlyphsCustom[i]))) {
-        list.push({ id: 'custom', label: '내 묶음', glyphs: moodGlyphsCustom });
-      }
-      return list;
+      return GLYPH_PRESETS.concat(moodGlyphSets.map(x => ({ id: x.id, label: x.name, glyphs: x.glyphs, custom: true })));
     }
     function applyMoodGlyphs() {
       for (let i = 0; i < 5; i++) {
@@ -5381,7 +5436,7 @@
       if (head) head.setAttribute('aria-expanded', glyphCardOpen ? 'true' : 'false');
       if (chev) chev.style.transform = glyphCardOpen ? 'rotate(180deg)' : '';
       if (body) {
-        body.style.maxHeight = glyphCardOpen ? (body.scrollHeight + 40) + 'px' : '0';
+        body.style.maxHeight = glyphCardOpen ? '2000px' : '0';
         body.style.opacity = glyphCardOpen ? '1' : '0';
       }
     }
@@ -5389,6 +5444,7 @@
       const p = allGlyphPresets().find(x => x.id === id);
       if (!p) return;
       triggerHaptic();
+      moodGlyphActive = p.id;
       moodGlyphs = p.glyphs.slice();
       saveMoodGlyphs();
       applyMoodGlyphs();
@@ -5422,7 +5478,6 @@
             let url = c.toDataURL('image/webp', 0.85);
             if (!/^data:image\/webp/.test(url)) url = c.toDataURL('image/png');
             moodGlyphs[slot] = 'img:' + url;
-            saveMoodGlyphs();
             rememberCustomGlyphs();
             applyMoodGlyphs();
           } catch (err) {
@@ -5437,7 +5492,6 @@
 
     function setMoodGlyphSlot(i, text) {
       moodGlyphs[i] = firstGlyph(text);
-      saveMoodGlyphs();
       rememberCustomGlyphs();
       applyMoodGlyphs();
     }
@@ -5457,10 +5511,10 @@
       if (desc) desc.style.color = isDark ? 'rgba(255,255,255,0.5)' : '#6b7280';
 
       const presets = allGlyphPresets();
-      const current = presets.find(p => p.glyphs.every((g, i) => g === moodGlyphs[i]));
+      const current = presets.find(p => p.id === moodGlyphActive);
       const summary = document.getElementById('glyphCardSummary');
       if (summary) {
-        summary.textContent = current ? current.label : '직접 고름';
+        summary.textContent = current ? current.label : '';
         summary.style.color = text;
       }
       const chevEl = document.getElementById('glyphCardChevron');
@@ -5471,16 +5525,35 @@
         const b = document.createElement('button');
         b.type = 'button';
         // 내 묶음은 한 줄을 다 쓰고 그림을 크게 보여 준다
-        b.className = 'w-full rounded-xl px-1 py-2 text-center text-xs font-semibold transition active:scale-95' + (p.id === 'custom' ? ' col-span-4' : '');
+        b.className = 'relative w-full rounded-xl px-1 py-2 text-center text-xs font-semibold transition active:scale-95' + (p.custom ? ' col-span-4' : '');
         b.style.cssText = `background:${on ? accent + '1a' : cardBg};border:${on ? 2 : 1}px solid ${on ? accent : border};color:${on ? accent : text};`;
         const sample = p.id === 'shape' ? escapeHtml(MOOD_CANON.join(''))
-          : p.id === 'custom'
+          : p.custom
             ? p.glyphs.map((g, i) => g ? glyphHtml(g, 'width:22px;height:22px;display:inline-block;vertical-align:middle;') : escapeHtml(MOOD_CANON[i])).join(' ')
             : p.glyphs.map(g => glyphHtml(g, 'width:11px;height:11px;display:inline-block;vertical-align:-1px;')).join(isSpecialGlyph(p.glyphs[0]) ? '' : ' ');
         b.innerHTML = `<div>${escapeHtml(p.label)}</div><div style="font-size:10px;opacity:0.75;margin-top:2px;white-space:nowrap;overflow:hidden;">${sample}</div>`;
         b.addEventListener('click', e => { e.stopPropagation(); setMoodGlyphPreset(p.id); });
+        if (p.custom) {
+          // 지우기 ×
+          const del = document.createElement('span');
+          del.setAttribute('role', 'button');
+          del.setAttribute('aria-label', p.label + ' 지우기');
+          del.textContent = '×';
+          del.className = 'absolute top-1 right-2 text-base leading-none px-1';
+          del.style.opacity = '0.45';
+          del.addEventListener('click', e => deleteGlyphSet(p.id, e));
+          b.appendChild(del);
+        }
         presetBox.appendChild(b);
       });
+      // + 새 묶음
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'col-span-4 w-full rounded-xl py-2 text-center text-xs font-semibold transition active:scale-95';
+      add.style.cssText = `background:transparent;border:1px dashed ${border};color:${text};opacity:0.8;`;
+      add.textContent = '+ 새 묶음';
+      add.addEventListener('click', addGlyphSet);
+      presetBox.appendChild(add);
 
       // 칸이 이미 있으면 입력 중인 칸을 다시 만들지 않는다 (글자 입력이 끊기지 않게)
       if (slotBox.children.length !== 5) {
