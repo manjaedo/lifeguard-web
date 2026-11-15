@@ -755,10 +755,12 @@
           <button id="peaceTimerBtn" type="button" onclick="cyclePeaceSleepTimer(event)" class="text-white/70 hover:text-white bg-white/10 px-2.5 py-1 rounded-full text-[11px] shrink-0 transition cursor-pointer active:scale-95" aria-label="소리 저절로 끄기">⏲ 30분</button>
           <span id="soundTrackName" class="text-[11px] text-[#9ec0c4] font-medium truncate whitespace-nowrap" style="max-width: 0px; opacity: 0; overflow: hidden; display: inline-block; transition: max-width 0.4s ease, opacity 0.4s ease, margin 0.4s ease; margin-left: 0px;">해변의 파도와 싱잉볼</span>
         </div>
-        <div class="flex items-center gap-2 shrink-0">
-          <button id="peaceDarkBtn" type="button" onclick="enterPeaceDark(event)" class="text-white/70 hover:text-white bg-white/10 px-2.5 py-1 rounded-full text-[11px] flex items-center gap-1 transition cursor-pointer active:scale-95">🌙 화면 끔</button>
-          <button id="peaceCloseBtn" type="button" onclick="closePeaceModal(event)" class="close-btn text-sm text-white/85 shrink-0">닫기 ✕</button>
-        </div>
+        <button id="peaceCloseBtn" type="button" onclick="closePeaceModal(event)" class="close-btn text-sm text-white/85 shrink-0">닫기 ✕</button>
+      </div>
+
+      <!-- 화면 끔 버튼: 위쪽이 좁아(큰 글자에서 겹침) 아래 빈자리에 둔다. 다른 안내와 함께 사라졌다 나타난다 -->
+      <div id="peaceDarkBtnWrap" class="absolute bottom-[72px] inset-x-0 flex justify-center z-20 transition-opacity duration-700">
+        <button id="peaceDarkBtn" type="button" onclick="enterPeaceDark(event)" class="text-white/70 hover:text-white bg-white/10 px-3 py-1.5 rounded-full text-[11px] flex items-center gap-1 transition cursor-pointer active:scale-95">🌙 화면 끄고 소리만 듣기</button>
       </div>
 
       <!-- 화면 끔: 소리만 들을 때. 까만 화면으로 덮고 (앱에서는 밝기도 가장 낮게), 누르면 돌아온다 -->
@@ -2829,6 +2831,11 @@
       }
       if (quote) {
         quote.style.opacity = opacityVal;
+      }
+      const darkWrap = document.getElementById('peaceDarkBtnWrap');
+      if (darkWrap) {
+        darkWrap.style.opacity = opacityVal;
+        darkWrap.style.pointerEvents = pointerVal;
       }
     }
 
