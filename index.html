@@ -470,6 +470,18 @@
           </div>
         </div>
 
+        <!-- 활동 정보 (안드로이드 앱 + 설정에서 켰을 때만). 기분 그래프와 같은 날짜 축. 안내·경고 문구와 색 강조 없음 -->
+        <div id="reportActivityCard" class="bg-white rounded-xl p-3 border border-gray-100 shadow-sm mb-3 transition-colors" style="display: none;">
+          <div class="flex justify-between items-center text-[10px] font-semibold mb-1">
+            <span id="activityLabel" class="text-[#597075]">잠 · 걸음</span>
+          </div>
+          <svg id="activitySvg" class="w-full h-20 cursor-pointer" viewBox="0 0 260 76" onclick="selectActivityDay(event)">
+            <g id="activitySleep"></g>
+            <g id="activitySteps"></g>
+          </svg>
+          <div id="activityDetail" class="text-[10.5px] mt-1 px-1 text-gray-500 leading-relaxed" style="word-break: keep-all;"></div>
+        </div>
+
         <!-- 핵심 지표 (복약 기록 사용 시에만 복약 일수 표기 - 평시 비율은 연구 후 보완을 위해 임시 숨김) -->
         <div id="reportStatsCard" class="bg-white rounded-xl p-2.5 shadow-sm border border-gray-100 mb-3 text-center transition-colors">
           <div class="flex items-stretch">
@@ -565,6 +577,22 @@
           <div id="medSettingStatusText" class="text-xs font-semibold text-gray-500">현재: 복약 기록 끔 (기분만 기록)</div>
           <p id="settingsMedDesc" class="leading-relaxed text-[11px] text-gray-500">
             복약 치료를 받지 않으시거나 복약 체크가 필요 없으신 경우 기능을 끄면, 첫 화면과 함께보기에서 복약 정보가 숨겨지고 <strong>기분 기록만 단독으로 표시</strong>됩니다.
+          </p>
+        </div>
+
+        <!-- 활동 정보 (안드로이드 앱 전용, 기본 꺼짐): Health Connect에서 잠·걸음 하루 합계를 읽기만 한다 -->
+        <div id="settingsActivityCard" class="bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2 transition-colors" style="display: none;">
+          <div class="flex items-center justify-between">
+            <div id="settingsActivityTitle" class="font-bold text-[#597075] text-[13px] flex items-center gap-1.5">
+              <span>🌙</span> 활동 정보
+            </div>
+            <button id="activityToggleBtn" onclick="toggleActivitySetting()" type="button" role="switch" aria-label="활동 정보" class="switch-hit relative inline-flex h-6 w-11 p-0.5 items-center rounded-full transition-colors focus:outline-none bg-[#d1d5db] cursor-pointer">
+              <span id="activityToggleCircle" class="inline-block h-5 w-5 rounded-full bg-white shadow-md transform transition-transform duration-200 translate-x-0"></span>
+            </button>
+          </div>
+          <div id="activitySettingStatusText" class="text-xs font-semibold text-gray-500">현재: 끔</div>
+          <p id="settingsActivityDesc" class="leading-relaxed text-[11px] text-gray-500">
+            잠잔 시간·깬 횟수·걸음 수를 Health Connect에서 읽어 와 <strong>함께 보는 기록</strong>에 보여 줍니다. 읽기만 하고, 하루 합계만 이 기기에 둡니다. 기기에 있는 원래 기록은 그대로 남고, 진료 완료 때는 이 앱에 둔 값만 함께 비워집니다.
           </p>
         </div>
 
@@ -711,7 +739,7 @@
       <div class="text-center pb-1">
         <button type="button" onclick="event.stopPropagation(); triggerHaptic(); showWhatsNew(true)" class="text-[11px] opacity-60 hover:opacity-100 underline underline-offset-4 transition cursor-pointer" style="color: inherit;">새로워진 점 보기</button>
       </div>
-      <div id="settingsVersion" class="text-center text-[10px] text-gray-400">Life Guard v1.2.3-alpha (알파판)</div>
+      <div id="settingsVersion" class="text-center text-[10px] text-gray-400">Life Guard v1.2.4-alpha (알파판)</div>
     </div>
 
     <!-- Modal 3: Peace Screen (마음의 평화: 호흡의 파도 & 실시간 명상 배경음 / 10초 후 중앙 이미지 외 페이드아웃, 탭 시 복귀) -->
@@ -2530,6 +2558,7 @@
       } catch (err) {
         console.warn('openReportModal render error:', err);
       }
+      requestActivitySync();
     }
     function closeReportModal(e) {
       if (e && e.stopPropagation) e.stopPropagation();
@@ -3937,6 +3966,7 @@
         localStorage.setItem('lifeguard_doctor_notes', '[]');
         localStorage.setItem('lifeguard_last_visit_date', todayStr);
       } catch(e) {}
+      clearActivityData();
       updateMedicationSettingUI();
       renderDoctorNotes();
       renderReportData();
@@ -3978,6 +4008,377 @@
           hideControls();
         }, 400);
       }, 1100);
+    }
+
+    // ── 활동 정보 (잠·걸음) ──
+    // 안드로이드 앱에서만. Health Connect에서 하루 합계를 읽어 와 함께 보는 기록에 기분 그래프와 같은 날짜 축으로 보여 준다.
+    // 원칙: 가공 지표(점수·평균·목표) 없음, 안내·경고 문구 없음, 적은 날을 다른 색으로 칠하지 않음,
+    //       기록이 없는 날은 0이 아니라 '기록 없음', 진료 완료 때 이 앱에 둔 값만 함께 비움.
+    const ACTIVITY_SLEEP_MAX_MIN = 12 * 60;  // 막대 높이 고정 눈금 (넘으면 꼭대기에서 멈춤)
+    const ACTIVITY_STEPS_MAX = 15000;
+    const ACTIVITY_MAX_DAYS = 190;           // 가장 긴 진료 주기(6달) + 여유
+
+    let isActivityEnabled = (function() {
+      try { return localStorage.getItem('lifeguard_activity_enabled') === 'true'; } catch (_) { return false; }
+    })();
+
+    // [{ date: 'YYYY-MM-DD', sleep_min, nap_min, wake_count, steps }] (값이 없으면 null)
+    let activityDaily = (function() {
+      return safeJsonParse('lifeguard_activity_daily', []).filter(d => d && typeof d.date === 'string');
+    })();
+
+    // 허락받은 항목 { sleep: bool, steps: bool }
+    let activityGranted = (function() {
+      const g = safeJsonParse('lifeguard_activity_granted', null);
+      return (g && typeof g === 'object') ? { sleep: !!g.sleep, steps: !!g.steps } : { sleep: false, steps: false };
+    })();
+
+    let activitySelectedDate = null;
+    let activitySettingsPending = false; // Health Connect 설정을 열어 두었고, 돌아오면 허락을 다시 확인한다
+    let activityLastSyncAt = 0;
+
+    function hasActivityBridge() {
+      return !!(window.AndroidBridge && typeof window.AndroidBridge.syncActivity === 'function');
+    }
+
+    function saveActivity() {
+      try {
+        localStorage.setItem('lifeguard_activity_daily', JSON.stringify(activityDaily));
+        localStorage.setItem('lifeguard_activity_granted', JSON.stringify(activityGranted));
+      } catch (_) {}
+    }
+
+    // 진료 완료 / 데이터 비우기: 이 앱에 둔 값만 지운다. 지운 시각 이전의 잠·걸음은 다시 읽어 오지 않는다.
+    function clearActivityData() {
+      activityDaily = [];
+      activitySelectedDate = null;
+      try {
+        localStorage.setItem('lifeguard_activity_daily', '[]');
+        localStorage.setItem('lifeguard_activity_cleared_at', String(Date.now()));
+      } catch (_) {}
+    }
+
+    function parseLocalDate(key) {
+      const p = String(key || '').split('-');
+      if (p.length !== 3) return null;
+      const d = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    // 함께 보는 기록의 날짜 범위 (renderReportData와 같은 계산)
+    function getReportRange() {
+      const now = new Date();
+      const last = parseLocalDate(lastVisitDate) || now;
+      const d1 = new Date(last.getFullYear(), last.getMonth(), last.getDate());
+      const d2 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const diffDays = Math.max(1, Math.round((d2 - d1) / 86400000) + 1);
+      return { d1, d2, diffDays };
+    }
+
+    // 읽기 시작 시각: 지난 진료일 0시와 마지막으로 비운 시각 중 늦은 쪽. 너무 오래전이면 190일 전까지만.
+    function getActivitySyncFrom() {
+      const { d1 } = getReportRange();
+      let from = d1.getTime();
+      try {
+        const cleared = parseInt(localStorage.getItem('lifeguard_activity_cleared_at') || '0', 10);
+        if (cleared > from) from = cleared;
+      } catch (_) {}
+      const floor = Date.now() - ACTIVITY_MAX_DAYS * 86400000;
+      return Math.max(from, floor);
+    }
+
+    function requestActivitySync(force) {
+      if (!isActivityEnabled || !hasActivityBridge()) return;
+      const now = Date.now();
+      if (!force && now - activityLastSyncAt < 30000) return;
+      activityLastSyncAt = now;
+      try { window.AndroidBridge.syncActivity(String(getActivitySyncFrom())); } catch (_) {}
+    }
+
+    // 네이티브가 다 읽고 부른다. { ok, granted: {sleep, steps}, days: [...] }
+    window.onActivitySync = function(result) {
+      try {
+        const r = typeof result === 'string' ? JSON.parse(result) : result;
+        if (!r || !r.ok) return;
+        if (r.granted) activityGranted = { sleep: !!r.granted.sleep, steps: !!r.granted.steps };
+        const byDate = new Map(activityDaily.map(d => [d.date, d]));
+        (r.days || []).forEach(d => {
+          if (!d || typeof d.date !== 'string') return;
+          const num = (v) => (typeof v === 'number' && isFinite(v) && v >= 0) ? Math.round(v) : null;
+          byDate.set(d.date, {
+            date: d.date,
+            sleep_min: num(d.sleep_min),
+            nap_min: num(d.nap_min),
+            wake_count: num(d.wake_count),
+            steps: num(d.steps)
+          });
+        });
+        const startKey = localDateKey(getReportRange().d1);
+        activityDaily = Array.from(byDate.values())
+          .filter(d => d.date >= startKey)
+          .sort((a, b) => a.date < b.date ? -1 : 1);
+        saveActivity();
+        updateActivitySettingUI();
+        renderActivityData();
+      } catch (err) {
+        console.warn('onActivitySync error:', err);
+      }
+    };
+
+    // 권한 창이 닫히면 네이티브가 부른다. { available, sleep, steps }
+    window.onActivityPermissionResult = function(result) {
+      try {
+        const r = typeof result === 'string' ? JSON.parse(result) : result;
+        if (!r || !r.available) {
+          showToast(r && r.reason === 'update'
+            ? 'Health Connect를 먼저 설치하거나 업데이트해 주세요.'
+            : '이 기기에서는 Health Connect를 쓸 수 없어요.');
+          setActivityEnabled(false);
+          return;
+        }
+        activityGranted = { sleep: !!r.sleep, steps: !!r.steps };
+        saveActivity();
+        if (!r.sleep && !r.steps) {
+          setActivityEnabled(false);
+          if (r.checkOnly) return; // 설정에서 돌아와 다시 확인했는데도 허락이 없으면 조용히 둔다
+          // 권한 창에서 허락하지 않았거나, 창이 아예 뜨지 않은 경우 (두 번 거절하면 안드로이드가 창을 더 띄우지 않는다)
+          const go = confirm('잠·걸음을 읽도록 허락되지 않았어요.\n\nHealth Connect 설정에서 Life Guard에 직접 허락할 수 있어요. 지금 열까요?');
+          if (go && window.AndroidBridge && typeof window.AndroidBridge.openActivitySettings === 'function') {
+            activitySettingsPending = true;
+            try { window.AndroidBridge.openActivitySettings(); } catch (_) { activitySettingsPending = false; }
+          }
+          return;
+        }
+        setActivityEnabled(true);
+        requestActivitySync(true);
+      } catch (err) {
+        console.warn('onActivityPermissionResult error:', err);
+      }
+    };
+
+    function setActivityEnabled(on) {
+      isActivityEnabled = !!on;
+      try { localStorage.setItem('lifeguard_activity_enabled', isActivityEnabled ? 'true' : 'false'); } catch (_) {}
+      if (!isActivityEnabled) {
+        // 끄면 복사해 둔 값도 지운다 (다시 켜면 지난 진료일부터 다시 읽는다)
+        activityDaily = [];
+        activitySelectedDate = null;
+        try { localStorage.setItem('lifeguard_activity_daily', '[]'); } catch (_) {}
+      }
+      updateActivitySettingUI();
+      renderActivityData();
+    }
+
+    function toggleActivitySetting() {
+      if (!hasActivityBridge()) return;
+      triggerHaptic();
+      if (isActivityEnabled) {
+        setActivityEnabled(false);
+        return;
+      }
+      // 켤 때는 먼저 허락을 묻는다. 결과는 onActivityPermissionResult로 온다.
+      try { window.AndroidBridge.requestActivityPermission(); } catch (_) {}
+    }
+
+    function updateActivitySettingUI() {
+      const card = document.getElementById('settingsActivityCard');
+      if (card) card.style.display = hasActivityBridge() ? '' : 'none';
+      const toggleBtn = document.getElementById('activityToggleBtn');
+      const toggleCircle = document.getElementById('activityToggleCircle');
+      const statusText = document.getElementById('activitySettingStatusText');
+      const effective = getEffectiveTheme(currentTheme);
+      const isDark = effective === 'dark';
+      const activeColor = isDark ? '#9ec0c4' : (effective === 'neutral' ? '#455a5c' : '#597075');
+      const offBg = isDark ? '#343a3d' : '#d1d5db';
+      if (toggleBtn && toggleCircle) {
+        toggleBtn.style.backgroundColor = isActivityEnabled ? activeColor : offBg;
+        toggleCircle.style.transform = isActivityEnabled ? 'translateX(20px)' : 'translateX(0px)';
+        toggleBtn.setAttribute('aria-checked', isActivityEnabled ? 'true' : 'false');
+      }
+      if (statusText) {
+        if (!isActivityEnabled) {
+          statusText.textContent = '현재: 끔';
+          statusText.style.color = isDark ? '#889295' : '#6b7280';
+        } else {
+          const parts = [];
+          if (activityGranted.sleep) parts.push('잠');
+          if (activityGranted.steps) parts.push('걸음');
+          statusText.textContent = parts.length ? `현재: ${parts.join('·')} 함께 보는 중` : '현재: 켜짐';
+          statusText.style.color = activeColor;
+        }
+      }
+    }
+
+    // 테마: 기존 카드의 모양을 그대로 따른다
+    function applyActivityTheme() {
+      const pairs = [
+        ['reportActivityCard', 'reportChartCard'],
+        ['activityLabel', 'chartLabel'],
+        ['settingsActivityCard', 'settingsMedCard'],
+        ['settingsActivityTitle', 'settingsMedTitle'],
+        ['settingsActivityDesc', 'settingsMedDesc']
+      ];
+      pairs.forEach(([to, from]) => {
+        const a = document.getElementById(to), b = document.getElementById(from);
+        if (a && b) a.className = b.className;
+      });
+      const detail = document.getElementById('activityDetail');
+      if (detail) {
+        detail.className = 'text-[10.5px] mt-1 px-1 leading-relaxed ' +
+          (getEffectiveTheme(currentTheme) === 'dark' ? 'text-white/60' : 'text-gray-500');
+      }
+      updateActivitySettingUI();
+    }
+
+    function formatSleepMin(min) {
+      const h = Math.floor(min / 60), m = min % 60;
+      if (h && m) return `${h}시간 ${m}분`;
+      if (h) return `${h}시간`;
+      return `${m}분`;
+    }
+
+    function renderActivityData() {
+      const card = document.getElementById('reportActivityCard');
+      if (!card) return;
+      const visible = isActivityEnabled && hasActivityBridge() && (activityGranted.sleep || activityGranted.steps);
+      card.style.display = visible ? 'block' : 'none';
+      if (!visible) return;
+      try {
+        const SVG_NS = 'http://www.w3.org/2000/svg';
+        const chartPathEl = document.getElementById('chartPath');
+        const color = (chartPathEl && chartPathEl.getAttribute('stroke')) || '#597075';
+        const { d1, diffDays } = getReportRange();
+        const X0 = 22, X1 = 254;
+        const dayW = (X1 - X0) / diffDays;
+        const barW = Math.min(6, Math.max(1, dayW * 0.55));
+        const byDate = new Map(activityDaily.map(d => [d.date, d]));
+        const dayKey = (i) => { const d = new Date(d1); d.setDate(d1.getDate() + i); return localDateKey(d); };
+
+        // 두 줄: 잠(위), 걸음(아래). 보여 줄 줄만 세로 공간을 나눠 쓴다.
+        const rows = [];
+        if (activityGranted.sleep) rows.push({ g: 'activitySleep', label: '잠', value: d => d.sleep_min, max: ACTIVITY_SLEEP_MAX_MIN });
+        if (activityGranted.steps) rows.push({ g: 'activitySteps', label: '걸음', value: d => d.steps, max: ACTIVITY_STEPS_MAX });
+        ['activitySleep', 'activitySteps'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = ''; });
+        const rowH = 76 / rows.length;
+
+        rows.forEach((row, ri) => {
+          const g = document.getElementById(row.g);
+          if (!g) return;
+          const top = ri * rowH + 4, base = (ri + 1) * rowH - 4;
+          const h = base - top;
+          const lbl = document.createElementNS(SVG_NS, 'text');
+          lbl.setAttribute('x', '10'); lbl.setAttribute('y', String(base - h / 2 + 3));
+          lbl.setAttribute('text-anchor', 'middle'); lbl.setAttribute('font-size', '7.5');
+          lbl.setAttribute('fill', color); lbl.setAttribute('opacity', '0.6');
+          lbl.textContent = row.label;
+          g.appendChild(lbl);
+          const ln = document.createElementNS(SVG_NS, 'line');
+          ln.setAttribute('x1', String(X0)); ln.setAttribute('x2', String(X1));
+          ln.setAttribute('y1', base.toFixed(1)); ln.setAttribute('y2', base.toFixed(1));
+          ln.setAttribute('stroke', color); ln.setAttribute('stroke-width', '0.6'); ln.setAttribute('opacity', '0.2');
+          g.appendChild(ln);
+          for (let i = 0; i < diffDays; i++) {
+            const key = dayKey(i);
+            const rec = byDate.get(key);
+            const v = rec ? row.value(rec) : null;
+            const cx = X0 + (i + 0.5) * dayW;
+            const selected = key === activitySelectedDate;
+            if (v === null || v === undefined) {
+              // 기록 없음: 0과 구별되게 옅은 짧은 선
+              const dash = document.createElementNS(SVG_NS, 'line');
+              dash.setAttribute('x1', (cx - barW / 2).toFixed(2)); dash.setAttribute('x2', (cx + barW / 2).toFixed(2));
+              dash.setAttribute('y1', (base - 1.5).toFixed(1)); dash.setAttribute('y2', (base - 1.5).toFixed(1));
+              dash.setAttribute('stroke', color); dash.setAttribute('stroke-width', '0.8');
+              dash.setAttribute('opacity', '0.25');
+              g.appendChild(dash);
+              continue;
+            }
+            const bh = Math.max(0.8, Math.min(1, v / row.max) * h);
+            const rect = document.createElementNS(SVG_NS, 'rect');
+            rect.setAttribute('x', (cx - barW / 2).toFixed(2));
+            rect.setAttribute('y', (base - bh).toFixed(2));
+            rect.setAttribute('width', barW.toFixed(2));
+            rect.setAttribute('height', bh.toFixed(2));
+            rect.setAttribute('rx', Math.min(1.2, barW / 2).toFixed(2));
+            rect.setAttribute('fill', color);
+            rect.setAttribute('opacity', selected ? '0.95' : '0.6');
+            g.appendChild(rect);
+          }
+        });
+
+        // 고른 날(없으면 가장 최근에 값이 있는 날)의 숫자를 그대로 보여 준다
+        const detail = document.getElementById('activityDetail');
+        if (detail) {
+          let key = activitySelectedDate;
+          if (!key) {
+            const withData = activityDaily.filter(d => d.sleep_min !== null || d.steps !== null);
+            key = withData.length ? withData[withData.length - 1].date : null;
+          }
+          const rec = key ? byDate.get(key) : null;
+          if (!key) {
+            detail.textContent = '아직 읽어 온 기록이 없어요';
+          } else {
+            const dt = parseLocalDate(key);
+            const wd = ['일', '월', '화', '수', '목', '금', '토'][dt.getDay()];
+            const parts = [`${dt.getMonth() + 1}.${dt.getDate()} (${wd})`];
+            if (activityGranted.sleep) {
+              if (!rec || rec.sleep_min === null) {
+                parts.push('잠 기록 없음');
+              } else {
+                let t = `잠 ${formatSleepMin(rec.sleep_min)}`;
+                if (rec.nap_min) t += ` (낮잠 ${formatSleepMin(rec.nap_min)} 포함)`;
+                parts.push(t);
+                parts.push(rec.wake_count === null ? '깬 횟수 기록 없음' : `깸 ${rec.wake_count}번`);
+              }
+            }
+            if (activityGranted.steps) {
+              parts.push((!rec || rec.steps === null) ? '걸음 기록 없음' : `걸음 ${rec.steps.toLocaleString('ko-KR')}`);
+            }
+            detail.textContent = parts.join(' · ');
+          }
+        }
+      } catch (err) {
+        console.warn('renderActivityData error:', err);
+      }
+    }
+
+    // 막대를 누르면 그날의 숫자를 보여 준다
+    function selectActivityDay(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      const svg = document.getElementById('activitySvg');
+      if (!svg || !e) return;
+      const rect = svg.getBoundingClientRect();
+      if (!rect.width) return;
+      const x = (e.clientX - rect.left) / rect.width * 260;
+      const { d1, diffDays } = getReportRange();
+      const X0 = 22, X1 = 254;
+      if (x < X0 || x > X1) return;
+      const i = Math.min(diffDays - 1, Math.max(0, Math.floor((x - X0) / ((X1 - X0) / diffDays))));
+      const d = new Date(d1); d.setDate(d1.getDate() + i);
+      activitySelectedDate = localDateKey(d);
+      triggerHaptic();
+      renderActivityData();
+    }
+
+    // 설정의 샘플 채우기용 (그래프 확인)
+    function fillActivitySample(start, days) {
+      const sleeps = [430, 415, 360, 300, 270, 330, 420, 455, 510, 540, 495, 440, 425, null];
+      const wakes = [2, 1, 3, 4, 5, 3, 2, 1, 2, 3, 2, 2, null, null];
+      const naps = [0, 0, 0, 0, 0, 0, 40, 0, 60, 90, 0, 0, 0, 0];
+      const steps = [6200, 7400, 9800, 12400, 14100, 11000, 7600, 4200, 2100, 1800, null, 3900, 5600, 6100];
+      activityDaily = [];
+      for (let i = 0; i < days; i++) {
+        const d = new Date(start); d.setDate(start.getDate() + i);
+        const sl = sleeps[i % sleeps.length];
+        activityDaily.push({
+          date: localDateKey(d),
+          sleep_min: sl === null ? null : sl + (naps[i % naps.length] || 0),
+          nap_min: sl === null ? null : (naps[i % naps.length] || 0),
+          wake_count: sl === null ? null : wakes[i % wakes.length],
+          steps: steps[i % steps.length]
+        });
+      }
+      saveActivity();
     }
 
     // 보고서 그래프 보기 방식: 'bar'(기본, 기록 그대로) / 'curve'(흐름). 이 기기에만 기억한다.
@@ -4218,6 +4619,7 @@
       } catch (err) {
         console.warn('renderReportData error:', err);
       }
+      renderActivityData();
     }
 
     // 14일간의 현실적인 기분 궤적/복약 샘플 데이터 자동 생성 (그래프 겹침 테스트용)
@@ -4255,6 +4657,7 @@
       ];
       try { localStorage.setItem('lifeguard_doctor_notes', JSON.stringify(doctorNotes)); } catch(e){}
 
+      fillActivitySample(start, 14);
       renderDoctorNotes();
       renderReportData();
       showToast('14일간의 기분 기록 샘플 데이터가 채워졌습니다! 📊');
@@ -4717,6 +5120,7 @@
       updateMedicationSettingUI();
       updateAlarmSettingUI();
       updateHapticSettingUI();
+      applyActivityTheme();
       renderReportData();
     }
 
@@ -4785,8 +5189,8 @@
     }
 
     // ── 새로워진 점 안내 (버전별). 저절로는 한 번만 뜬다. 다시 보려면 설정 맨 아래 '새로워진 점 보기' ──
-    const WHATS_NEW_VERSION = '1.2.3';
-    // 1.2.3에서 바뀐 것. 세 번째 값 'android'는 안드로이드 앱에서만, 'web'은 웹·아이폰에서만 보여주는 항목
+    const WHATS_NEW_VERSION = '1.2.4';
+    // 1.2.3 + 1.2.4에서 바뀐 것 (휴대폰 앱은 1.2.2에서 바로 올라오므로 합쳐 둔다). 세 번째 값 'android'는 안드로이드 앱에서만, 'web'은 웹·아이폰에서만 보여주는 항목
     const WHATS_NEW_ITEMS = [
       ['🛟', '구명튜브가 빨주노초파남보 일곱 장면과 번외 넷(노을·단풍길·비 오는 날·양수리 시냇물)으로 늘었어요. 위의 색 동그라미로 골라요.'],
       ['🌲', '모닥불·새소리·숲과 강물·빗소리는 실제로 녹음한 소리예요.'],
@@ -4795,6 +5199,7 @@
       ['📝', '함께 보는 기록 맨 아래에서 바로 한 줄 메모를 적을 수 있어요. 진료 때 할 이야기를 정리해 두세요.'],
       ['🔕', '앱을 켜 둔 채 알림 시각이 되어도 선택창이 저절로 뜨지 않아요.', 'android'],
       ['👆', '켜고 끄는 스위치를 누르기 쉬워졌어요.'],
+      ['🌙', '설정에 ‘활동 정보’가 생겼어요. 켜면 잠잔 시간·깬 횟수·걸음 수를 함께 보는 기록에서 볼 수 있어요. 처음에는 꺼져 있어요.', 'android'],
       ['🌿', '이 안내는 한 번만 떠요. 설정 맨 아래 ‘새로워진 점 보기’에서 다시 볼 수 있어요.']
     ];
     let whatsNewEl = null;
@@ -4965,6 +5370,20 @@
           setTimeout(() => openDailyCheckinModal(false), 300);
         }
       } catch (_) {}
+
+      // 활동 정보: 앱을 열 때, 다시 앞으로 올라올 때 다시 읽는다 (백그라운드 동기화 없음)
+      updateActivitySettingUI();
+      requestActivitySync();
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible') return;
+        if (activitySettingsPending && window.AndroidBridge && typeof window.AndroidBridge.checkActivityPermission === 'function') {
+          // Health Connect 설정에서 돌아왔다: 창을 다시 띄우지 않고 허락 여부만 확인한다
+          activitySettingsPending = false;
+          try { window.AndroidBridge.checkActivityPermission(); } catch (_) {}
+          return;
+        }
+        requestActivitySync();
+      });
 
       // 알림 시각이 되어도 앱 안에서 선택창을 저절로 띄우지 않는다 (1.2.3).
       // 이미 쓰던 선택창이 다시 열리며 고른 도형이 사라지는 일을 막는다. 알림은 상단 알림으로만 온다.
