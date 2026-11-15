@@ -5398,6 +5398,10 @@
       return GLYPH_PRESETS.concat(moodGlyphSets.map(x => ({ id: x.id, label: x.name, glyphs: x.glyphs, custom: true })));
     }
     function applyMoodGlyphs() {
+      // 그림이 하나라도 있으면 다섯 개를 똑같은 간격으로 (도형은 ▲△ · ○ · ▽▼로 묶어 둔 원래 배치 그대로)
+      const evenSpacing = moodGlyphs.some(isImageGlyph);
+      const row = document.getElementById('moodRow');
+      if (row) row.querySelectorAll(':scope > div').forEach(sp => { sp.style.display = evenSpacing ? 'none' : ''; });
       for (let i = 0; i < 5; i++) {
         const btn = document.getElementById('m' + i);
         if (!btn) continue;
@@ -5409,7 +5413,7 @@
         // 화면 폭에 맞춰 줄어든다 (폰마다 화면 폭이 달라 가장자리에 닿지 않게)
         btn.style.width = isImg ? 'min(52px, 14vw)' : '';
         btn.style.height = isImg ? 'min(52px, 14vw)' : '';
-        btn.style.margin = isImg ? '0 min(3px, 0.6vw)' : '';
+        btn.style.margin = evenSpacing ? '0 min(6px, 1.4vw)' : '';
         if (!g) {
           if (svg) svg.classList.remove('hidden');
           if (span) span.remove();
