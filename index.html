@@ -754,7 +754,15 @@
           </button>
           <span id="soundTrackName" class="text-[11px] text-[#9ec0c4] font-medium truncate whitespace-nowrap" style="max-width: 0px; opacity: 0; overflow: hidden; display: inline-block; transition: max-width 0.4s ease, opacity 0.4s ease, margin 0.4s ease; margin-left: 0px;">해변의 파도와 싱잉볼</span>
         </div>
-        <button id="peaceCloseBtn" type="button" onclick="closePeaceModal(event)" class="close-btn text-sm text-white/85 shrink-0">닫기 ✕</button>
+        <div class="flex items-center gap-2 shrink-0">
+          <button id="peaceDarkBtn" type="button" onclick="enterPeaceDark(event)" class="text-white/70 hover:text-white bg-white/10 px-2.5 py-1 rounded-full text-[11px] flex items-center gap-1 transition cursor-pointer active:scale-95">🌙 화면 끔</button>
+          <button id="peaceCloseBtn" type="button" onclick="closePeaceModal(event)" class="close-btn text-sm text-white/85 shrink-0">닫기 ✕</button>
+        </div>
+      </div>
+
+      <!-- 화면 끔: 소리만 들을 때. 까만 화면으로 덮고 (앱에서는 밝기도 가장 낮게), 누르면 돌아온다 -->
+      <div id="peaceDarkOverlay" onclick="exitPeaceDark(event)" class="absolute inset-0 z-50 flex items-center justify-center" style="display:none;background:#000;cursor:none;">
+        <span id="peaceDarkHint" class="text-[11px] text-white/30" style="transition:opacity 1.2s ease;">화면을 누르면 다시 켜져요</span>
       </div>
 
       <!-- 2. 상단 제목 & 설명글 & 3가지 소리 빠른 선택 탭 (45초 후 페이드아웃) -->
@@ -2796,7 +2804,7 @@
     function handlePeaceModalTap(e) {
       if (e) e.stopPropagation();
       // 만약 소리 토글이나 닫기/장면전환 버튼을 직접 눌렀다면 이벤트 버블링에 의한 화면 토글은 제외
-      if (e && e.target && e.target.closest('#soundToggleBtn, #peaceCloseBtn, #peaceSceneTabs')) {
+      if (e && e.target && e.target.closest('#soundToggleBtn, #peaceCloseBtn, #peaceDarkBtn, #peaceDarkOverlay, #peaceSceneTabs')) {
         startPeaceChromeTimer();
         return;
       }
@@ -2812,6 +2820,43 @@
           clearTimeout(peaceChromeTimer);
           peaceChromeTimer = null;
         }
+      }
+    }
+
+    // ── 화면 끔 (소리만 듣기) ──
+    // 앱은 화면이 꺼지면(onPause) 소리를 멈추게 되어 있어서, 진짜로 끄는 대신 까맣게 덮고 밝기를 가장 낮춘다.
+    let isPeaceDark = false;
+    let peaceDarkHintTimer = null;
+    function setNativeScreenDim(on) {
+      try {
+        if (window.AndroidBridge && typeof window.AndroidBridge.setScreenDim === 'function') window.AndroidBridge.setScreenDim(!!on);
+      } catch (_) {}
+    }
+    function enterPeaceDark(e) {
+      if (e) e.stopPropagation();
+      triggerHaptic();
+      if (!isSoundOn) toggleMeditationAudio(); // 소리를 들으려고 끄는 것이니, 꺼져 있으면 켠다
+      const ov = document.getElementById('peaceDarkOverlay');
+      const hint = document.getElementById('peaceDarkHint');
+      if (!ov) return;
+      isPeaceDark = true;
+      if (hint) hint.style.opacity = '1';
+      ov.style.display = 'flex';
+      setNativeScreenDim(true);
+      if (peaceDarkHintTimer) clearTimeout(peaceDarkHintTimer);
+      peaceDarkHintTimer = setTimeout(() => { if (hint) hint.style.opacity = '0'; }, 3000);
+    }
+    function exitPeaceDark(e) {
+      if (e) e.stopPropagation();
+      if (!isPeaceDark) return;
+      isPeaceDark = false;
+      if (peaceDarkHintTimer) { clearTimeout(peaceDarkHintTimer); peaceDarkHintTimer = null; }
+      const ov = document.getElementById('peaceDarkOverlay');
+      if (ov) ov.style.display = 'none';
+      setNativeScreenDim(false);
+      if (e) {
+        setPeaceChromeVisibility(true);
+        startPeaceChromeTimer();
       }
     }
 
@@ -2853,6 +2898,7 @@
         clearTimeout(peaceChromeTimer);
         peaceChromeTimer = null;
       }
+      exitPeaceDark();
       stopMeditationSound(1.0); // 창은 사르르 닫히고 소리도 1초에 걸쳐 잦아든다
       stopPeaceBreathGuide();
       syncSystemThemeColor(false);
@@ -5280,6 +5326,7 @@
       if (isWindowOpen('dailyCheckinModal')) { dismissDailyCheckin(); return true; }
       if (isWindowOpen('finishVisitModal')) { closeFinishVisitModal(); return true; }
       if (isWindowOpen('memoModal')) { saveAndCloseMemo(); return true; }
+      if (isPeaceDark) { exitPeaceDark({ stopPropagation() {} }); return true; } // 화면 끔이면 먼저 화면만 켠다
       if (isWindowOpen('peaceModal')) { closePeaceModal(); return true; }
       if (isWindowOpen('settingsModal')) { closeSettingsModal(); return true; }
       if (isWindowOpen('reportModal')) { closeReportModal(); return true; }
@@ -5379,6 +5426,7 @@
       requestActivitySync();
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState !== 'visible') return;
+        if (isPeaceDark) exitPeaceDark({ stopPropagation() {} });
         if (activitySettingsPending && window.AndroidBridge && typeof window.AndroidBridge.checkActivityPermission === 'function') {
           // Health Connect 설정에서 돌아왔다: 창을 다시 띄우지 않고 허락 여부만 확인한다
           activitySettingsPending = false;
