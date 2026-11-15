@@ -4655,13 +4655,16 @@
           if (ticksEl) {
             ticksEl.textContent = '';
             const step = Math.max(1, Math.ceil(diffDays / 31));
-            for (let i = 0; i <= diffDays; i += step) {
+            for (let i = 0; i <= diffDays; i++) {
+              // 지난 진료일부터 5일마다 진하고 조금 긴 눈금 (1.2.5, 날짜를 세기 쉽게)
+              const major = i % 5 === 0;
+              if (!major && i % step !== 0) continue;
               const x = dayStartX(i);
               const ln = document.createElementNS(SVG_NS, 'line');
               ln.setAttribute('x1', x.toFixed(1)); ln.setAttribute('x2', x.toFixed(1));
-              ln.setAttribute('y1', '84'); ln.setAttribute('y2', '88');
-              ln.setAttribute('stroke', color); ln.setAttribute('stroke-width', '1');
-              ln.setAttribute('opacity', '0.35');
+              ln.setAttribute('y1', major ? '82.5' : '84'); ln.setAttribute('y2', '88');
+              ln.setAttribute('stroke', color); ln.setAttribute('stroke-width', major ? '1.5' : '1');
+              ln.setAttribute('opacity', major ? '0.8' : '0.35');
               ticksEl.appendChild(ln);
             }
           }
