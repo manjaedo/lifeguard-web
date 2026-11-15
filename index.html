@@ -752,6 +752,7 @@
             <span id="soundIcon">🔇</span>
             <span id="soundStatusText">소리 끔</span>
           </button>
+          <button id="peaceTimerBtn" type="button" onclick="cyclePeaceSleepTimer(event)" class="text-white/70 hover:text-white bg-white/10 px-2.5 py-1 rounded-full text-[11px] shrink-0 transition cursor-pointer active:scale-95" aria-label="소리 저절로 끄기">⏲ 30분</button>
           <span id="soundTrackName" class="text-[11px] text-[#9ec0c4] font-medium truncate whitespace-nowrap" style="max-width: 0px; opacity: 0; overflow: hidden; display: inline-block; transition: max-width 0.4s ease, opacity 0.4s ease, margin 0.4s ease; margin-left: 0px;">해변의 파도와 싱잉볼</span>
         </div>
         <div class="flex items-center gap-2 shrink-0">
@@ -2018,7 +2019,51 @@
       }
     }
 
+    // ── 소리 저절로 끄기 (30분 / 1시간 / 계속). 고른 값은 기억한다 ──
+    // 소리를 켠 때부터 센다. 장면을 바꿔도 다시 세지 않는다. 다 되면 소리를 천천히 줄여 끄고,
+    // '화면 끔' 중이면 까만 화면은 그대로 두고 밝기와 화면 꺼짐만 원래대로 돌려 폰이 스스로 잠들게 한다.
+    const PEACE_TIMER_OPTIONS = [30, 60, 0]; // 분. 0 = 계속
+    let peaceTimerMin = (function() {
+      try {
+        const v = parseInt(localStorage.getItem('lifeguard_peace_timer_min') || '30', 10);
+        return PEACE_TIMER_OPTIONS.includes(v) ? v : 30;
+      } catch (_) { return 30; }
+    })();
+    let peaceSleepTimer = null;
+    function updatePeaceTimerUI() {
+      const btn = document.getElementById('peaceTimerBtn');
+      if (btn) btn.textContent = '⏲ ' + (peaceTimerMin === 0 ? '계속' : peaceTimerMin === 60 ? '1시간' : peaceTimerMin + '분');
+    }
+    function clearPeaceSleepTimer() {
+      if (peaceSleepTimer) { clearTimeout(peaceSleepTimer); peaceSleepTimer = null; }
+    }
+    function startPeaceSleepTimer() {
+      clearPeaceSleepTimer();
+      if (!isSoundOn || peaceTimerMin === 0) return;
+      peaceSleepTimer = setTimeout(() => {
+        peaceSleepTimer = null;
+        if (!isSoundOn) return;
+        isSoundOn = false;
+        updateSoundTrackUI();
+        stopMeditationSound(4);
+        if (isPeaceDark) setNativeScreenDim(false);
+      }, peaceTimerMin * 60000);
+    }
+    function cyclePeaceSleepTimer(e) {
+      if (e) e.stopPropagation();
+      triggerHaptic();
+      peaceTimerMin = PEACE_TIMER_OPTIONS[(PEACE_TIMER_OPTIONS.indexOf(peaceTimerMin) + 1) % PEACE_TIMER_OPTIONS.length];
+      try { localStorage.setItem('lifeguard_peace_timer_min', String(peaceTimerMin)); } catch (_) {}
+      updatePeaceTimerUI();
+      startPeaceSleepTimer(); // 바꾼 때부터 다시 센다
+      startPeaceChromeTimer();
+    }
+
     function updateSoundTrackUI() {
+      // 소리가 켜지면 타이머를 걸고(이미 걸려 있으면 그대로), 꺼지면 거둔다
+      if (!isSoundOn) clearPeaceSleepTimer();
+      else if (!peaceSleepTimer) startPeaceSleepTimer();
+      updatePeaceTimerUI();
       const icon = document.getElementById('soundIcon');
       const statusText = document.getElementById('soundStatusText');
       const trackName = document.getElementById('soundTrackName');
@@ -2026,11 +2071,8 @@
       if (statusText) statusText.textContent = isSoundOn ? '소리 켬' : '소리 끔';
       if (trackName) {
         trackName.style.display = 'inline-block';
-        if (isSoundOn) {
-          trackName.style.opacity = '1';
-          trackName.style.maxWidth = '180px';
-          trackName.style.marginLeft = '6px';
-        } else {
+        // 1.2.5: 타이머 버튼이 들어와 자리가 좁아져, 곡 이름은 띄우지 않는다 (바로 아래 장면 제목에 같은 이름이 있다)
+        if (false) {
           trackName.style.opacity = '0';
           trackName.style.maxWidth = '0px';
           trackName.style.marginLeft = '0px';
@@ -2804,7 +2846,7 @@
     function handlePeaceModalTap(e) {
       if (e) e.stopPropagation();
       // 만약 소리 토글이나 닫기/장면전환 버튼을 직접 눌렀다면 이벤트 버블링에 의한 화면 토글은 제외
-      if (e && e.target && e.target.closest('#soundToggleBtn, #peaceCloseBtn, #peaceDarkBtn, #peaceDarkOverlay, #peaceSceneTabs')) {
+      if (e && e.target && e.target.closest('#soundToggleBtn, #peaceTimerBtn, #peaceCloseBtn, #peaceDarkBtn, #peaceDarkOverlay, #peaceSceneTabs')) {
         startPeaceChromeTimer();
         return;
       }
