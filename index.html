@@ -5406,9 +5406,10 @@
         const g = moodGlyphs[i];
         // 그림은 자세해서 조금 크게, 옆 그림과 붙지 않게 칸도 넓힌다
         const isImg = isImageGlyph(g);
-        btn.style.width = isImg ? '52px' : '';
-        btn.style.height = isImg ? '52px' : '';
-        btn.style.margin = isImg ? '0 3px' : '';
+        // 화면 폭에 맞춰 줄어든다 (폰마다 화면 폭이 달라 가장자리에 닿지 않게)
+        btn.style.width = isImg ? 'min(52px, 14vw)' : '';
+        btn.style.height = isImg ? 'min(52px, 14vw)' : '';
+        btn.style.margin = isImg ? '0 min(3px, 0.6vw)' : '';
         if (!g) {
           if (svg) svg.classList.remove('hidden');
           if (span) span.remove();
@@ -5421,7 +5422,7 @@
           span.style.cssText = 'font-size:24px;line-height:1;font-weight:700;white-space:nowrap;pointer-events:none;display:flex;align-items:center;justify-content:center;';
           btn.appendChild(span);
         }
-        span.innerHTML = glyphHtml(g, isImg ? 'width:46px;height:46px;' : 'width:28px;height:28px;');
+        span.innerHTML = glyphHtml(g, isImg ? 'width:min(46px, 12.4vw);height:min(46px, 12.4vw);' : 'width:28px;height:28px;');
       }
       updateMoodGlyphUI();
     }
