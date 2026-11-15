@@ -159,6 +159,9 @@
     /* 색 동그라미 (구명튜브 장면 고르기) */
     .scene-dot { flex: 1; height: 40px; display: flex; align-items: center; justify-content: center; background: transparent; border: 0; padding: 0; cursor: pointer; }
     .scene-dot span { display: block; width: 15px; height: 15px; border-radius: 9999px; opacity: 0.65; transition: all 0.35s ease; }
+    /* 색 동그라미 줄: 고르면 첫 화면 도형처럼 사르르 사라지고, 그 자리를 누르면 다시 피어난다 (1.2.5) */
+    #peaceSceneTabs { transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); }
+    #peaceSceneTabs.tabs-hidden { opacity: 0; transform: scale(0.94); pointer-events: none; }
     .scene-dot.on span { width: 22px; height: 22px; opacity: 1; box-shadow: 0 0 0 2px #141718, 0 0 0 3.5px rgba(255,255,255,0.5); }
     /* 새 장면들의 느린 움직임 */
     @keyframes sunSink { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(9px); } }
@@ -658,13 +661,20 @@
 
         <!-- 1.2.5 시험: 첫 화면 기분 모양 바꾸기. 기록은 늘 ▲ △ ○ ▽ ▼로 저장하고, 첫 화면에 보이는 모양만 바꾼다 -->
         <div id="settingsGlyphCard" class="mb-4">
-          <div class="text-xs font-bold mb-2 flex items-center justify-between">
+          <!-- 평소에는 접혀 있고, 제목 줄을 누르면 펼친다 -->
+          <button id="glyphCardHeader" type="button" onclick="toggleGlyphCard(event)" aria-expanded="false" aria-controls="glyphCardBody" class="w-full text-xs font-bold flex items-center justify-between py-1 cursor-pointer">
             <span id="settingsGlyphTitle" class="text-[#597075]">첫 화면 기분 모양</span>
-          </div>
-          <div id="glyphPresetContainer" class="grid grid-cols-4 gap-1.5 mb-2"></div>
+            <span class="flex items-center gap-1.5 font-semibold">
+              <span id="glyphCardSummary" class="opacity-60"></span>
+              <span id="glyphCardChevron" style="display:inline-block;transition:transform 0.3s ease;opacity:0.6;">▾</span>
+            </span>
+          </button>
+          <div id="glyphCardBody" style="overflow:hidden;max-height:0;opacity:0;transition:max-height 0.35s ease, opacity 0.3s ease, margin 0.35s ease;">
+          <div id="glyphPresetContainer" class="grid grid-cols-4 gap-1.5 mb-2 mt-2"></div>
           <div id="glyphSlots" class="grid grid-cols-5 gap-1.5"></div>
           <input id="glyphImageInput" type="file" accept="image/*" class="hidden" onchange="onGlyphImagePicked(this)">
           <p id="settingsGlyphDesc" class="text-[10.5px] text-gray-500 mt-1.5 leading-relaxed" style="word-break: keep-all;">칸을 눌러 글자나 이모지로, 🖼을 눌러 그림으로 바꿀 수 있어요. 그림은 이 기기에만 둬요. 기록과 그래프는 그대로예요.</p>
+          </div>
         </div>
 
         <!-- 배경 및 화면 테마 선택 (시스템 연동 / 순백 / 중간톤 / 다크) -->
@@ -2798,9 +2808,31 @@
       });
     }
 
+    // 색 동그라미 줄 보이기/숨기기
+    let peaceTabsHideTimer = null;
+    function setPeaceTabsVisible(on) {
+      const tabs = document.getElementById('peaceSceneTabs');
+      if (peaceTabsHideTimer) { clearTimeout(peaceTabsHideTimer); peaceTabsHideTimer = null; }
+      if (tabs) tabs.classList.toggle('tabs-hidden', !on);
+    }
+    function arePeaceTabsHidden() {
+      const tabs = document.getElementById('peaceSceneTabs');
+      return !!tabs && tabs.classList.contains('tabs-hidden');
+    }
+    // 숨어 있는 색 동그라미 줄 자리를 눌렀는가
+    function isTapOnPeaceTabsArea(e) {
+      const tabs = document.getElementById('peaceSceneTabs');
+      if (!tabs || !e || typeof e.clientY !== 'number') return false;
+      const r = tabs.getBoundingClientRect();
+      return e.clientY >= r.top - 14 && e.clientY <= r.bottom + 14;
+    }
+
     function selectPeaceScene(idx, e) {
       if (e) e.stopPropagation();
       triggerHaptic();
+      // 고른 동그라미가 커지는 것을 잠깐 보여 준 뒤 줄째 사르르 물러난다
+      if (peaceTabsHideTimer) clearTimeout(peaceTabsHideTimer);
+      peaceTabsHideTimer = setTimeout(() => { peaceTabsHideTimer = null; setPeaceTabsVisible(false); }, 700);
       currentPeaceIdx = idx % peaceScenes.length;
       renderPeaceScene(currentPeaceIdx);
       if (isSoundOn) {
@@ -2864,8 +2896,15 @@
         return;
       }
       
+      // 색 동그라미 줄이 숨어 있고 그 자리를 눌렀으면 줄만 다시 피어나게
+      if (isPeaceChromeVisible && arePeaceTabsHidden() && isTapOnPeaceTabsArea(e)) {
+        setPeaceTabsVisible(true);
+        startPeaceChromeTimer();
+        return;
+      }
       // 사라진 상태면 다시 나타나게 하고 10초 타이머 재시작
       if (!isPeaceChromeVisible) {
+        if (isTapOnPeaceTabsArea(e)) setPeaceTabsVisible(true);
         setPeaceChromeVisibility(true);
         startPeaceChromeTimer();
       } else {
@@ -2915,6 +2954,7 @@
       }
       renderPeaceScene(currentPeaceIdx);
 
+      setPeaceTabsVisible(true); // 처음 열 때는 색 동그라미가 보인다
       // 구명튜브 진입 시 기본으로 소리 끔 시작
       isSoundOn = false;
       updateSoundTrackUI();
@@ -5289,6 +5329,11 @@
         const svg = btn.querySelector('svg');
         let span = btn.querySelector('.mood-glyph');
         const g = moodGlyphs[i];
+        // 그림은 자세해서 조금 크게, 옆 그림과 붙지 않게 칸도 넓힌다
+        const isImg = isImageGlyph(g);
+        btn.style.width = isImg ? '52px' : '';
+        btn.style.height = isImg ? '52px' : '';
+        btn.style.margin = isImg ? '0 3px' : '';
         if (!g) {
           if (svg) svg.classList.remove('hidden');
           if (span) span.remove();
@@ -5301,9 +5346,24 @@
           span.style.cssText = 'font-size:24px;line-height:1;font-weight:700;white-space:nowrap;pointer-events:none;display:flex;align-items:center;justify-content:center;';
           btn.appendChild(span);
         }
-        span.innerHTML = glyphHtml(g, isImageGlyph(g) ? 'width:34px;height:34px;' : 'width:28px;height:28px;');
+        span.innerHTML = glyphHtml(g, isImg ? 'width:46px;height:46px;' : 'width:28px;height:28px;');
       }
       updateMoodGlyphUI();
+    }
+    let glyphCardOpen = false;
+    function toggleGlyphCard(e) {
+      if (e) e.stopPropagation();
+      triggerHaptic();
+      glyphCardOpen = !glyphCardOpen;
+      const body = document.getElementById('glyphCardBody');
+      const chev = document.getElementById('glyphCardChevron');
+      const head = document.getElementById('glyphCardHeader');
+      if (head) head.setAttribute('aria-expanded', glyphCardOpen ? 'true' : 'false');
+      if (chev) chev.style.transform = glyphCardOpen ? 'rotate(180deg)' : '';
+      if (body) {
+        body.style.maxHeight = glyphCardOpen ? (body.scrollHeight + 40) + 'px' : '0';
+        body.style.opacity = glyphCardOpen ? '1' : '0';
+      }
     }
     function setMoodGlyphPreset(id) {
       const p = GLYPH_PRESETS.find(x => x.id === id);
@@ -5375,6 +5435,13 @@
       if (desc) desc.style.color = isDark ? 'rgba(255,255,255,0.5)' : '#6b7280';
 
       const current = GLYPH_PRESETS.find(p => p.glyphs.every((g, i) => g === moodGlyphs[i]));
+      const summary = document.getElementById('glyphCardSummary');
+      if (summary) {
+        summary.textContent = current ? current.label : '직접 고름';
+        summary.style.color = text;
+      }
+      const chevEl = document.getElementById('glyphCardChevron');
+      if (chevEl) chevEl.style.color = text;
       presetBox.textContent = '';
       GLYPH_PRESETS.forEach(p => {
         const on = current && current.id === p.id;
