@@ -5319,8 +5319,28 @@
       } catch (_) {}
       return Array.from(t).slice(0, /^[+\-−]/.test(t) ? 2 : 1).join('');
     }
+    // 내 묶음: 칸을 직접 바꾼(글자·이모지·그림) 다섯 칸. 다른 묶음을 골라도 지우지 않고 남겨 두어 다시 고를 수 있다.
+    let moodGlyphsCustom = (function() {
+      try {
+        const v = JSON.parse(localStorage.getItem('lifeguard_mood_glyphs_custom') || 'null');
+        if (Array.isArray(v) && v.length === 5) return v.map(x => typeof x === 'string' ? x : '');
+      } catch (_) {}
+      // 예전에 이미 직접 바꿔 둔 것이 있으면 그것을 내 묶음으로
+      return GLYPH_PRESETS.some(p => p.glyphs.every((g, i) => g === moodGlyphs[i])) ? null : moodGlyphs.slice();
+    })();
     function saveMoodGlyphs() {
       try { localStorage.setItem('lifeguard_mood_glyphs', JSON.stringify(moodGlyphs)); } catch (_) {}
+    }
+    function rememberCustomGlyphs() {
+      moodGlyphsCustom = moodGlyphs.slice();
+      try { localStorage.setItem('lifeguard_mood_glyphs_custom', JSON.stringify(moodGlyphsCustom)); } catch (_) {}
+    }
+    function allGlyphPresets() {
+      const list = GLYPH_PRESETS.slice();
+      if (moodGlyphsCustom && !GLYPH_PRESETS.some(p => p.glyphs.every((g, i) => g === moodGlyphsCustom[i]))) {
+        list.push({ id: 'custom', label: '내 묶음', glyphs: moodGlyphsCustom });
+      }
+      return list;
     }
     function applyMoodGlyphs() {
       for (let i = 0; i < 5; i++) {
@@ -5366,7 +5386,7 @@
       }
     }
     function setMoodGlyphPreset(id) {
-      const p = GLYPH_PRESETS.find(x => x.id === id);
+      const p = allGlyphPresets().find(x => x.id === id);
       if (!p) return;
       triggerHaptic();
       moodGlyphs = p.glyphs.slice();
@@ -5403,6 +5423,7 @@
             if (!/^data:image\/webp/.test(url)) url = c.toDataURL('image/png');
             moodGlyphs[slot] = 'img:' + url;
             saveMoodGlyphs();
+            rememberCustomGlyphs();
             applyMoodGlyphs();
           } catch (err) {
             showToast('그림을 넣지 못했어요');
@@ -5417,6 +5438,7 @@
     function setMoodGlyphSlot(i, text) {
       moodGlyphs[i] = firstGlyph(text);
       saveMoodGlyphs();
+      rememberCustomGlyphs();
       applyMoodGlyphs();
     }
     function updateMoodGlyphUI() {
@@ -5434,7 +5456,8 @@
       const desc = document.getElementById('settingsGlyphDesc');
       if (desc) desc.style.color = isDark ? 'rgba(255,255,255,0.5)' : '#6b7280';
 
-      const current = GLYPH_PRESETS.find(p => p.glyphs.every((g, i) => g === moodGlyphs[i]));
+      const presets = allGlyphPresets();
+      const current = presets.find(p => p.glyphs.every((g, i) => g === moodGlyphs[i]));
       const summary = document.getElementById('glyphCardSummary');
       if (summary) {
         summary.textContent = current ? current.label : '직접 고름';
@@ -5443,14 +5466,17 @@
       const chevEl = document.getElementById('glyphCardChevron');
       if (chevEl) chevEl.style.color = text;
       presetBox.textContent = '';
-      GLYPH_PRESETS.forEach(p => {
+      presets.forEach(p => {
         const on = current && current.id === p.id;
         const b = document.createElement('button');
         b.type = 'button';
-        b.className = 'w-full rounded-xl px-1 py-2 text-center text-xs font-semibold transition active:scale-95';
+        // 내 묶음은 한 줄을 다 쓰고 그림을 크게 보여 준다
+        b.className = 'w-full rounded-xl px-1 py-2 text-center text-xs font-semibold transition active:scale-95' + (p.id === 'custom' ? ' col-span-4' : '');
         b.style.cssText = `background:${on ? accent + '1a' : cardBg};border:${on ? 2 : 1}px solid ${on ? accent : border};color:${on ? accent : text};`;
         const sample = p.id === 'shape' ? escapeHtml(MOOD_CANON.join(''))
-          : p.glyphs.map(g => glyphHtml(g, 'width:11px;height:11px;display:inline-block;vertical-align:-1px;')).join(isSpecialGlyph(p.glyphs[0]) ? '' : ' ');
+          : p.id === 'custom'
+            ? p.glyphs.map((g, i) => g ? glyphHtml(g, 'width:22px;height:22px;display:inline-block;vertical-align:middle;') : escapeHtml(MOOD_CANON[i])).join(' ')
+            : p.glyphs.map(g => glyphHtml(g, 'width:11px;height:11px;display:inline-block;vertical-align:-1px;')).join(isSpecialGlyph(p.glyphs[0]) ? '' : ' ');
         b.innerHTML = `<div>${escapeHtml(p.label)}</div><div style="font-size:10px;opacity:0.75;margin-top:2px;white-space:nowrap;overflow:hidden;">${sample}</div>`;
         b.addEventListener('click', e => { e.stopPropagation(); setMoodGlyphPreset(p.id); });
         presetBox.appendChild(b);
