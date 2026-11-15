@@ -4249,11 +4249,20 @@
         const dayKey = (i) => { const d = new Date(d1); d.setDate(d1.getDate() + i); return localDateKey(d); };
 
         // 두 줄: 잠(위), 걸음(아래). 보여 줄 줄만 세로 공간을 나눠 쓴다.
+        // 이번 기간에 기록이 하나도 없는 줄은 숨긴다 (예: 워치 없이 자서 잠 기록이 없을 때). 둘 다 비면 둘 다 둔다.
+        const hasAny = (k) => activityDaily.some(d => d[k] !== null && d[k] !== undefined);
+        let showSleep = activityGranted.sleep, showSteps = activityGranted.steps;
+        if (showSleep && showSteps) {
+          const s1 = hasAny('sleep_min'), s2 = hasAny('steps');
+          if (s1 !== s2) { showSleep = s1; showSteps = s2; }
+        }
         const rows = [];
-        if (activityGranted.sleep) rows.push({ g: 'activitySleep', label: '잠', value: d => d.sleep_min, max: ACTIVITY_SLEEP_MAX_MIN });
-        if (activityGranted.steps) rows.push({ g: 'activitySteps', label: '걸음', value: d => d.steps, max: ACTIVITY_STEPS_MAX });
+        if (showSleep) rows.push({ g: 'activitySleep', label: '잠', value: d => d.sleep_min, max: ACTIVITY_SLEEP_MAX_MIN });
+        if (showSteps) rows.push({ g: 'activitySteps', label: '걸음', value: d => d.steps, max: ACTIVITY_STEPS_MAX });
         ['activitySleep', 'activitySteps'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = ''; });
         const rowH = 76 / rows.length;
+        const labelEl = document.getElementById('activityLabel');
+        if (labelEl) labelEl.textContent = rows.map(r => r.label).join(' · ');
 
         rows.forEach((row, ri) => {
           const g = document.getElementById(row.g);
@@ -4315,7 +4324,7 @@
             const dt = parseLocalDate(key);
             const wd = ['일', '월', '화', '수', '목', '금', '토'][dt.getDay()];
             const parts = [`${dt.getMonth() + 1}.${dt.getDate()} (${wd})`];
-            if (activityGranted.sleep) {
+            if (showSleep) {
               if (!rec || rec.sleep_min === null) {
                 parts.push('잠 기록 없음');
               } else {
@@ -4325,7 +4334,7 @@
                 parts.push(rec.wake_count === null ? '깬 횟수 기록 없음' : `깸 ${rec.wake_count}번`);
               }
             }
-            if (activityGranted.steps) {
+            if (showSteps) {
               parts.push((!rec || rec.steps === null) ? '걸음 기록 없음' : `걸음 ${rec.steps.toLocaleString('ko-KR')}`);
             }
             detail.textContent = parts.join(' · ');
