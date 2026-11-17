@@ -9,6 +9,8 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" id="metaThemeColor" content="#fbfcfc">
   <title>Life Guard</title>
+  <!-- 안드로이드 크롬에서 웹판을 '앱 설치'하기 위한 안내서 (앱 APK 안에서는 쓰이지 않음) -->
+  <link rel="manifest" href="manifest.webmanifest">
   <script src="tailwindcss.min.js" onerror="this.onerror=null;this.src='https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js';"></script>
   <style>
     * {
@@ -5880,6 +5882,10 @@
       // 알림 시각이 되어도 앱 안에서 선택창을 저절로 띄우지 않는다 (1.2.3).
       // 이미 쓰던 선택창이 다시 열리며 고른 도형이 사라지는 일을 막는다. 알림은 상단 알림으로만 온다.
     });
+    // 웹판(https)에서만: 안드로이드 크롬 '앱 설치'용 도우미. 앱(APK) 안에서는 건너뛴다
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
   </script>
 </body>
 </html>
