@@ -452,6 +452,20 @@
       </div>
     </div>
 
+    <!-- 함께 보는 기록 보내기 (1.2.6): 리포트 한 장 사진을 먼저 보여 주고, 보내기를 누르면 폰의 공유 창(문자·카톡 등). 앱이 스스로 보내지 않는다 -->
+    <div id="reportShare" onclick="event.stopPropagation()" class="fixed inset-0 z-40 hidden flex-col items-center justify-center p-5" style="display: none; background: rgba(20,24,26,0.55);">
+      <div id="reportShareCard" class="w-full max-w-md rounded-2xl p-4 flex flex-col gap-3" style="max-height: 92vh;">
+        <div id="reportShareTitle" class="text-sm font-bold">이 사진을 보내요</div>
+        <div class="overflow-y-auto rounded-xl border" style="border-color: rgba(127,167,170,0.3);">
+          <img id="reportShareImg" alt="함께 보는 기록 사진" class="w-full block">
+        </div>
+        <div class="flex gap-2">
+          <button type="button" onclick="closeReportShare(event)" class="flex-1 py-2.5 rounded-xl text-sm font-semibold" style="background: rgba(127,167,170,0.16);" id="reportShareCancel">취소</button>
+          <button type="button" onclick="sendReportShare(event)" class="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white" style="background: #597075;" id="reportShareSend">보내기</button>
+        </div>
+      </div>
+    </div>
+
     <div id="reportModal" onclick="event.stopPropagation()" class="absolute inset-0 bg-[#fbfcfc] z-30 p-5 flex flex-col justify-between opacity-0 pointer-events-none transition-all duration-300 overflow-y-auto hidden" style="display: none;">
       <div>
         <div class="flex justify-between items-center mb-3 gap-2">
@@ -459,6 +473,7 @@
             <span class="shrink-0">📋</span> <span id="reportTitleText" class="truncate">함께 보는 기록</span>
           </h2>
           <div class="flex items-center gap-2 shrink-0">
+            <button id="reportShareBtn" onclick="openReportShare(event)" class="close-btn text-sm text-gray-600">보내기</button>
             <button id="reportCloseBtn" onclick="closeReportModal(event)" class="close-btn text-sm text-gray-600">닫기 ✕</button>
           </div>
         </div>
@@ -478,7 +493,7 @@
               <button type="button" onclick="openChartZoom(event)" aria-label="그래프 크게 보기" class="px-2 py-0.5 rounded-full transition flex items-center"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2.5h4v4M13.5 2.5 9 7M6.5 13.5h-4v-4M2.5 13.5 7 9"/></svg></button>
             </div>
           </div>
-          <svg class="w-full h-24 cursor-pointer" viewBox="0 0 260 90" onclick="openChartZoom(event)">
+          <svg id="reportChartSvg" class="w-full h-24 cursor-pointer" viewBox="0 0 260 90" onclick="openChartZoom(event)">
             <line x1="22" y1="45" x2="256" y2="45" stroke="#7fa7aa" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.4"/>
             <g id="chartGrid"></g>
             <g id="chartTicks"></g>
@@ -4616,6 +4631,30 @@
       return el;
     }
 
+    // 약 먹은 날: 지난 진료일(d1)부터 며칠째인지(0부터)를 모은다
+    function pillDayIndexes(d1, diffDays) {
+      const set = new Set();
+      (pillRecords || []).forEach(p => {
+        const t = new Date((typeof p === 'string' ? p : p?.time) || '');
+        if (isNaN(t.getTime())) return;
+        const day = Math.round((new Date(t.getFullYear(), t.getMonth(), t.getDate()) - d1) / 86400000);
+        if (day >= 0 && day < diffDays) set.add(day);
+      });
+      return set;
+    }
+    // 약 표시 캡슐 하나. 먹은 날은 채우고, 안 먹은 날은 옅은 테두리만 (색은 한 가지, 강조하지 않음)
+    function drawPillMark(parent, cx, cy, w, h, taken, color, opacity) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      const sw = Math.max(0.6, h * 0.18);
+      el.setAttribute('x', (cx - w / 2).toFixed(2)); el.setAttribute('y', (cy - h / 2).toFixed(2));
+      el.setAttribute('width', w.toFixed(2)); el.setAttribute('height', h.toFixed(2));
+      el.setAttribute('rx', (h / 2).toFixed(2));
+      if (taken) { el.setAttribute('fill', color); el.setAttribute('opacity', opacity != null ? opacity : 0.75); }
+      else { el.setAttribute('fill', 'none'); el.setAttribute('stroke', color); el.setAttribute('stroke-width', sw.toFixed(2)); el.setAttribute('opacity', opacity != null ? opacity : 0.4); }
+      parent.appendChild(el);
+      return el;
+    }
+
     // 기분 그래프 세로 높이: ○~△(▽)가 한 칸이면 △~▲(▽~▼)는 1.5칸 (1.2.6, 사용자 결정). ○에서 위로 + / 아래로 -
     function moodLift(score, level) {
       const a = Math.abs(score);
@@ -4738,8 +4777,23 @@
 
           // 날짜 눈금 (기록 없는 날도 빈 칸으로 보이게)
           const ticksEl = document.getElementById('chartTicks');
+          // 복약 기록을 켰으면 그래프 바로 아래에 날마다 약 표시 한 줄 (1.2.6). 그만큼 그래프 칸을 아래로 늘린다
+          const showPills = !!isMedicationEnabled;
+          const tickShift = showPills ? 9 : 0;
+          const chartSvgEl = document.getElementById('reportChartSvg');
+          if (chartSvgEl) {
+            chartSvgEl.setAttribute('viewBox', showPills ? '0 0 260 99' : '0 0 260 90');
+            chartSvgEl.style.height = showPills ? (96 * 99 / 90).toFixed(1) + 'px' : '';
+          }
           if (ticksEl) {
             ticksEl.textContent = '';
+            if (showPills) {
+              const taken = pillDayIndexes(d1, diffDays);
+              drawPillMark(ticksEl, 9, 82, 7, 3.4, true, color, 0.55); // 왼쪽: 이 줄이 약이라는 표시
+              for (let i = 0; i < diffDays; i++) {
+                drawPillMark(ticksEl, dayStartX(i) + dayW / 2, 82, Math.min(7, dayW * 0.6), 3.4, taken.has(i), color);
+              }
+            }
             const step = Math.max(1, Math.ceil(diffDays / 31));
             for (let i = 0; i <= diffDays; i++) {
               // 지난 진료일부터 5일마다 진하고 조금 긴 눈금 (1.2.5, 날짜를 세기 쉽게)
@@ -4748,7 +4802,7 @@
               const x = dayStartX(i);
               const ln = document.createElementNS(SVG_NS, 'line');
               ln.setAttribute('x1', x.toFixed(1)); ln.setAttribute('x2', x.toFixed(1));
-              ln.setAttribute('y1', major ? '82.5' : '84'); ln.setAttribute('y2', '88');
+              ln.setAttribute('y1', String((major ? 82.5 : 84) + tickShift)); ln.setAttribute('y2', String(88 + tickShift));
               ln.setAttribute('stroke', color); ln.setAttribute('stroke-width', major ? '1.5' : '1');
               ln.setAttribute('opacity', major ? '0.8' : '0.35');
               ticksEl.appendChild(ln);
@@ -4896,30 +4950,29 @@
     }
     // 크게 보기 그리기. 두 손가락으로 벌리면 가로(날짜)로 확대(k배), 두 손가락을 옆으로 밀면 이동(offset).
     // 한 손가락은 빨간 기준선. 기준선 자리는 '전체 기간 중 몇 %'(lineFrac)로 기억해 확대해도 같은 기록에 남는다.
-    function drawChartZoom() {
-      const svg = document.getElementById('chartZoomSvg');
-      const st = chartZoomState;
-      if (!svg || !st) return;
-      const W = svg.clientWidth, H = svg.clientHeight;
-      if (!W || !H) return;
+    // 기분 그래프 한 장 그리기 (크게 보기와 문자로 보낼 리포트가 함께 쓴다).
+    // opts: { W, H, color, k(가로 확대 배율), offset(가로 이동), clipId }. 그린 자리 정보를 돌려준다
+    function drawMoodGraph(svg, opts) {
+      const W = opts.W, H = opts.H, color = opts.color, clipId = opts.clipId || 'moodGraphClip';
       svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
       svg.textContent = '';
       const SVG_NS = 'http://www.w3.org/2000/svg';
-      const color = st.color;
       const mk = (tag, attrs, parent) => { const el = document.createElementNS(SVG_NS, tag); for (const k in attrs) el.setAttribute(k, String(attrs[k])); (parent || svg).appendChild(el); return el; };
       const { d1, diffDays } = getReportRange();
       const X0 = 44, X1 = W - 24, PW = X1 - X0;
-      const top = 18, bottom = H - 44;
+      const showPills = opts.showPills != null ? opts.showPills : !!isMedicationEnabled;
+      const PILL_ROW = showPills ? 24 : 0;
+      const top = 18, bottom = H - 44 - PILL_ROW;
       const MID = (top + bottom) / 2, LEVEL = (bottom - top) / 5; // ○~△ 한 칸. △~▲는 1.5배
       // 확대: 하루가 화면 너비를 넘지 않을 만큼까지
       const kMax = Math.max(1, diffDays);
-      st.k = Math.min(kMax, Math.max(1, st.k || 1));
-      st.offset = Math.min(PW * (st.k - 1), Math.max(0, st.offset || 0));
-      const dayW = PW * st.k / diffDays;
-      const dayStartX = (i) => X0 + i * dayW - st.offset;
+      const k = Math.min(kMax, Math.max(1, opts.k || 1));
+      const offset = Math.min(PW * (k - 1), Math.max(0, opts.offset || 0));
+      const dayW = PW * k / diffDays;
+      const dayStartX = (i) => X0 + i * dayW - offset;
       // 그래프 칸 밖으로 나간 것은 가린다
       const defs = mk('defs', {});
-      const cp = mk('clipPath', { id: 'chartZoomClip' }, defs);
+      const cp = mk('clipPath', { id: clipId }, defs);
       mk('rect', { x: X0 - 1, y: 0, width: PW + 2, height: H }, cp);
       // 평시 구간·눈금선·도형 기호 (기호는 확대해도 왼쪽에 그대로)
       mk('rect', { x: X0, width: PW, y: MID - LEVEL, height: LEVEL * 2, fill: color, opacity: 0.08 });
@@ -4929,10 +4982,20 @@
         else mk('line', { x1: X0, x2: X1, y1: y, y2: y, stroke: color, 'stroke-width': 0.8, opacity: 0.12 });
         drawMoodSymbol(svg, 20, y, 12, score, color, 0.6);
       });
-      const g = mk('g', { 'clip-path': 'url(#chartZoomClip)' });
+      const g = mk('g', { 'clip-path': `url(#${clipId})` });
       // 날짜 눈금: 매일 짧게, 5일마다 길고 진하게 + 날짜. 크게 벌려 하루 칸이 넓어지면 날마다 날짜
-      const tickTop = bottom + 8;
-      const step = Math.max(1, Math.ceil(diffDays / (62 * st.k)));
+      const tickTop = bottom + 8 + PILL_ROW;
+      // 복약 기록을 켰으면 그래프 바로 아래에 날마다 약 표시 (먹은 날 = 채운 캡슐, 안 먹은 날 = 빈 캡슐)
+      if (showPills) {
+        const taken = pillDayIndexes(d1, diffDays);
+        drawPillMark(svg, 20, bottom + 16, 14, 6, true, color, 0.6);
+        for (let i = 0; i < diffDays; i++) {
+          const x = dayStartX(i) + dayW / 2;
+          if (x < X0 - 20 || x > X1 + 20) continue;
+          drawPillMark(g, x, bottom + 16, Math.min(14, dayW * 0.6), 6, taken.has(i), color);
+        }
+      }
+      const step = Math.max(1, Math.ceil(diffDays / (62 * k)));
       const labelEvery = dayW >= 40 ? 1 : 5;
       for (let i = 0; i <= diffDays; i++) {
         const major = i % 5 === 0;
@@ -4942,8 +5005,8 @@
         mk('line', { x1: x, x2: x, y1: major ? tickTop - 2 : tickTop + 2, y2: tickTop + 8, stroke: color, 'stroke-width': major ? 1.5 : 1, opacity: major ? 0.8 : 0.35 }, g);
         if (i % labelEvery === 0 && i < diffDays) {
           const d = new Date(d1.getFullYear(), d1.getMonth(), d1.getDate() + i);
-          // 날마다 적을 때는 칸 가운데에, 5일마다일 때는 눈금 아래에
-          const t = mk('text', { x: labelEvery === 1 ? x + dayW / 2 : x, y: tickTop + 26, 'text-anchor': 'middle', 'font-size': 12, fill: color, opacity: major ? 0.8 : 0.55 }, g);
+          // 날짜는 그날 칸 가운데 아래에 (첫날 날짜가 왼쪽 끝에서 잘리지 않게)
+          const t = mk('text', { x: x + dayW / 2, y: tickTop + 26, 'text-anchor': 'middle', 'font-size': 12, fill: color, opacity: major ? 0.8 : 0.55 }, g);
           t.textContent = `${d.getMonth() + 1}.${d.getDate()}`;
         }
       }
@@ -4989,6 +5052,18 @@
           }
         });
       }
+      return { mk, g, X0, X1, PW, dayW, d1, diffDays, pts, top, bottom, k, offset, W, H };
+    }
+
+    function drawChartZoom() {
+      const svg = document.getElementById('chartZoomSvg');
+      const st = chartZoomState;
+      if (!svg || !st) return;
+      const W = svg.clientWidth, H = svg.clientHeight;
+      if (!W || !H) return;
+      const gr = drawMoodGraph(svg, { W, H, color: st.color, k: st.k, offset: st.offset, clipId: 'chartZoomClip' });
+      st.k = gr.k; st.offset = gr.offset;
+      const { mk, g, X0, X1, PW, dayW, d1, diffDays, pts, top, bottom } = gr;
       // 빨간 기준선 + 고른 기록 표시
       const RED = '#e0584f';
       const ring = mk('circle', { r: 7, fill: 'none', stroke: RED, 'stroke-width': 2, opacity: 0 }, g);
@@ -5108,6 +5183,165 @@
           ro.appendChild(ic);
         }
       }
+    }
+
+    // ── 함께 보는 기록 보내기 (1.2.6) ──
+    // 리포트 한 장(기간·기분 그래프·복약 일수·선생님께 드릴 말씀)을 사진으로 만든다.
+    // 활동 정보와 이름은 넣지 않는다 (사용자 결정). 받는 쪽 폰에서 읽기 좋게 늘 밝은 바탕.
+    let reportShareBlob = null;
+    function svgToImage(svg) {
+      const xml = new XMLSerializer().serializeToString(svg);
+      return new Promise((res, rej) => {
+        const img = new Image();
+        img.onload = () => res(img);
+        img.onerror = rej;
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
+      });
+    }
+    async function buildReportImage() {
+      const W = 1080, PAD = 64, INNER = W - PAD * 2;
+      const ACCENT = '#597075', TEXT = '#2d3748', SUB = '#8a9aa0', BG = '#fbfcfc', CARD = '#ffffff', LINE = '#e6ecee';
+      const FONT = getComputedStyle(document.body).fontFamily || 'sans-serif';
+      const { now, d1, diffDays } = getReportRange();
+      const fmt = (d) => `${d.getMonth() + 1}.${d.getDate()}`;
+      // 그래프: 화면의 큰 그래프와 같은 그림을 절반 크기로 그려 두 배로 키운다 (글자·막대가 사진에서 읽기 좋은 크기)
+      const GW = INNER / 2 - 24, GH = 220;
+      const gsvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      gsvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      gsvg.setAttribute('width', String(GW * 2)); gsvg.setAttribute('height', String(GH * 2));
+      gsvg.setAttribute('font-family', FONT);
+      drawMoodGraph(gsvg, { W: GW, H: GH, color: ACCENT, clipId: 'reportGraphClip' });
+      const graphImg = await svgToImage(gsvg);
+
+      const c = document.createElement('canvas');
+      const ctx = c.getContext('2d');
+      const font = (px, bold) => `${bold ? '700' : '400'} ${px}px ${FONT}`;
+      // 메모 줄바꿈 (글자 단위로 재서 넘치면 다음 줄)
+      const wrap = (text, maxW, px) => {
+        ctx.font = font(px);
+        const lines = []; let cur = '';
+        for (const ch of String(text)) {
+          if (ch === '\n') { lines.push(cur); cur = ''; continue; }
+          if (ctx.measureText(cur + ch).width > maxW && cur) { lines.push(cur); cur = ch.trimStart(); }
+          else cur += ch;
+        }
+        if (cur) lines.push(cur);
+        return lines.length ? lines : [''];
+      };
+      const notes = (doctorNotes || []).map(n => String(n).trim()).filter(Boolean);
+      const noteLines = notes.map(n => wrap(n, INNER - 48 - 40, 32));
+      const showMed = !!isMedicationEnabled;
+      let medText = '';
+      if (showMed) { const el = document.getElementById('statMed'); medText = el ? el.textContent.trim() : ''; }
+
+      // 높이 계산
+      const graphCardH = GH * 2 + 44 + 20;
+      let H = PAD + 52 + 18 + 40 + 36 + graphCardH;
+      if (showMed) H += 28 + 110;
+      const notesCardH = 40 + 36 + 28 + noteLines.reduce((a, l) => a + l.length * 46 + 22, 0) - 22 + 44;
+      if (notes.length) H += 28 + notesCardH;
+      H += 40 + 34 + PAD;
+      c.width = W; c.height = H;
+      const rr = (x, y, w, h, r, fill, stroke) => {
+        ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h);
+        ctx.fillStyle = fill; ctx.fill();
+        if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 2; ctx.stroke(); }
+      };
+      ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
+      ctx.textBaseline = 'alphabetic';
+      let y = PAD + 46;
+      ctx.fillStyle = ACCENT; ctx.font = font(46, true); ctx.fillText('함께 보는 기록', PAD, y);
+      y += 18 + 36;
+      ctx.fillStyle = SUB; ctx.font = font(30);
+      ctx.fillText(diffDays > 1 ? `${fmt(d1)} ~ ${fmt(now)} · ${diffDays}일간 기분 기록` : `${fmt(now)} 기분 기록`, PAD, y);
+      y += 36;
+      // 그래프 칸
+      rr(PAD, y, INNER, graphCardH, 28, CARD, LINE);
+      ctx.drawImage(graphImg, PAD + 24, y + 44, GW * 2, GH * 2);
+      y += graphCardH;
+      // 복약 일수
+      if (showMed) {
+        y += 28;
+        rr(PAD, y, INNER, 110, 28, CARD, LINE);
+        ctx.fillStyle = SUB; ctx.font = font(30); ctx.fillText('복약 일수', PAD + 40, y + 66);
+        ctx.fillStyle = ACCENT; ctx.font = font(40, true); ctx.textAlign = 'right'; ctx.fillText(medText, PAD + INNER - 40, y + 70); ctx.textAlign = 'left';
+        y += 110;
+      }
+      // 선생님께 드릴 말씀
+      if (notes.length) {
+        y += 28;
+        const cardH = notesCardH;
+        rr(PAD, y, INNER, cardH, 28, CARD, LINE);
+        let ny = y + 40 + 36;
+        ctx.fillStyle = ACCENT; ctx.font = font(34, true); ctx.fillText('선생님께 드릴 말씀', PAD + 40, ny);
+        ny += 28;
+        noteLines.forEach((lines, i) => {
+          ny += 46;
+          ctx.fillStyle = ACCENT; ctx.font = font(32, true); ctx.fillText(`${i + 1}.`, PAD + 40, ny);
+          ctx.fillStyle = TEXT; ctx.font = font(32);
+          lines.forEach((ln, j) => ctx.fillText(ln, PAD + 40 + 48, ny + j * 46));
+          ny += (lines.length - 1) * 46 + 22;
+        });
+        y += cardH;
+      }
+      // 맨 아래: 만든 날
+      y += 40 + 30;
+      ctx.fillStyle = SUB; ctx.font = font(26); ctx.textAlign = 'right';
+      ctx.fillText(`${fmt(now)} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} 작성`, W - PAD, y);
+      ctx.textAlign = 'left';
+      return await new Promise(res => c.toBlob(res, 'image/png'));
+    }
+    async function openReportShare(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      triggerHaptic();
+      const pendingMemo = document.getElementById('reportMemoInput');
+      if (pendingMemo && pendingMemo.value.trim()) addReportMemo(); // 적다 만 말도 담는다
+      let blob = null;
+      try { blob = await buildReportImage(); } catch (err) { console.warn('report image error:', err); }
+      if (!blob) { showToast && showToast('사진을 만들지 못했어요'); return; }
+      reportShareBlob = blob;
+      const img = document.getElementById('reportShareImg');
+      if (img) { if (img.dataset.url) URL.revokeObjectURL(img.dataset.url); img.dataset.url = URL.createObjectURL(blob); img.src = img.dataset.url; }
+      const dark = getEffectiveTheme(currentTheme) === 'dark';
+      const card = document.getElementById('reportShareCard');
+      if (card) { card.style.backgroundColor = dark ? '#1c2123' : '#ffffff'; card.style.color = dark ? '#eff3f2' : '#597075'; }
+      const cancel = document.getElementById('reportShareCancel'); if (cancel) cancel.style.color = dark ? '#eff3f2' : '#597075';
+      const m = document.getElementById('reportShare');
+      if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+    }
+    function closeReportShare(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      const m = document.getElementById('reportShare');
+      if (m) { m.classList.add('hidden'); m.style.display = 'none'; }
+      reportShareBlob = null;
+    }
+    async function sendReportShare(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      triggerHaptic();
+      const blob = reportShareBlob;
+      if (!blob) return;
+      const now = new Date();
+      const name = `lifeguard_${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}.png`;
+      // 안드로이드 앱: 앱이 사진을 잠깐 저장해 두고 폰의 공유 창을 연다
+      const bridge = window.AndroidBridge;
+      if (bridge && typeof bridge.shareImage === 'function') {
+        const b64 = await new Promise(res => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1] || ''); r.readAsDataURL(blob); });
+        try { bridge.shareImage(b64, name); } catch (err) { console.warn(err); }
+        closeReportShare();
+        return;
+      }
+      // 웹(안드로이드 크롬·아이폰): 폰의 공유 창
+      const file = new File([blob], name, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file] }); closeReportShare(); } catch (_) { /* 취소하면 그대로 둔다 */ }
+        return;
+      }
+      // 공유 창이 없는 곳(컴퓨터 등): 사진 파일로 내려받기
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      closeReportShare();
     }
 
     // 14일간의 현실적인 기분 궤적/복약 샘플 데이터 자동 생성 (그래프 겹침 테스트용)
@@ -6094,7 +6328,7 @@
     }
 
     // ── 뒤로가기: 열려 있는 창이 있으면 그 창부터 닫는다 (안드로이드 앱·웹 공통) ──
-    const BACK_WINDOW_IDS = ['chartZoom', 'dailyCheckinModal', 'finishVisitModal', 'memoModal', 'peaceModal', 'settingsModal', 'reportModal'];
+    const BACK_WINDOW_IDS = ['reportShare', 'chartZoom', 'dailyCheckinModal', 'finishVisitModal', 'memoModal', 'peaceModal', 'settingsModal', 'reportModal'];
     function isWindowOpen(id) {
       const el = document.getElementById(id);
       return !!el && !el.classList.contains('opacity-0') && !el.classList.contains('hidden') && el.style.display !== 'none';
@@ -6105,6 +6339,7 @@
     // 맨 위에 열린 창 하나를 닫는다. 닫은 것이 있으면 true.
     function closeTopWindow() {
       if (whatsNewEl) { closeWhatsNew(); return true; }
+      if (isWindowOpen('reportShare')) { closeReportShare(); return true; }
       if (isWindowOpen('chartZoom')) { closeChartZoom(); return true; }
       if (isWindowOpen('dailyCheckinModal')) { dismissDailyCheckin(); return true; }
       if (isWindowOpen('finishVisitModal')) { closeFinishVisitModal(); return true; }
