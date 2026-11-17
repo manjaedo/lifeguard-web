@@ -436,6 +436,17 @@
     </div>
 
     <!-- Modal 1: Hospital Clinical Summary (좌측 상단 리포트 - 최대한 심플하게: 지난 진료~이번 진료만 & 진료 완료 시 휘발) -->
+    <!-- 기분 그래프 크게 보기 (1.2.6). 세로로 든 폰에서는 화면째 옆으로 눕혀 그린다. 빨간 기준선을 좌우로 움직이면 그 자리의 날짜·시각 -->
+    <div id="chartZoom" onclick="event.stopPropagation()" class="fixed inset-0 z-40 hidden" style="display: none;">
+      <div id="chartZoomStage" class="absolute flex flex-col" style="touch-action: none;">
+        <div class="flex items-center justify-between px-5 pt-4 pb-1 gap-3">
+          <div id="chartZoomReadout" class="text-sm font-semibold tabular-nums min-w-0 truncate"></div>
+          <button type="button" onclick="closeChartZoom(event)" class="close-btn text-sm shrink-0">닫기 ✕</button>
+        </div>
+        <svg id="chartZoomSvg" class="flex-1 w-full" style="display:block;"></svg>
+      </div>
+    </div>
+
     <div id="reportModal" onclick="event.stopPropagation()" class="absolute inset-0 bg-[#fbfcfc] z-30 p-5 flex flex-col justify-between opacity-0 pointer-events-none transition-all duration-300 overflow-y-auto hidden" style="display: none;">
       <div>
         <div class="flex justify-between items-center mb-3 gap-2">
@@ -459,9 +470,10 @@
             <div id="chartModeSwitch" class="flex items-center rounded-full p-0.5 text-[10px] font-semibold" style="background: rgba(127,167,170,0.14);">
               <button type="button" data-mode="bar" onclick="setChartMode('bar', event)" class="chart-mode-btn px-2 py-0.5 rounded-full transition">막대</button>
               <button type="button" data-mode="curve" onclick="setChartMode('curve', event)" class="chart-mode-btn px-2 py-0.5 rounded-full transition">곡선</button>
+              <button type="button" onclick="openChartZoom(event)" aria-label="그래프 크게 보기" class="px-2 py-0.5 rounded-full transition text-[12px] leading-none">⤢</button>
             </div>
           </div>
-          <svg class="w-full h-24" viewBox="0 0 260 90">
+          <svg class="w-full h-24 cursor-pointer" viewBox="0 0 260 90" onclick="openChartZoom(event)">
             <line x1="22" y1="45" x2="256" y2="45" stroke="#7fa7aa" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.4"/>
             <g id="chartGrid"></g>
             <g id="chartTicks"></g>
@@ -4550,24 +4562,59 @@
     }
 
     // 실제 입력된 기분/복약/진료구간 데이터 계산 및 리포트 화면 동적 렌더링
+    // 하루 칸 안에서 기록 사이를 '시간차'대로 벌린다 (1.2.6, 사용자 요청: 칸을 똑같이 나누지 않고).
+    // 칸 너비 = 24시간. 그날 기록 묶음은 칸 가운데에 놓는다 → 하루 한 번 찍은 날은 늘 칸 가운데 (사용자 결정).
+    // 너무 가까운 기록(몇 분 차이)은 막대가 겹치지 않을 만큼만 살짝 벌린다.
+    // recs는 시간 순서로 정렬된 [{t}], 돌려주는 값은 같은 순서의 x 좌표들
+    function placeRecordsByTime(recs, x0, dayW, barW) {
+      const gap = Math.min(barW * 1.25, dayW / Math.max(1, recs.length));
+      const lo = x0 + gap / 2, hi = x0 + dayW - gap / 2;
+      const midT = recs.length ? (recs[0].t + recs[recs.length - 1].t) / 2 : 0;
+      const xs = recs.map(r => Math.min(hi, Math.max(lo, x0 + dayW / 2 + (r.t - midT) / 86400000 * dayW)));
+      for (let i = 1; i < xs.length; i++) if (xs[i] < xs[i - 1] + gap) xs[i] = xs[i - 1] + gap;      // 앞에서부터 밀기
+      if (xs.length > 1) {                                                                          // 벌리느라 한쪽으로 밀렸으면 다시 가운데로
+        const shift = (x0 + dayW / 2) - (xs[0] + xs[xs.length - 1]) / 2;
+        const room = shift > 0 ? hi - xs[xs.length - 1] : xs[0] - lo;
+        const s = Math.sign(shift) * Math.min(Math.abs(shift), Math.max(0, room));
+        for (let i = 0; i < xs.length; i++) xs[i] += s;
+      }
+      if (xs.length && xs[xs.length - 1] > hi) {                                                     // 칸 밖으로 나가면 뒤에서부터 당기기
+        xs[xs.length - 1] = hi;
+        for (let i = xs.length - 2; i >= 0; i--) if (xs[i] > xs[i + 1] - gap) xs[i] = xs[i + 1] - gap;
+      }
+      return xs;
+    }
+
+    // 기분 그래프 세로 높이: ○~△(▽)가 한 칸이면 △~▲(▽~▼)는 1.5칸 (1.2.6, 사용자 결정). ○에서 위로 + / 아래로 -
+    function moodLift(score, level) {
+      const a = Math.abs(score);
+      return Math.sign(score) * (a >= 2 ? 2.5 * level : a * level);
+    }
+
+    // 함께 보는 기록의 기간: 지난 진료일 0시(d1) ~ 오늘, 며칠간(diffDays). 작은 그래프와 크게 보기가 함께 쓴다
+    function getReportRange() {
+      const now = new Date();
+      let last;
+      if (lastVisitDate) {
+        const parts = String(lastVisitDate).split('-');
+        if (parts.length === 3) {
+          last = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        } else {
+          last = new Date(lastVisitDate);
+        }
+      } else {
+        last = now;
+      }
+      if (isNaN(last.getTime())) last = now;
+      const d1 = new Date(last.getFullYear(), last.getMonth(), last.getDate());
+      const d2 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const diffDays = Math.max(1, Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1);
+      return { now, last, d1, d2, diffDays };
+    }
+
     function renderReportData() {
       try {
-        const now = new Date();
-        let last;
-        if (lastVisitDate) {
-          const parts = String(lastVisitDate).split('-');
-          if (parts.length === 3) {
-            last = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-          } else {
-            last = new Date(lastVisitDate);
-          }
-        } else {
-          last = now;
-        }
-        if (isNaN(last.getTime())) last = now;
-        const d1 = new Date(last.getFullYear(), last.getMonth(), last.getDate());
-        const d2 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const diffDays = Math.max(1, Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1);
+        const { now, last, d1, d2, diffDays } = getReportRange();
         const fmt = (d) => `${d.getMonth() + 1}.${d.getDate()}`;
 
         // 1. 진료 구간 텍스트 (지난 진료 ~ 오늘)
@@ -4629,7 +4676,7 @@
           const SVG_NS = 'http://www.w3.org/2000/svg';
           const color = chartPathEl.getAttribute('stroke') || '#597075';
           const X0 = 22, X1 = 254;
-          const LEVEL = 15; // 도형 한 칸의 높이 (○ 기준선 y=45, ▲ y=15, ▼ y=75)
+          const LEVEL = 12; // ○~△ 한 칸의 높이. △~▲는 1.5배 (moodLift). ○ 기준선 y=45, △ y=33, ▲ y=15, ▼ y=75
           // 가로축: 지난 진료일 0시 ~ 오늘 자정. 하루가 같은 폭을 가진다.
           const dayW = (X1 - X0) / diffDays;
           const dayStartX = (i) => X0 + i * dayW;
@@ -4645,7 +4692,7 @@
             band.setAttribute('fill', color); band.setAttribute('opacity', '0.08');
             gridEl.appendChild(band);
             [[2, '▲'], [1, '△'], [0, '○'], [-1, '▽'], [-2, '▼']].forEach(([score, sym]) => {
-              const y = 45 - score * LEVEL;
+              const y = 45 - moodLift(score, LEVEL);
               if (score !== 0) {
                 const ln = document.createElementNS(SVG_NS, 'line');
                 ln.setAttribute('x1', String(X0)); ln.setAttribute('x2', String(X1));
@@ -4683,7 +4730,7 @@
           }
 
           // 기록 하나 = 막대 하나. 누른 순간의 높이를 가공 없이 그대로 세운다.
-          // 같은 날의 기록은 그날 칸 안에 시간 순서대로 나란히 놓아, 겹쳐서 가려지는 기록이 없게 한다.
+          // 같은 날의 기록은 그날 칸 안에서 누른 시각 자리에 놓고, 너무 가까우면 살짝 벌려 가려지는 기록이 없게 한다.
           const byDay = new Map();
           (moodRecords || []).forEach(m => {
             const t = new Date(m?.time || '');
@@ -4700,8 +4747,9 @@
           byDay.forEach((recs, day) => {
             recs.sort((p, q) => p.t - q.t);
             const sub = dayW / recs.length;
+            const xs = placeRecordsByTime(recs, dayStartX(day), dayW, Math.min(5, Math.max(1, sub * 0.55)));
             recs.forEach((r, i) => {
-              pts.push({ t: r.t, score: r.score, x: dayStartX(day) + (i + 0.5) * sub, y: 45 - r.score * LEVEL, sub });
+              pts.push({ t: r.t, score: r.score, x: xs[i], y: 45 - moodLift(r.score, LEVEL), sub });
             });
           });
           pts.sort((p, q) => p.t - q.t);
@@ -4746,7 +4794,7 @@
                 c.setAttribute('fill', color);
                 dotsEl.appendChild(c);
               } else {
-                const h = Math.abs(p.score) * LEVEL;
+                const h = Math.abs(moodLift(p.score, LEVEL));
                 const rect = document.createElementNS(SVG_NS, 'rect');
                 rect.setAttribute('x', (p.x - barW / 2).toFixed(2));
                 rect.setAttribute('y', (p.score > 0 ? 45 - h : 45).toFixed(2));
@@ -4771,6 +4819,261 @@
         console.warn('renderReportData error:', err);
       }
       renderActivityData();
+    }
+
+    // ── 기분 그래프 크게 보기 (1.2.6) ──
+    // 그래프를 누르면 화면 가득 크게. 세로로 든 폰에서는 옆으로 눕혀 그려서 폰을 돌려 보면 넓게 보인다.
+    // 빨간 기준선을 손가락으로 좌우로 움직이면 그 자리의 날짜와, 그날 가장 가까운 기록의 시각·도형이 위에 뜬다.
+    // 두 손가락으로 벌리면 날짜 쪽으로 확대, 두 손가락째 옆으로 밀면 이동 (1.2.6, 사용자 요청).
+    // 아래에는 지난 진료일부터 5일마다 날짜를 적는다. 그리는 방식(막대/곡선)은 작은 그래프에서 고른 것을 따른다.
+    let chartZoomState = null;
+    function openChartZoom(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      triggerHaptic();
+      const z = document.getElementById('chartZoom');
+      if (!z) return;
+      z.classList.remove('hidden');
+      z.style.display = 'block';
+      chartZoomState = { lineFrac: null, k: 1, offset: 0, pointers: new Map(), pinch: null, pinchedTouch: false };
+      layoutChartZoom();
+      window.addEventListener('resize', layoutChartZoom);
+    }
+    function closeChartZoom(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      const z = document.getElementById('chartZoom');
+      if (!z) return;
+      z.classList.add('hidden');
+      z.style.display = 'none';
+      chartZoomState = null;
+      window.removeEventListener('resize', layoutChartZoom);
+    }
+    function layoutChartZoom() {
+      const z = document.getElementById('chartZoom');
+      const stage = document.getElementById('chartZoomStage');
+      if (!z || !stage || !chartZoomState) return;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const rotated = vh > vw; // 세로로 들고 있으면 눕힌다
+      const W = rotated ? vh : vw, H = rotated ? vw : vh;
+      stage.style.width = W + 'px'; stage.style.height = H + 'px';
+      stage.style.left = '50%'; stage.style.top = '50%';
+      stage.style.transform = 'translate(-50%, -50%)' + (rotated ? ' rotate(90deg)' : '');
+      chartZoomState.rotated = rotated;
+      // 함께 보는 기록 창과 같은 바탕·글자 색
+      const rm = document.getElementById('reportModal');
+      const bg = rm ? getComputedStyle(rm).backgroundColor : '#fbfcfc';
+      z.style.backgroundColor = bg;
+      const color = (document.getElementById('chartPath') || {}).getAttribute?.('stroke') || '#597075';
+      chartZoomState.color = color;
+      const ro = document.getElementById('chartZoomReadout'); if (ro) ro.style.color = color;
+      const cb = stage.querySelector('.close-btn'); if (cb) cb.style.color = color;
+      requestAnimationFrame(drawChartZoom);
+    }
+    // 크게 보기 그리기. 두 손가락으로 벌리면 가로(날짜)로 확대(k배), 두 손가락을 옆으로 밀면 이동(offset).
+    // 한 손가락은 빨간 기준선. 기준선 자리는 '전체 기간 중 몇 %'(lineFrac)로 기억해 확대해도 같은 기록에 남는다.
+    function drawChartZoom() {
+      const svg = document.getElementById('chartZoomSvg');
+      const st = chartZoomState;
+      if (!svg || !st) return;
+      const W = svg.clientWidth, H = svg.clientHeight;
+      if (!W || !H) return;
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+      svg.textContent = '';
+      const SVG_NS = 'http://www.w3.org/2000/svg';
+      const color = st.color;
+      const mk = (tag, attrs, parent) => { const el = document.createElementNS(SVG_NS, tag); for (const k in attrs) el.setAttribute(k, String(attrs[k])); (parent || svg).appendChild(el); return el; };
+      const { d1, diffDays } = getReportRange();
+      const X0 = 44, X1 = W - 24, PW = X1 - X0;
+      const top = 18, bottom = H - 44;
+      const MID = (top + bottom) / 2, LEVEL = (bottom - top) / 5; // ○~△ 한 칸. △~▲는 1.5배
+      // 확대: 하루가 화면 너비를 넘지 않을 만큼까지
+      const kMax = Math.max(1, diffDays);
+      st.k = Math.min(kMax, Math.max(1, st.k || 1));
+      st.offset = Math.min(PW * (st.k - 1), Math.max(0, st.offset || 0));
+      const dayW = PW * st.k / diffDays;
+      const dayStartX = (i) => X0 + i * dayW - st.offset;
+      // 그래프 칸 밖으로 나간 것은 가린다
+      const defs = mk('defs', {});
+      const cp = mk('clipPath', { id: 'chartZoomClip' }, defs);
+      mk('rect', { x: X0 - 1, y: 0, width: PW + 2, height: H }, cp);
+      // 평시 구간·눈금선·도형 기호 (기호는 확대해도 왼쪽에 그대로)
+      mk('rect', { x: X0, width: PW, y: MID - LEVEL, height: LEVEL * 2, fill: color, opacity: 0.08 });
+      [[2, '▲'], [1, '△'], [0, '○'], [-1, '▽'], [-2, '▼']].forEach(([score, sym]) => {
+        const y = MID - moodLift(score, LEVEL);
+        if (score === 0) mk('line', { x1: X0, x2: X1, y1: y, y2: y, stroke: '#7fa7aa', 'stroke-width': 1.5, 'stroke-dasharray': '4,4', opacity: 0.5 });
+        else mk('line', { x1: X0, x2: X1, y1: y, y2: y, stroke: color, 'stroke-width': 0.8, opacity: 0.12 });
+        const tx = mk('text', { x: 20, y: y + 5, 'text-anchor': 'middle', 'font-size': 14, fill: color, opacity: 0.6 });
+        tx.textContent = sym;
+      });
+      const g = mk('g', { 'clip-path': 'url(#chartZoomClip)' });
+      // 날짜 눈금: 매일 짧게, 5일마다 길고 진하게 + 날짜. 크게 벌려 하루 칸이 넓어지면 날마다 날짜
+      const tickTop = bottom + 8;
+      const step = Math.max(1, Math.ceil(diffDays / (62 * st.k)));
+      const labelEvery = dayW >= 40 ? 1 : 5;
+      for (let i = 0; i <= diffDays; i++) {
+        const major = i % 5 === 0;
+        if (!major && i % step !== 0) continue;
+        const x = dayStartX(i);
+        if (x < X0 - 40 || x > X1 + 40) continue;
+        mk('line', { x1: x, x2: x, y1: major ? tickTop - 2 : tickTop + 2, y2: tickTop + 8, stroke: color, 'stroke-width': major ? 1.5 : 1, opacity: major ? 0.8 : 0.35 }, g);
+        if (i % labelEvery === 0 && i < diffDays) {
+          const d = new Date(d1.getFullYear(), d1.getMonth(), d1.getDate() + i);
+          // 날마다 적을 때는 칸 가운데에, 5일마다일 때는 눈금 아래에
+          const t = mk('text', { x: labelEvery === 1 ? x + dayW / 2 : x, y: tickTop + 26, 'text-anchor': 'middle', 'font-size': 12, fill: color, opacity: major ? 0.8 : 0.55 }, g);
+          t.textContent = `${d.getMonth() + 1}.${d.getDate()}`;
+        }
+      }
+      // 기록 (작은 그래프와 같은 규칙: 기록 하나 = 막대 하나, 하루 칸 안에서 시간차대로, 묶음은 칸 가운데)
+      const byDay = new Map();
+      (moodRecords || []).forEach(m => {
+        const t = new Date(m?.time || '');
+        if (isNaN(t.getTime())) return;
+        const day = Math.round((new Date(t.getFullYear(), t.getMonth(), t.getDate()) - d1) / 86400000);
+        if (day < 0 || day >= diffDays) return;
+        const score = [2, 1, 0, -1, -2].includes(m?.score) ? m.score : 0;
+        if (!byDay.has(day)) byDay.set(day, []);
+        byDay.get(day).push({ t: t.getTime(), score });
+      });
+      const pts = [];
+      byDay.forEach((recs, day) => {
+        recs.sort((p, q) => p.t - q.t);
+        const sub = dayW / recs.length;
+        const xs = placeRecordsByTime(recs, dayStartX(day), dayW, Math.min(14, Math.max(1.5, sub * 0.55)));
+        recs.forEach((r, i) => pts.push({ t: r.t, day, score: r.score, x: xs[i], y: MID - moodLift(r.score, LEVEL), sub }));
+      });
+      pts.sort((p, q) => p.t - q.t);
+      if (chartMode === 'curve') {
+        if (pts.length > 1) {
+          const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+          let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+          for (let i = 0; i < pts.length - 1; i++) {
+            const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+            const cp1x = clamp(p1.x + (p2.x - p0.x) / 6, p1.x, p2.x), cp1y = clamp(p1.y + (p2.y - p0.y) / 6, MID - 2.5 * LEVEL, MID + 2.5 * LEVEL);
+            const cp2x = clamp(p2.x - (p3.x - p1.x) / 6, p1.x, p2.x), cp2y = clamp(p2.y - (p3.y - p1.y) / 6, MID - 2.5 * LEVEL, MID + 2.5 * LEVEL);
+            d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+          }
+          mk('path', { d, fill: 'none', stroke: color, 'stroke-width': 2.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', opacity: 0.55 }, g);
+        }
+        pts.forEach(p => mk('circle', { cx: p.x, cy: p.y, r: Math.max(1.5, Math.min(4, p.sub * 0.3)), fill: color }, g));
+      } else {
+        pts.forEach(p => {
+          const barW = Math.min(14, Math.max(1.5, p.sub * 0.55));
+          if (p.score === 0) mk('circle', { cx: p.x, cy: MID, r: Math.max(1.5, Math.min(4, barW * 0.5)), fill: color }, g);
+          else {
+            const h = Math.abs(moodLift(p.score, LEVEL));
+            mk('rect', { x: p.x - barW / 2, y: p.score > 0 ? MID - h : MID, width: barW, height: h, rx: Math.min(2, barW / 2), fill: color }, g);
+          }
+        });
+      }
+      // 빨간 기준선 + 고른 기록 표시
+      const RED = '#e0584f';
+      const ring = mk('circle', { r: 7, fill: 'none', stroke: RED, 'stroke-width': 2, opacity: 0 }, g);
+      const line = mk('line', { y1: top - 8, y2: bottom + 4, stroke: RED, 'stroke-width': 2, opacity: 0.85 }, g);
+      const handle = mk('circle', { cy: bottom + 4, r: 6, fill: RED }, g);
+      st.geo = { X0, X1, PW, dayW, d1, diffDays, pts, line, ring, handle, W };
+      if (st.lineFrac == null) st.lineFrac = pts.length ? (pts[pts.length - 1].x - X0 + st.offset) / (PW * st.k) : 1 - 0.5 / diffDays;
+      placeChartZoomLine();
+      bindChartZoomGestures(svg);
+    }
+    // 손가락 자리 → 그래프 가로 좌표 (눕혀 그렸으면 그래프의 가로는 화면의 세로)
+    function chartZoomPos(svg, ev) {
+      const r = svg.getBoundingClientRect();
+      const st = chartZoomState;
+      const frac = st.rotated ? (ev.clientY - r.top) / r.height : (ev.clientX - r.left) / r.width;
+      return frac * (st.geo ? st.geo.W : r.width);
+    }
+    function bindChartZoomGestures(svg) {
+      if (svg.dataset.bound) return;
+      svg.dataset.bound = '1';
+      const pinchInfo = () => {
+        const st = chartZoomState;
+        const [a, b] = [...st.pointers.values()];
+        const dist = Math.hypot(a.cx - b.cx, a.cy - b.cy);
+        return { dist, mid: (a.x + b.x) / 2 };
+      };
+      svg.addEventListener('pointerdown', (ev) => {
+        const st = chartZoomState;
+        if (!st || !st.geo) return;
+        try { svg.setPointerCapture(ev.pointerId); } catch (_) {}
+        st.pointers.set(ev.pointerId, { x: chartZoomPos(svg, ev), cx: ev.clientX, cy: ev.clientY });
+        if (st.pointers.size === 2) {
+          // 두 손가락: 벌린 사이 가운데의 날짜를 붙잡고 확대한다
+          const { dist, mid } = pinchInfo();
+          st.pinch = { dist0: Math.max(10, dist), k0: st.k, anchor: (mid - st.geo.X0 + st.offset) / (st.geo.PW * st.k) };
+          st.pinchedTouch = true;
+        } else if (st.pointers.size === 1 && !st.pinchedTouch) {
+          moveChartZoomLine(chartZoomPos(svg, ev));
+        }
+      });
+      svg.addEventListener('pointermove', (ev) => {
+        const st = chartZoomState;
+        if (!st || !st.geo || !st.pointers.has(ev.pointerId)) return;
+        st.pointers.set(ev.pointerId, { x: chartZoomPos(svg, ev), cx: ev.clientX, cy: ev.clientY });
+        if (st.pointers.size >= 2 && st.pinch) {
+          const { dist, mid } = pinchInfo();
+          const g = st.geo;
+          st.k = Math.min(Math.max(1, g.diffDays), Math.max(1, st.pinch.k0 * dist / st.pinch.dist0));
+          st.offset = st.pinch.anchor * g.PW * st.k - (mid - g.X0);
+          drawChartZoom();
+        } else if (st.pointers.size === 1 && !st.pinchedTouch) {
+          moveChartZoomLine(chartZoomPos(svg, ev));
+        }
+      });
+      const up = (ev) => {
+        const st = chartZoomState;
+        if (!st) return;
+        st.pointers.delete(ev.pointerId);
+        if (st.pointers.size < 2) st.pinch = null;
+        if (st.pointers.size === 0) st.pinchedTouch = false; // 두 손가락을 다 뗀 뒤부터 다시 기준선
+      };
+      svg.addEventListener('pointerup', up);
+      svg.addEventListener('pointercancel', up);
+      // 컴퓨터: 마우스 휠로도 확대
+      svg.addEventListener('wheel', (ev) => {
+        const st = chartZoomState;
+        if (!st || !st.geo) return;
+        ev.preventDefault();
+        const g = st.geo, mid = chartZoomPos(svg, ev);
+        const anchor = (mid - g.X0 + st.offset) / (g.PW * st.k);
+        st.k = Math.min(Math.max(1, g.diffDays), Math.max(1, st.k * Math.exp(-ev.deltaY * 0.002)));
+        st.offset = anchor * g.PW * st.k - (mid - g.X0);
+        drawChartZoom();
+      }, { passive: false });
+    }
+    function moveChartZoomLine(x) {
+      const st = chartZoomState;
+      if (!st || !st.geo) return;
+      const g = st.geo;
+      x = Math.min(g.X1 - 0.5, Math.max(g.X0 + 0.5, x));
+      st.lineFrac = (x - g.X0 + st.offset) / (g.PW * st.k);
+      placeChartZoomLine();
+    }
+    function placeChartZoomLine() {
+      const st = chartZoomState;
+      if (!st || !st.geo) return;
+      const g = st.geo;
+      const x = g.X0 + st.lineFrac * g.PW * st.k - st.offset;
+      const day = Math.min(g.diffDays - 1, Math.max(0, Math.floor(st.lineFrac * g.diffDays)));
+      // 그날의 기록 중 기준선에 가장 가까운 것
+      let pick = null;
+      g.pts.forEach(p => { if (p.day === day && (!pick || Math.abs(p.x - x) < Math.abs(pick.x - x))) pick = p; });
+      const lx = (pick ? pick.x : x).toFixed(1); // 기록이 있는 날은 그 기록에 붙는다
+      g.line.setAttribute('x1', lx); g.line.setAttribute('x2', lx);
+      g.handle.setAttribute('cx', lx);
+      if (pick) { g.ring.setAttribute('cx', pick.x.toFixed(1)); g.ring.setAttribute('cy', pick.y.toFixed(1)); g.ring.setAttribute('opacity', '1'); }
+      else g.ring.setAttribute('opacity', '0');
+      const d = new Date(g.d1.getFullYear(), g.d1.getMonth(), g.d1.getDate() + day);
+      const wd = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
+      let text = `${d.getMonth() + 1}.${d.getDate()} (${wd})`;
+      if (pick) {
+        const t = new Date(pick.t);
+        const h = t.getHours(), ap = h < 12 ? '오전' : '오후', h12 = h % 12 === 0 ? 12 : h % 12;
+        const sym = { 2: '▲', 1: '△', 0: '○', '-1': '▽', '-2': '▼' }[pick.score];
+        text += `  ${ap} ${h12}:${String(t.getMinutes()).padStart(2, '0')}  ${sym}`;
+      } else {
+        text += '  기록 없음';
+      }
+      const ro = document.getElementById('chartZoomReadout');
+      if (ro) ro.textContent = text;
     }
 
     // 14일간의 현실적인 기분 궤적/복약 샘플 데이터 자동 생성 (그래프 겹침 테스트용)
@@ -5757,7 +6060,7 @@
     }
 
     // ── 뒤로가기: 열려 있는 창이 있으면 그 창부터 닫는다 (안드로이드 앱·웹 공통) ──
-    const BACK_WINDOW_IDS = ['dailyCheckinModal', 'finishVisitModal', 'memoModal', 'peaceModal', 'settingsModal', 'reportModal'];
+    const BACK_WINDOW_IDS = ['chartZoom', 'dailyCheckinModal', 'finishVisitModal', 'memoModal', 'peaceModal', 'settingsModal', 'reportModal'];
     function isWindowOpen(id) {
       const el = document.getElementById(id);
       return !!el && !el.classList.contains('opacity-0') && !el.classList.contains('hidden') && el.style.display !== 'none';
@@ -5768,6 +6071,7 @@
     // 맨 위에 열린 창 하나를 닫는다. 닫은 것이 있으면 true.
     function closeTopWindow() {
       if (whatsNewEl) { closeWhatsNew(); return true; }
+      if (isWindowOpen('chartZoom')) { closeChartZoom(); return true; }
       if (isWindowOpen('dailyCheckinModal')) { dismissDailyCheckin(); return true; }
       if (isWindowOpen('finishVisitModal')) { closeFinishVisitModal(); return true; }
       if (isWindowOpen('memoModal')) { saveAndCloseMemo(); return true; }
