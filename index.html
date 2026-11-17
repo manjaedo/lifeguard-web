@@ -441,7 +441,12 @@
       <div id="chartZoomStage" class="absolute flex flex-col" style="touch-action: none;">
         <div class="flex items-center justify-between px-5 pt-4 pb-1 gap-3">
           <div id="chartZoomReadout" class="text-sm font-semibold tabular-nums min-w-0 truncate"></div>
-          <button type="button" onclick="closeChartZoom(event)" class="close-btn text-sm shrink-0">닫기 ✕</button>
+          <!-- 작은 그래프와 같은 스위치. ⤡는 작은 그래프로 돌아가기 (닫기 대신, 사용자 결정) -->
+          <div id="chartZoomModeSwitch" class="flex items-center rounded-full p-0.5 text-[13px] font-semibold shrink-0" style="background: rgba(127,167,170,0.14);">
+            <button type="button" data-mode="bar" onclick="setChartMode('bar', event)" class="chart-mode-btn px-3 py-1 rounded-full transition">막대</button>
+            <button type="button" data-mode="curve" onclick="setChartMode('curve', event)" class="chart-mode-btn px-3 py-1 rounded-full transition">곡선</button>
+            <button type="button" onclick="closeChartZoom(event)" aria-label="작은 그래프로 돌아가기" class="zoom-out-btn px-3 py-1 rounded-full transition flex items-center"><svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 6.5h-4v-4M9.5 6.5 14 2M2.5 9.5h4v4M6.5 9.5 2 14"/></svg></button>
+          </div>
         </div>
         <svg id="chartZoomSvg" class="flex-1 w-full" style="display:block;"></svg>
       </div>
@@ -470,7 +475,7 @@
             <div id="chartModeSwitch" class="flex items-center rounded-full p-0.5 text-[10px] font-semibold" style="background: rgba(127,167,170,0.14);">
               <button type="button" data-mode="bar" onclick="setChartMode('bar', event)" class="chart-mode-btn px-2 py-0.5 rounded-full transition">막대</button>
               <button type="button" data-mode="curve" onclick="setChartMode('curve', event)" class="chart-mode-btn px-2 py-0.5 rounded-full transition">곡선</button>
-              <button type="button" onclick="openChartZoom(event)" aria-label="그래프 크게 보기" class="px-2 py-0.5 rounded-full transition text-[12px] leading-none">⤢</button>
+              <button type="button" onclick="openChartZoom(event)" aria-label="그래프 크게 보기" class="px-2 py-0.5 rounded-full transition flex items-center"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2.5h4v4M13.5 2.5 9 7M6.5 13.5h-4v-4M2.5 13.5 7 9"/></svg></button>
             </div>
           </div>
           <svg class="w-full h-24 cursor-pointer" viewBox="0 0 260 90" onclick="openChartZoom(event)">
@@ -4547,6 +4552,7 @@
       try { localStorage.setItem('lifeguard_chart_mode', chartMode); } catch (_) {}
       triggerHaptic();
       renderReportData();
+      if (chartZoomState) drawChartZoom(); // 크게 보기에서 바꿨으면 큰 그래프도 다시
     }
 
     function formatPeriodDuration(days) {
@@ -4583,6 +4589,31 @@
         for (let i = xs.length - 2; i >= 0; i--) if (xs[i] > xs[i + 1] - gap) xs[i] = xs[i + 1] - gap;
       }
       return xs;
+    }
+
+    // 그래프 왼쪽 ▲△○▽▼를 글자 대신 그림으로 (1.2.6). 폰 글꼴마다 ○ 등이 아주 작게 나오는 문제.
+    // size = 도형 한 변(지름) 길이. 꽉 찬 것은 ▲▼, 테두리만은 △○▽
+    function drawMoodSymbol(parent, cx, cy, size, score, color, opacity) {
+      const SVG_NS = 'http://www.w3.org/2000/svg';
+      const h = size * 0.87, w = size / 2, sw = Math.max(0.8, size * 0.11);
+      let el;
+      if (score === 0) {
+        el = document.createElementNS(SVG_NS, 'circle');
+        el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', (size / 2 - sw / 2).toFixed(2));
+      } else {
+        const up = score > 0;
+        const tip = up ? cy - h / 2 : cy + h / 2, base = up ? cy + h / 2 : cy - h / 2;
+        el = document.createElementNS(SVG_NS, 'polygon');
+        el.setAttribute('points', `${cx},${tip.toFixed(2)} ${(cx + w).toFixed(2)},${base.toFixed(2)} ${(cx - w).toFixed(2)},${base.toFixed(2)}`);
+        el.setAttribute('stroke-linejoin', 'round');
+      }
+      const filled = Math.abs(score) === 2;
+      el.setAttribute('fill', filled ? color : 'none');
+      el.setAttribute('stroke', color);
+      el.setAttribute('stroke-width', filled ? '0' : sw.toFixed(2));
+      el.setAttribute('opacity', opacity);
+      parent.appendChild(el);
+      return el;
     }
 
     // 기분 그래프 세로 높이: ○~△(▽)가 한 칸이면 △~▲(▽~▼)는 1.5칸 (1.2.6, 사용자 결정). ○에서 위로 + / 아래로 -
@@ -4701,12 +4732,7 @@
                 ln.setAttribute('opacity', '0.12');
                 gridEl.appendChild(ln);
               }
-              const tx = document.createElementNS(SVG_NS, 'text');
-              tx.setAttribute('x', '9'); tx.setAttribute('y', String(y + 3));
-              tx.setAttribute('text-anchor', 'middle'); tx.setAttribute('font-size', '8');
-              tx.setAttribute('fill', color); tx.setAttribute('opacity', '0.55');
-              tx.textContent = sym;
-              gridEl.appendChild(tx);
+              drawMoodSymbol(gridEl, 9, y, 6, score, color, 0.55);
             });
           }
 
@@ -4808,7 +4834,7 @@
           }
 
           // 스위치 모양: 고른 쪽만 채운다 (테마 색을 따라감)
-          document.querySelectorAll('#chartModeSwitch .chart-mode-btn').forEach(btn => {
+          document.querySelectorAll('#chartModeSwitch .chart-mode-btn, #chartZoomModeSwitch .chart-mode-btn').forEach(btn => {
             const on = btn.dataset.mode === chartMode;
             btn.style.backgroundColor = on ? color : 'transparent';
             btn.style.color = on ? (getEffectiveTheme(currentTheme) === 'dark' ? '#141718' : '#ffffff') : color;
@@ -4865,7 +4891,7 @@
       const color = (document.getElementById('chartPath') || {}).getAttribute?.('stroke') || '#597075';
       chartZoomState.color = color;
       const ro = document.getElementById('chartZoomReadout'); if (ro) ro.style.color = color;
-      const cb = stage.querySelector('.close-btn'); if (cb) cb.style.color = color;
+      const zo = stage.querySelector('.zoom-out-btn'); if (zo) zo.style.color = color;
       requestAnimationFrame(drawChartZoom);
     }
     // 크게 보기 그리기. 두 손가락으로 벌리면 가로(날짜)로 확대(k배), 두 손가락을 옆으로 밀면 이동(offset).
@@ -4901,8 +4927,7 @@
         const y = MID - moodLift(score, LEVEL);
         if (score === 0) mk('line', { x1: X0, x2: X1, y1: y, y2: y, stroke: '#7fa7aa', 'stroke-width': 1.5, 'stroke-dasharray': '4,4', opacity: 0.5 });
         else mk('line', { x1: X0, x2: X1, y1: y, y2: y, stroke: color, 'stroke-width': 0.8, opacity: 0.12 });
-        const tx = mk('text', { x: 20, y: y + 5, 'text-anchor': 'middle', 'font-size': 14, fill: color, opacity: 0.6 });
-        tx.textContent = sym;
+        drawMoodSymbol(svg, 20, y, 12, score, color, 0.6);
       });
       const g = mk('g', { 'clip-path': 'url(#chartZoomClip)' });
       // 날짜 눈금: 매일 짧게, 5일마다 길고 진하게 + 날짜. 크게 벌려 하루 칸이 넓어지면 날마다 날짜
