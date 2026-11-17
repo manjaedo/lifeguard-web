@@ -5092,13 +5092,22 @@
       if (pick) {
         const t = new Date(pick.t);
         const h = t.getHours(), ap = h < 12 ? '오전' : '오후', h12 = h % 12 === 0 ? 12 : h % 12;
-        const sym = { 2: '▲', 1: '△', 0: '○', '-1': '▽', '-2': '▼' }[pick.score];
-        text += `  ${ap} ${h12}:${String(t.getMinutes()).padStart(2, '0')}  ${sym}`;
+        text += `  ${ap} ${h12}:${String(t.getMinutes()).padStart(2, '0')}  `;
       } else {
         text += '  기록 없음';
       }
       const ro = document.getElementById('chartZoomReadout');
-      if (ro) ro.textContent = text;
+      if (ro) {
+        ro.textContent = text;
+        // 도형도 글자 대신 그림으로 (폰 글꼴에서 △○ 등이 작게 나오는 문제)
+        if (pick) {
+          const ic = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          ic.setAttribute('viewBox', '0 0 16 16'); ic.setAttribute('width', '15'); ic.setAttribute('height', '15');
+          ic.style.display = 'inline-block'; ic.style.verticalAlign = '-2px';
+          drawMoodSymbol(ic, 8, 8, 13, pick.score, st.color, 1);
+          ro.appendChild(ic);
+        }
+      }
     }
 
     // 14일간의 현실적인 기분 궤적/복약 샘플 데이터 자동 생성 (그래프 겹침 테스트용)
