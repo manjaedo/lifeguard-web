@@ -700,7 +700,7 @@
           </div>
         </div>
 
-        <!-- 기록 지키기 (1.2.8): 켠 사람만 Firebase에 저절로 담는다. 웹판만, 설정값(CLOUD_CONFIG)이 있을 때만 보인다 -->
+        <!-- 기록 지키기 (1.2.8): 켠 사람만 Firebase에 저절로 담는다. 설정값(CLOUD_CONFIG)이 있을 때만 보인다 (앱은 googleSignInReady도 있어야) -->
         <div id="cloudCard" class="bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2 transition-colors" style="display: none;"></div>
 
         <!-- 복약 관리 설정 (복약 안 할 시 끄기) -->
@@ -7314,7 +7314,7 @@
     });
     // ───────── 기록 지키기 (1.2.8) ─────────
     // 아이폰 사파리는 폰 안 기록(localStorage)을 스스로 지울 때가 있다 → 켠 사람만 Firebase(Firestore, 서울)에 저절로 담는다.
-    // 웹판만(안드로이드 앱 WebView는 구글 로그인이 막혀 있음). 이름·기분 모양 그림처럼 이 기기에만 두는 값은 담지 않는다.
+    // 웹판은 Firebase 구글 로그인 창, 안드로이드 앱은 앱이 구글 로그인을 하고 토큰만 넘긴다(WebView 안 구글 로그인은 막혀 있음). 이름·기분 모양 그림처럼 이 기기에만 두는 값은 담지 않는다.
     // 저장 자리: lifeguard/{uid}/cycles/current (지금 주기), lifeguard/{uid}/cycles/{c날짜} (진료 완료로 넘긴 지난 주기 = 보관함).
     // 값은 localStorage 문자열 그대로 담는다(data 칸) → 불러올 때 그대로 되돌리고, 나중에 가공할 때 JSON.parse.
     // Firebase 웹 앱 설정 (haru-hanjul 프로젝트를 함께 씀, Life Guard 기록은 lifeguard/{uid} 칸에만). apiKey는 비밀이 아님 — 지키는 것은 Firestore 규칙.
@@ -7330,7 +7330,11 @@
     const cloudOrigSet = Storage.prototype.setItem;
     const cloudOrigRemove = Storage.prototype.removeItem;
 
-    function cloudAvailable() { return !!CLOUD_CONFIG && !window.AndroidBridge; }
+    // 안드로이드 앱: 구글 로그인은 앱(Credential Manager)이 하고 토큰만 넘겨받는다 (googleSignInReady가 있어야 보임)
+    function cloudNative() {
+      try { return !!(window.AndroidBridge && typeof window.AndroidBridge.googleSignInReady === 'function' && window.AndroidBridge.googleSignInReady()); } catch (_) { return false; }
+    }
+    function cloudAvailable() { return !!CLOUD_CONFIG && (!window.AndroidBridge || cloudNative()); }
     function cloudGet(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
     function cloudPut(k, v) { try { if (v === null) cloudOrigRemove.call(localStorage, k); else cloudOrigSet.call(localStorage, k, v); } catch (_) {} }
     function cloudOn() { return cloudGet('lifeguard_cloud_on') === 'true'; }
@@ -7387,12 +7391,20 @@
         import(CLOUD_SDK + 'firebase-firestore-lite.js')
       ]).then(([appM, authM, fsM]) => {
         const app = appM.initializeApp(CLOUD_CONFIG);
-        const auth = authM.getAuth(app);
+        // 앱(file://)에서는 IndexedDB가 안 될 수 있어 localStorage로도 로그인 상태를 지킨다
+        const auth = window.AndroidBridge
+          ? authM.initializeAuth(app, { persistence: [authM.indexedDBLocalPersistence, authM.browserLocalPersistence] })
+          : authM.getAuth(app);
         const db = fsM.getFirestore(app);
         cloud.fb = { authM, fsM, auth, db };
-        authM.getRedirectResult(auth).catch(() => {});
+        if (!window.AndroidBridge) authM.getRedirectResult(auth).catch(() => {});
         authM.onAuthStateChanged(auth, (u) => {
           cloud.user = u;
+          // 앱: 켜 두었는데 로그인이 풀려 있으면, 전에 고른 계정으로 조용히 한 번 다시 잇는다 (창 없음)
+          if (!u && window.AndroidBridge && cloudOn() && !cloud.silentTried) {
+            cloud.silentTried = true;
+            try { window.AndroidBridge.googleSignIn(true); return; } catch (_) {}
+          }
           cloud.ready = true;
           if (u) {
             cloudPut('lifeguard_cloud_on', 'true');
@@ -7517,7 +7529,7 @@
       const title = '<div class="font-bold text-[#597075] text-[13px] flex items-center gap-1.5"><span>🛟</span> 기록 지키기</div>';
       if (!cloudOn()) {
         card.innerHTML = title +
-          '<p class="leading-relaxed text-[11px] ' + sub + '" style="word-break:keep-all">아이폰 사파리는 기록을 스스로 지울 때가 있어요. 켜 두면 기록을 저절로 담아 두어, 사라져도 다시 불러올 수 있어요. 진료 완료 뒤 지난 기록도 보관함에 남아요.</p>' +
+          '<p class="leading-relaxed text-[11px] ' + sub + '" style="word-break:keep-all">' + (window.AndroidBridge ? '켜 두면 기록을 저절로 담아 두어, 폰을 바꾸거나 앱을 다시 깔아도 불러올 수 있어요.' : '아이폰 사파리는 기록을 스스로 지울 때가 있어요. 켜 두면 기록을 저절로 담아 두어, 사라져도 다시 불러올 수 있어요.') + ' 진료 완료 뒤 지난 기록도 보관함에 남아요.</p>' +
           '<button type="button" onclick="openCloudConsent(event)" class="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border ' + (dark ? 'border-white/20 text-white/85' : 'border-gray-300 bg-white text-gray-700') + ' font-semibold text-[12.5px] active:scale-95 transition cursor-pointer">' + G + ' 구글로 로그인해 지키기</button>';
         return;
       }
@@ -7598,6 +7610,10 @@
         return;
       }
       const { authM, auth } = cloud.fb;
+      if (window.AndroidBridge) {
+        try { window.AndroidBridge.googleSignIn(false); } catch (_) { showToast('로그인하지 못했어요. 잠시 뒤 다시 눌러 주세요.'); }
+        return; // 결과는 window.onGoogleSignIn으로 온다
+      }
       const provider = new authM.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
       authM.signInWithPopup(auth, provider).then(() => {
@@ -7608,13 +7624,37 @@
       }).catch((err) => {
         const code = err && err.code || '';
         if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
-          authM.signInWithRedirect(auth, provider).catch(() => showToast('로그인하지 못했어요. 잠시 뒤 다시 눌러 주세요.'));
+          authM.signInWithRedirect(auth, provider).catch((e2) => showToast('로그인하지 못했어요. (' + ((e2 && e2.code) || 'redirect') + ')'));
           return;
         }
         if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return;
-        showToast('로그인하지 못했어요. 잠시 뒤 다시 눌러 주세요.');
+        // 원인을 찾을 수 있게 짧은 코드를 함께 보여 준다
+        showToast('로그인하지 못했어요. (' + (code || (err && err.message) || '알 수 없음') + ')');
       });
     }
+
+    // 안드로이드 앱이 구글 로그인 결과를 돌려준다: { ok, token, silent, reason }
+    window.onGoogleSignIn = function(payload) {
+      let r = payload;
+      try { if (typeof r === 'string') r = JSON.parse(r); } catch (_) { r = { ok: false, reason: 'parse' }; }
+      if (!cloud.fb) return;
+      const { authM, auth } = cloud.fb;
+      if (r && r.ok && r.token) {
+        authM.signInWithCredential(auth, authM.GoogleAuthProvider.credential(r.token)).then(() => {
+          const sh = document.getElementById('cloudSheet');
+          if (sh && sh.dataset.kind === 'consent') sh.remove();
+          if (!r.silent) showToast('기록 지키기를 켰어요 🛟');
+        }).catch(() => {
+          cloud.ready = true; renderCloudCard();
+          if (!r.silent) showToast('로그인하지 못했어요. 잠시 뒤 다시 눌러 주세요.');
+        });
+        return;
+      }
+      // 조용히 잇기가 안 되면 카드에 '다시 로그인'만 보여 준다 (창을 띄우지 않음)
+      cloud.ready = true;
+      renderCloudCard();
+      if (r && !r.silent && r.reason !== 'cancelled') showToast('로그인하지 못했어요. 잠시 뒤 다시 눌러 주세요.');
+    };
 
     function openCloudRestore(remote, why) {
       cloud.pendingRemote = remote;
@@ -7669,6 +7709,7 @@
       cloud.checked = false;
       cloud.archiveCount = null;
       try { if (cloud.fb) await cloud.fb.authM.signOut(cloud.fb.auth); } catch (_) {}
+      try { if (window.AndroidBridge && window.AndroidBridge.googleSignOut) window.AndroidBridge.googleSignOut(); } catch (_) {}
       cloud.user = null;
       closeCloudSheet();
       renderCloudCard();
