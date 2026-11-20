@@ -700,6 +700,9 @@
           </div>
         </div>
 
+        <!-- 기록 지키기 (1.2.8): 켠 사람만 Firebase에 저절로 담는다. 웹판만, 설정값(CLOUD_CONFIG)이 있을 때만 보인다 -->
+        <div id="cloudCard" class="bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2 transition-colors" style="display: none;"></div>
+
         <!-- 복약 관리 설정 (복약 안 할 시 끄기) -->
         <div id="settingsMedCard" class="bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2 transition-colors">
           <div class="flex items-center justify-between">
@@ -4191,6 +4194,11 @@
       const actions = document.getElementById('finishVisitActions');
       if (!modal || !card) return;
       if (actions) actions.style.display = 'flex';
+      // 기록 지키기를 켰으면 지난 기록은 보관함에 남는다 (1.2.8)
+      const fvDesc = document.getElementById('finishVisitDesc');
+      if (fvDesc) fvDesc.innerHTML = (cloudOn() && cloud.user)
+        ? '폰 화면의 지난 진료 기록을 비우고,<br>오늘부터 깨끗한 백지(0)에서 다시 시작합니다.<br>지난 기록은 기록 지키기 보관함에 남아요.<br><br>새 주기를 시작하시겠습니까?'
+        : '선생님께 보여드린 지난 진료 기록이 모두 비워지고,<br>오늘부터 깨끗한 백지(0)에서 다시 시작합니다.<br><br>새 주기를 시작하시겠습니까?';
       modal.classList.remove('hidden');
       modal.style.display = 'flex';
       void modal.offsetWidth; // force reflow for smooth opacity transition
@@ -4259,6 +4267,7 @@
       }
       modalClosingUntil = Date.now() + 2000;
       hideControls();
+      const archived = cloudArchiveCycle(); // 비우기 전에 지난 주기를 보관함으로 (켠 경우만)
       performDataReset();
 
       // 블러 팝업 내부를 '초기화 완료' 상태로 전환
@@ -4268,7 +4277,7 @@
       const actions = document.getElementById('finishVisitActions');
       if (iconWrap) iconWrap.textContent = '🌿';
       if (title) title.textContent = '초기화되었습니다';
-      if (desc) desc.innerHTML = '다시 기록을 시작합니다.<br>새로운 백지에서 오늘을 맞이합니다.';
+      if (desc) desc.innerHTML = '다시 기록을 시작합니다.<br>새로운 백지에서 오늘을 맞이합니다.' + (archived ? '<br>지난 기록은 보관함에 담았어요.' : '');
       if (actions) actions.style.display = 'none';
 
       // 1.1초 후 팝업 닫고 첫 화면으로 복귀
@@ -7303,6 +7312,385 @@
       // 알림 시각이 되어도 앱 안에서 선택창을 저절로 띄우지 않는다 (1.2.3).
       // 이미 쓰던 선택창이 다시 열리며 고른 도형이 사라지는 일을 막는다. 알림은 상단 알림으로만 온다.
     });
+    // ───────── 기록 지키기 (1.2.8) ─────────
+    // 아이폰 사파리는 폰 안 기록(localStorage)을 스스로 지울 때가 있다 → 켠 사람만 Firebase(Firestore, 서울)에 저절로 담는다.
+    // 웹판만(안드로이드 앱 WebView는 구글 로그인이 막혀 있음). 이름·기분 모양 그림처럼 이 기기에만 두는 값은 담지 않는다.
+    // 저장 자리: lifeguard/{uid}/cycles/current (지금 주기), lifeguard/{uid}/cycles/{c날짜} (진료 완료로 넘긴 지난 주기 = 보관함).
+    // 값은 localStorage 문자열 그대로 담는다(data 칸) → 불러올 때 그대로 되돌리고, 나중에 가공할 때 JSON.parse.
+    // Firebase 웹 앱 설정 (haru-hanjul 프로젝트를 함께 씀, Life Guard 기록은 lifeguard/{uid} 칸에만). apiKey는 비밀이 아님 — 지키는 것은 Firestore 규칙.
+    const CLOUD_CONFIG = {
+      apiKey: 'AIzaSyDroq35SSRzp-oTmE4rtkjLpgQzbxqWfTo',
+      authDomain: 'haru-hanjul-f16fc.firebaseapp.com',
+      projectId: 'haru-hanjul-f16fc',
+      appId: '1:6418622627:web:551e87825217d28fa0b716'
+    };
+    const CLOUD_SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
+    const CLOUD_SKIP = /^lifeguard_(patient_name|ios_guide_dismissed|whats_new_hidden|activity_granted|sleep_auto|sleep_auto_days|mood_glyph_sets|mood_glyphs|mood_glyph_active|cloud_.*)$/;
+    const cloud = { fb: null, loading: null, user: null, ready: false, status: 'idle', timer: null, checked: false, archiveCount: null };
+    const cloudOrigSet = Storage.prototype.setItem;
+    const cloudOrigRemove = Storage.prototype.removeItem;
+
+    function cloudAvailable() { return !!CLOUD_CONFIG && !window.AndroidBridge; }
+    function cloudGet(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
+    function cloudPut(k, v) { try { if (v === null) cloudOrigRemove.call(localStorage, k); else cloudOrigSet.call(localStorage, k, v); } catch (_) {} }
+    function cloudOn() { return cloudGet('lifeguard_cloud_on') === 'true'; }
+    function cloudIsSynced(k) { return typeof k === 'string' && k.startsWith('lifeguard_') && !CLOUD_SKIP.test(k); }
+
+    // 기록이 바뀌면(어느 함수에서 저장하든) 몇 초 모았다가 한 번 담는다
+    Storage.prototype.setItem = function(k, v) {
+      cloudOrigSet.call(this, k, v);
+      if (this === window.localStorage && cloudIsSynced(k)) cloudMarkDirty();
+    };
+    Storage.prototype.removeItem = function(k) {
+      cloudOrigRemove.call(this, k);
+      if (this === window.localStorage && cloudIsSynced(k)) cloudMarkDirty();
+    };
+
+    function cloudSnapshot() {
+      const data = {};
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (cloudIsSynced(k)) data[k] = localStorage.getItem(k);
+        }
+      } catch (_) {}
+      return data;
+    }
+    function cloudHasRecords(data) {
+      const n = (k) => { try { const v = JSON.parse(data[k] || 'null'); return Array.isArray(v) ? v.length : (v && typeof v === 'object' ? Object.keys(v).length : 0); } catch (_) { return 0; } };
+      return n('lifeguard_mood_records') + n('lifeguard_pill_records') + n('lifeguard_doctor_notes') + n('lifeguard_sleep_log') > 0;
+    }
+    function cloudSummary(data) {
+      const n = (k) => { try { const v = JSON.parse(data[k] || 'null'); return Array.isArray(v) ? v.length : (v && typeof v === 'object' ? Object.keys(v).length : 0); } catch (_) { return 0; } };
+      const parts = [];
+      if (n('lifeguard_mood_records')) parts.push('기분 ' + n('lifeguard_mood_records') + '개');
+      if (n('lifeguard_pill_records')) parts.push('약 ' + n('lifeguard_pill_records') + '번');
+      if (n('lifeguard_sleep_log')) parts.push('잠 ' + n('lifeguard_sleep_log') + '일');
+      if (n('lifeguard_doctor_notes')) parts.push('말씀 ' + n('lifeguard_doctor_notes') + '개');
+      return parts.join(' · ') || '설정만 있어요';
+    }
+    function cloudTimeText(ms) {
+      if (!ms) return '';
+      const d = new Date(ms), now = new Date();
+      const h = d.getHours(), m = String(d.getMinutes()).padStart(2, '0');
+      const t = (h < 12 ? '오전 ' : '오후 ') + ((h % 12) || 12) + ':' + m;
+      if (d.toDateString() === now.toDateString()) return '오늘 ' + t;
+      return (d.getMonth() + 1) + '월 ' + d.getDate() + '일 ' + t;
+    }
+
+    function cloudLoadSdk() {
+      if (cloud.fb) return Promise.resolve(cloud.fb);
+      if (cloud.loading) return cloud.loading;
+      cloud.loading = Promise.all([
+        import(CLOUD_SDK + 'firebase-app.js'),
+        import(CLOUD_SDK + 'firebase-auth.js'),
+        import(CLOUD_SDK + 'firebase-firestore-lite.js')
+      ]).then(([appM, authM, fsM]) => {
+        const app = appM.initializeApp(CLOUD_CONFIG);
+        const auth = authM.getAuth(app);
+        const db = fsM.getFirestore(app);
+        cloud.fb = { authM, fsM, auth, db };
+        authM.getRedirectResult(auth).catch(() => {});
+        authM.onAuthStateChanged(auth, (u) => {
+          cloud.user = u;
+          cloud.ready = true;
+          if (u) {
+            cloudPut('lifeguard_cloud_on', 'true');
+            cloudAfterLogin();
+          }
+          renderCloudCard();
+        });
+        return cloud.fb;
+      }).catch((err) => {
+        cloud.loading = null;
+        cloud.status = 'offline';
+        renderCloudCard();
+        throw err;
+      });
+      return cloud.loading;
+    }
+    function cloudRef(id) {
+      const { fsM, db } = cloud.fb;
+      return fsM.doc(db, 'lifeguard', cloud.user.uid, 'cycles', id);
+    }
+
+    function cloudMarkDirty() {
+      if (!cloudOn()) return;
+      cloudPut('lifeguard_cloud_local_at', String(Date.now()));
+      cloudPut('lifeguard_cloud_dirty', 'true');
+      clearTimeout(cloud.timer);
+      cloud.timer = setTimeout(cloudSave, 2500);
+    }
+    async function cloudSave() {
+      clearTimeout(cloud.timer);
+      if (!cloudOn() || !cloud.fb || !cloud.user || !cloud.checked) return;
+      cloud.status = 'saving';
+      renderCloudCard();
+      const at = Date.now();
+      try {
+        await cloud.fb.fsM.setDoc(cloudRef('current'), { savedAt: at, app: 'web', data: cloudSnapshot() });
+        cloudPut('lifeguard_cloud_saved_at', String(at));
+        cloudPut('lifeguard_cloud_dirty', null);
+        cloud.status = 'idle';
+      } catch (_) {
+        cloud.status = 'failed';
+      }
+      renderCloudCard();
+    }
+
+    // 로그인 직후 한 번: 담아 둔 기록과 이 폰 기록을 맞춘다
+    async function cloudAfterLogin() {
+      if (cloud.checked) return;
+      let remote = null;
+      try {
+        const snap = await cloud.fb.fsM.getDoc(cloudRef('current'));
+        remote = snap.exists() ? snap.data() : null;
+      } catch (_) {
+        cloud.status = 'failed';
+        renderCloudCard();
+        return; // 다음에 열 때 다시
+      }
+      cloud.checked = true;
+      cloudCountArchive();
+      const local = cloudSnapshot();
+      const localAt = parseInt(cloudGet('lifeguard_cloud_local_at') || '0', 10);
+      if (remote && remote.data && cloudHasRecords(remote.data)) {
+        if (!cloudHasRecords(local)) { openCloudRestore(remote, 'empty'); return; }
+        if ((remote.savedAt || 0) > localAt + 1000 && JSON.stringify(remote.data) !== JSON.stringify(local)) { openCloudRestore(remote, 'newer'); return; }
+      }
+      if (!remote || cloudGet('lifeguard_cloud_dirty') === 'true' || cloudHasRecords(local)) cloudSave();
+    }
+    async function cloudCountArchive() {
+      try {
+        const { fsM, db } = cloud.fb;
+        const qs = await fsM.getDocs(fsM.collection(db, 'lifeguard', cloud.user.uid, 'cycles'));
+        cloud.archiveCount = qs.docs.filter(d => d.id !== 'current').length;
+        renderCloudCard();
+      } catch (_) {}
+    }
+
+    function cloudApply(data, savedAt) {
+      try {
+        const old = [];
+        for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (cloudIsSynced(k)) old.push(k); }
+        old.forEach(k => cloudOrigRemove.call(localStorage, k));
+        Object.keys(data || {}).forEach(k => { if (cloudIsSynced(k)) cloudOrigSet.call(localStorage, k, data[k]); });
+        cloudPut('lifeguard_cloud_local_at', String(savedAt || Date.now()));
+        cloudPut('lifeguard_cloud_saved_at', String(savedAt || Date.now()));
+        cloudPut('lifeguard_cloud_dirty', null);
+      } catch (_) {}
+      location.reload();
+    }
+
+    // 진료 완료: 비우기 전에 지금 주기를 보관함으로 넘긴다
+    function cloudArchiveCycle() {
+      if (!cloudOn() || !cloud.fb || !cloud.user) return false;
+      const data = cloudSnapshot();
+      if (!cloudHasRecords(data)) return false;
+      const now = new Date();
+      const p = (n) => String(n).padStart(2, '0');
+      const id = 'c' + now.getFullYear() + p(now.getMonth() + 1) + p(now.getDate()) + '-' + p(now.getHours()) + p(now.getMinutes()) + p(now.getSeconds());
+      cloud.fb.fsM.setDoc(cloudRef(id), {
+        savedAt: now.getTime(), app: 'web', archived: true,
+        from: data.lifeguard_last_visit_date || null, to: id.slice(1, 9),
+        data
+      }).then(() => { cloud.archiveCount = (cloud.archiveCount || 0) + 1; renderCloudCard(); }).catch(() => {});
+      return true;
+    }
+
+    // ── 화면 ──
+    function cloudIsDark() {
+      const pc = document.getElementById('settingsPatientCard');
+      return !!(pc && pc.className.indexOf('#222628') >= 0);
+    }
+    function renderCloudCard() {
+      const card = document.getElementById('cloudCard');
+      if (!card) return;
+      if (!cloudAvailable()) { card.style.display = 'none'; return; }
+      const pc = document.getElementById('settingsPatientCard');
+      if (pc) card.className = pc.className;
+      card.style.display = '';
+      const dark = cloudIsDark();
+      const sub = dark ? 'text-white/55' : 'text-gray-500';
+      const boxBg = dark ? 'background:rgba(255,255,255,0.06)' : 'background:#f4f7f8';
+      const G = '<svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true" style="display:inline;flex-shrink:0"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.1 1.4-4.9 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>';
+      const title = '<div class="font-bold text-[#597075] text-[13px] flex items-center gap-1.5"><span>🛟</span> 기록 지키기</div>';
+      if (!cloudOn()) {
+        card.innerHTML = title +
+          '<p class="leading-relaxed text-[11px] ' + sub + '" style="word-break:keep-all">아이폰 사파리는 기록을 스스로 지울 때가 있어요. 켜 두면 기록을 저절로 담아 두어, 사라져도 다시 불러올 수 있어요. 진료 완료 뒤 지난 기록도 보관함에 남아요.</p>' +
+          '<button type="button" onclick="openCloudConsent(event)" class="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border ' + (dark ? 'border-white/20 text-white/85' : 'border-gray-300 bg-white text-gray-700') + ' font-semibold text-[12.5px] active:scale-95 transition cursor-pointer">' + G + ' 구글로 로그인해 지키기</button>';
+        return;
+      }
+      let line;
+      if (!cloud.ready) line = '이어 붙이는 중…';
+      else if (!cloud.user) line = '로그인이 풀렸어요. 다시 로그인해 주세요.';
+      else if (cloud.status === 'saving') line = '담는 중…';
+      else if (cloud.status === 'failed' || cloud.status === 'offline') line = '지금은 담지 못했어요. 인터넷이 이어지면 다시 담아요.';
+      else {
+        const at = parseInt(cloudGet('lifeguard_cloud_saved_at') || '0', 10);
+        line = at ? '마지막으로 담은 때: ' + cloudTimeText(at) : '아직 담은 기록이 없어요.';
+      }
+      const arch = (cloud.user && cloud.archiveCount) ? '<br>보관함: 지난 주기 ' + cloud.archiveCount + '개' : '';
+      const who = cloud.user ? escapeHtml(cloud.user.email || '구글 계정') : '';
+      card.innerHTML = title +
+        (cloud.user
+          ? '<div class="flex items-center justify-between gap-2 rounded-xl px-3 py-2" style="' + boxBg + '"><span class="flex items-center gap-1.5 min-w-0">' + G + '<span class="font-semibold truncate">' + who + '</span></span><span class="text-[10.5px] text-[#597075] font-semibold shrink-0">✓ 지키는 중</span></div>'
+          : '') +
+        '<p class="text-[11px] ' + sub + ' leading-relaxed" style="word-break:keep-all">' + line + arch + '</p>' +
+        '<div class="grid grid-cols-2 gap-1.5">' +
+          (cloud.user
+            ? '<button type="button" onclick="cloudSaveNow(event)" class="py-2 rounded-xl ' + (dark ? 'bg-white/10 text-[#9ec0c4]' : 'bg-[#597075]/10 text-[#597075]') + ' text-[11px] font-semibold active:scale-95 transition cursor-pointer">지금 담기</button>'
+            : '<button type="button" onclick="cloudSignIn(event)" class="py-2 rounded-xl bg-[#597075]/10 text-[#597075] text-[11px] font-semibold active:scale-95 transition cursor-pointer">다시 로그인</button>') +
+          '<button type="button" onclick="openCloudOff(event)" class="py-2 rounded-xl border ' + (dark ? 'border-white/20 text-white/70' : 'border-gray-200 text-gray-600') + ' text-[11px] font-semibold active:scale-95 transition cursor-pointer">끄기</button>' +
+        '</div>';
+    }
+    function cloudSaveNow(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      cloudSave().then(() => { if (cloud.status === 'idle') showToast('기록을 담았어요 🛟'); });
+    }
+
+    // 작은 창 하나로 동의·불러오기·끄기를 모두 그린다
+    function cloudSheet(html, kind) {
+      closeCloudSheet();
+      const dark = cloudIsDark();
+      const wrap = document.createElement('div');
+      wrap.id = 'cloudSheet';
+      wrap.dataset.kind = kind || '';
+      wrap.onclick = (ev) => { if (ev.target === wrap) closeCloudSheet(); };
+      wrap.style.cssText = 'position:fixed;inset:0;z-index:80;background:rgba(20,28,30,0.45);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px';
+      wrap.innerHTML = '<div onclick="event.stopPropagation()" class="rounded-3xl p-5 w-full space-y-3 shadow-2xl ' + (dark ? 'bg-[#222628] text-white/85 border border-[#333a3d]' : 'bg-white text-gray-700') + '" style="max-width:340px;max-height:86vh;overflow-y:auto;word-break:keep-all">' + html + '</div>';
+      document.body.appendChild(wrap);
+    }
+    function closeCloudSheet(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      const s = document.getElementById('cloudSheet');
+      if (s) s.remove();
+    }
+    function cloudBtn(label, onclick, primary) {
+      const dark = cloudIsDark();
+      const cls = primary ? 'bg-[#597075] text-white font-bold' : (dark ? 'text-white/60' : 'text-gray-500');
+      return '<button type="button" onclick="' + onclick + '" class="w-full py-2.5 rounded-xl text-[13px] ' + cls + ' active:scale-95 transition cursor-pointer">' + label + '</button>';
+    }
+
+    function openCloudConsent(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      cloudLoadSdk().catch(() => {}); // 로그인 단추를 누를 때 바로 창이 뜨도록 미리 불러 둔다
+      const li = (t) => '<li class="flex gap-1.5"><span class="text-[#597075]">•</span><span>' + t + '</span></li>';
+      cloudSheet(
+        '<div class="text-[15px] font-bold text-[#597075]">🛟 기록 지키기를 켤까요?</div>' +
+        '<ul class="text-[12px] leading-relaxed space-y-1.5">' +
+          li('기분·약·잠·선생님께 드릴 말씀과 설정을 <b>Google Firebase(서울)</b>에 저절로 담아요.') +
+          li('<b>이름은 담지 않아요.</b> 첫 화면 기분 모양 그림도 이 기기에만 둬요.') +
+          li('구글로 로그인한 <b>본인만</b> 열 수 있어요. 다만 Life Guard를 운영하는 사람은 관리 화면에서 볼 수 있어요.') +
+          li('진료 완료를 하면 폰 화면은 새로 시작하고, 지난 기록은 <b>보관함</b>에 남아요.') +
+          li('언제든 끌 수 있고, 끌 때 담아 둔 기록을 모두 지울 수 있어요.') +
+        '</ul>' +
+        '<p class="text-[10.5px] ' + (cloudIsDark() ? 'text-white/50' : 'text-gray-400') + ' leading-relaxed">기분·약·잠은 건강에 관한 민감한 정보예요. 위 내용에 동의하시면 아래를 눌러 주세요.</p>' +
+        cloudBtn('동의하고 구글로 로그인', 'cloudSignIn(event)', true) +
+        cloudBtn('그만두기', 'closeCloudSheet(event)', false)
+      , 'consent');
+    }
+    function cloudSignIn(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      if (!cloud.fb) {
+        showToast('잠시만요, 준비하고 있어요…');
+        cloudLoadSdk().then(() => showToast('준비됐어요. 한 번 더 눌러 주세요.')).catch(() => showToast('인터넷이 이어졌을 때 다시 눌러 주세요.'));
+        return;
+      }
+      const { authM, auth } = cloud.fb;
+      const provider = new authM.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      authM.signInWithPopup(auth, provider).then(() => {
+        // 동의 창만 닫는다 (그 사이 '담아 둔 기록이 있어요' 창이 떴을 수 있음)
+        const sh = document.getElementById('cloudSheet');
+        if (sh && sh.dataset.kind === 'consent') sh.remove();
+        showToast('기록 지키기를 켰어요 🛟');
+      }).catch((err) => {
+        const code = err && err.code || '';
+        if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
+          authM.signInWithRedirect(auth, provider).catch(() => showToast('로그인하지 못했어요. 잠시 뒤 다시 눌러 주세요.'));
+          return;
+        }
+        if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return;
+        showToast('로그인하지 못했어요. 잠시 뒤 다시 눌러 주세요.');
+      });
+    }
+
+    function openCloudRestore(remote, why) {
+      cloud.pendingRemote = remote;
+      const when = cloudTimeText(remote.savedAt);
+      cloudSheet(
+        '<div class="text-[15px] font-bold text-[#597075]">🛟 ' + (why === 'empty' ? '담아 둔 기록이 있어요' : '더 새로운 기록이 있어요') + '</div>' +
+        '<p class="text-[12.5px] leading-relaxed"><b>' + when + '</b>에 담아 둔 기록이에요.<br>' + cloudSummary(remote.data) + '</p>' +
+        '<p class="text-[11px] ' + (cloudIsDark() ? 'text-white/50' : 'text-gray-500') + ' leading-relaxed">' +
+          (why === 'empty' ? '이 폰에는 지금 기록이 없어요. 불러오면 그대로 이어서 쓸 수 있어요.' : '다른 기기에서 적은 것 같아요. 불러오면 이 폰의 지금 기록 대신 담아 둔 기록으로 바뀌어요.') + '</p>' +
+        cloudBtn('불러오기', 'cloudRestoreNow(event)', true) +
+        cloudBtn(why === 'empty' ? '나중에' : '이 폰 기록 그대로 쓰기', 'cloudKeepLocal(event)', false)
+      );
+    }
+    function cloudRestoreNow(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      const r = cloud.pendingRemote;
+      if (r) cloudApply(r.data, r.savedAt);
+    }
+    function cloudKeepLocal(e) {
+      closeCloudSheet(e);
+      const r = cloud.pendingRemote;
+      cloud.pendingRemote = null;
+      // '나중에'(이 폰이 비어 있음)는 담아 둔 것을 덮지 않는다. '이 폰 그대로'는 이 폰 기록을 담는다.
+      if (r && cloudHasRecords(cloudSnapshot())) cloudSave();
+      else cloud.checked = false;
+    }
+
+    function openCloudOff(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      cloudSheet(
+        '<div class="text-[15px] font-bold text-[#597075]">기록 지키기를 끌까요?</div>' +
+        '<p class="text-[12px] leading-relaxed">이 폰의 기록은 그대로예요. 담아 둔 기록은 어떻게 할까요?</p>' +
+        cloudBtn('끄기 (담아 둔 기록은 남겨 두기)', 'cloudTurnOff(event, false)', true) +
+        '<button type="button" onclick="cloudTurnOff(event, true)" class="w-full py-2.5 rounded-xl text-[12.5px] border ' + (cloudIsDark() ? 'border-white/20 text-white/75' : 'border-gray-200 text-gray-600') + ' active:scale-95 transition cursor-pointer">끄고 담아 둔 기록도 모두 지우기</button>' +
+        cloudBtn('그만두기', 'closeCloudSheet(event)', false)
+      );
+    }
+    async function cloudTurnOff(e, wipe) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      if (wipe && cloud.fb && cloud.user) {
+        try {
+          const { fsM, db } = cloud.fb;
+          const qs = await fsM.getDocs(fsM.collection(db, 'lifeguard', cloud.user.uid, 'cycles'));
+          await Promise.all(qs.docs.map(d => fsM.deleteDoc(d.ref)));
+        } catch (_) {
+          showToast('지우지 못했어요. 인터넷을 확인하고 다시 해 주세요.');
+          return;
+        }
+      }
+      clearTimeout(cloud.timer);
+      ['lifeguard_cloud_on', 'lifeguard_cloud_saved_at', 'lifeguard_cloud_local_at', 'lifeguard_cloud_dirty'].forEach(k => cloudPut(k, null));
+      cloud.checked = false;
+      cloud.archiveCount = null;
+      try { if (cloud.fb) await cloud.fb.authM.signOut(cloud.fb.auth); } catch (_) {}
+      cloud.user = null;
+      closeCloudSheet();
+      renderCloudCard();
+      showToast(wipe ? '끄고 담아 둔 기록을 지웠어요.' : '기록 지키기를 껐어요.');
+    }
+
+    // 시작: 켜 둔 사람만 SDK를 불러 로그인 상태를 되살린다. 화면을 떠날 때는 기다리지 않고 바로 담는다
+    document.addEventListener('DOMContentLoaded', () => {
+      renderCloudCard();
+      if (cloudAvailable() && cloudOn()) cloudLoadSdk().catch(() => {});
+      const pc = document.getElementById('settingsPatientCard');
+      if (pc && window.MutationObserver) new MutationObserver(renderCloudCard).observe(pc, { attributes: true, attributeFilter: ['class'] });
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && cloudGet('lifeguard_cloud_dirty') === 'true') cloudSave();
+    });
+    window.addEventListener('online', () => {
+      if (!cloudOn() || !cloud.fb) { if (cloudAvailable() && cloudOn()) cloudLoadSdk().catch(() => {}); return; }
+      if (!cloud.checked && cloud.user) cloudAfterLogin();
+      else if (cloudGet('lifeguard_cloud_dirty') === 'true') cloudSave();
+    });
+
     // 웹판(https)에서만: 안드로이드 크롬 '앱 설치'용 도우미. 앱(APK) 안에서는 건너뛴다
     if ('serviceWorker' in navigator && location.protocol === 'https:') {
       navigator.serviceWorker.register('sw.js').catch(() => {});
