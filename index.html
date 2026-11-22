@@ -357,9 +357,16 @@
       </button>
 
       <!-- Top Center: 잠 기록 (1.2.7). 평소엔 보이지 않고, 한 번 누르면 침대가 피어나고 침대를 누르면 잠 기록 창 -->
-      <button id="sleepEntryBtn" type="button" onclick="tapSleepEntry(event)" aria-label="잠 기록" class="flex-1 h-9 mx-3 flex items-center justify-center text-current">
+      <!-- 1.2.11: 꾹 누르기(1초) — 안 자면 '잘게요', 자는 중이면 '깼어요' (낮이고 밤이고 같음) -->
+      <button id="sleepEntryBtn" type="button" onclick="tapSleepEntry(event)" oncontextmenu="return false" aria-label="잠 기록" class="flex-1 h-9 mx-3 flex items-center justify-center text-current" style="-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;touch-action:manipulation;">
+        <span class="relative inline-flex items-center justify-center">
+        <svg id="sleepHoldRing" width="44" height="44" viewBox="0 0 44 44" aria-hidden="true" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-90deg);pointer-events:none;opacity:0;transition:opacity .2s;">
+          <circle cx="22" cy="22" r="19" fill="none" stroke="currentColor" stroke-opacity="0.15" stroke-width="2.5"/>
+          <circle id="sleepHoldArc" cx="22" cy="22" r="19" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="119.4" stroke-dashoffset="119.4"/>
+        </svg>
         <span id="sleepEntryIcon" style="opacity: 0; transition: opacity 0.35s ease;" aria-hidden="true">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12M3 15h18v4M21 15v-3a3 3 0 0 0-3-3h-7v6"/><circle cx="7" cy="12" r="1.8"/><path d="M15.5 3.2a2.6 2.6 0 1 0 3.3 3.3 3 3 0 1 1-3.3-3.3z"/></svg>
+        </span>
         </span>
       </button>
 
@@ -511,6 +518,16 @@
         #sleepModal .sl-tm input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; margin: 0; cursor: pointer; font-size: 16px; }
         #sleepModal .sl-til { color: var(--sl-muted); font-size: calc(13px * var(--sl-fs)); }
         #sleepModal .sl-x { width: 30px; height: 30px; border-radius: 15px; color: var(--sl-muted); font-weight: 700; font-size: 18px; line-height: 1; flex-shrink: 0; }
+        #sleepModal .sl-now { background: var(--sl-card); border-radius: 24px; padding: 16px 14px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+        #sleepModal .sl-now.dark { background: #1f2a2c; color: #e6eeee; }
+        #sleepModal .sl-now .t { font-size: calc(12.5px * var(--sl-fs)); opacity: .65; }
+        #sleepModal .sl-now .q { font-size: calc(19px * var(--sl-fs)); font-weight: 700; margin: 4px 0 12px; }
+        #sleepModal .sl-now .row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        #sleepModal .sl-now-btn { border-radius: 999px; padding: 12px 20px; font-size: calc(16px * min(var(--sl-fs), 1.1)); font-weight: 800; white-space: nowrap; }
+        #sleepModal .sl-now-btn.moon { background: #9ec0c4; color: #14201f; }
+        #sleepModal .sl-now-btn.wake { background: #e8b98a; color: #2a1d10; }
+        #sleepModal .sl-now-btn.sun { background: #e6eeee; color: #1f2a2c; }
+        #sleepModal .sl-now-undo { margin-top: 10px; font-size: calc(12px * var(--sl-fs)); opacity: .55; text-decoration: underline; }
         #sleepDial { touch-action: none; user-select: none; -webkit-user-select: none; }
       </style>
       <div class="w-full h-full overflow-y-auto" style="padding: max(14px, env(safe-area-inset-top)) 16px max(14px, env(safe-area-inset-bottom));">
@@ -520,7 +537,8 @@
             <div class="font-bold pl-1" style="color: var(--sl-ink); font-size: calc(18px * var(--sl-fs));">🛏️ 잠 기록</div>
             <button type="button" onclick="closeSleepModal(event)" aria-label="닫기" class="rounded-full px-4 py-2 font-bold flex items-center gap-1.5" style="background: var(--sl-soft); color: var(--sl-ink); font-size: calc(14px * var(--sl-fs));">닫기 <span aria-hidden="true">✕</span></button>
           </div>
-          <div class="sl-card">
+          <div id="sleepNowCard"></div>
+          <div id="sleepMainCard" class="sl-card">
             <!-- 1.2.8 정리: 닫기는 위로, 시각/숫자 바꾸기는 아래 작은 글씨로 (사용자: 너무 산만) -->
             <div class="relative flex items-center justify-center gap-1">
               <button type="button" onclick="moveSleepDate(-1, event)" aria-label="전날" class="shrink-0 w-10 h-10 rounded-full text-2xl" style="color: var(--sl-muted);">‹</button>
@@ -531,6 +549,7 @@
               </button>
               <button type="button" id="sleepNextBtn" onclick="moveSleepDate(1, event)" aria-label="다음 날" class="shrink-0 w-10 h-10 rounded-full text-2xl" style="color: var(--sl-muted);">›</button>
             </div>
+            <div class="text-center" style="margin-top:6px;"><span id="sleepSrcTag" class="sl-small" style="display:none;background:var(--sl-soft);border-radius:99px;padding:2px 10px;font-weight:700;color:var(--sl-main);"></span></div>
             <div id="sleepTimeBox">
               <div id="sleepAutoNote" class="sl-small text-center mt-3" style="display: none;"></div>
               <!-- 1.2.11 (사용자): 시계 가운데에 잔 시간과 잠든·깬 시각. 시각을 누르면 시각 고르는 창 -->
@@ -1096,7 +1115,7 @@
         </div>
       </div>
       <div class="pt-2">
-      <div id="settingsVersion" class="text-center text-[10px] text-gray-400">Life Guard v1.2.9-alpha (알파판)</div>
+      <div id="settingsVersion" class="text-center text-[10px] text-gray-400">Life Guard v1.2.11-alpha (알파판)</div>
       </div>
     </div>
 
@@ -7283,13 +7302,13 @@
     }
 
     // ── 새로워진 점 안내 (버전별). 저절로는 한 번만 뜬다. 다시 보려면 설정 맨 아래 '새로워진 점 보기' ──
-    const WHATS_NEW_VERSION = '1.2.9';
-    // 1.2.9에서 바뀐 것 (문구 사용자 확인 11.22). 보관함·주기 같은 저장 구조는 말하지 않는다 (PHILOSOPHY 3-③). 세 번째 값 'android'는 안드로이드 앱에서만, 'web'은 웹·아이폰에서만
+    const WHATS_NEW_VERSION = '1.2.11';
+    // 1.2.11에서 바뀐 것 (잠 기록). 세 번째 값 'android'는 안드로이드 앱에서만, 'web'은 웹·아이폰에서만
     const WHATS_NEW_ITEMS = [
-      ['🔑', '이제 구글로 로그인해서 써요. 기록이 구글 계정에 저절로 담겨, 폰을 바꿔도 그대로예요.'],
-      ['📶', '인터넷이 없을 때는 보기만 되고, 기록은 인터넷이 이어지면 할 수 있어요.'],
-      ['📝', '함께 보기에서 우울·불안·몸 증상 설문을 할 수 있어요. 상세 설정에서 켜고 꺼요.'],
-      ['📤', '함께 보는 기록을 보낼 때 기분·잠·걸음으로 나뉘고 더 또렷해졌어요.'],
+      ['🌙', '잠 기록이 쉬워졌어요. 첫 화면 위 가운데를 꾹 누르면 ‘잘 자요’, 깨서 한 번 더 꾹 누르면 ‘깼어요’예요.'],
+      ['👁', '밤중에 깼다가 다시 잘 때도 꾹. 밤중에 깬 때와 낮잠은 앱이 알아서 나눠 적어요.'],
+      ['🕐', '잠 기록 창 시계 가운데에 잠든·깬 시각이 보이고, 눌러서 바로 고칠 수 있어요.'],
+      ['🛏️', '잠 기록은 설정 상세 칸에서 켜고 꺼요.'],
       ['🌿', '이 안내는 한 번만 떠요. 설정 상세 칸 맨 아래 ‘새로워진 점 보기’에서 다시 볼 수 있어요.']
     ];
     let whatsNewEl = null;
@@ -7389,6 +7408,8 @@
     // 첫 화면 위 가운데: 한 번 누르면 침대가 보이고(3.5초 뒤 사라짐), 침대가 보일 때 누르면 창을 연다
     function tapSleepEntry(e) {
       if (e && e.stopPropagation) e.stopPropagation();
+      if (sleepHoldFired) { sleepHoldFired = false; return; } // 꾹 누르기를 마친 손을 뗀 것
+
       const icon = document.getElementById('sleepEntryIcon');
       if (!icon) return;
       triggerHaptic();
@@ -7405,7 +7426,7 @@
     function hideSleepEntry() {
       clearTimeout(sleepEntryTimer);
       const icon = document.getElementById('sleepEntryIcon');
-      if (icon) { icon.dataset.shown = ''; icon.style.opacity = '0'; }
+      if (icon) { icon.dataset.shown = ''; icon.style.opacity = icon.dataset.live ? '0.28' : '0'; }
     }
 
     const sleepDur = (s) => ((s.end - s.start) % 1440 + 1440) % 1440;
@@ -7551,6 +7572,7 @@
       set('sleepAutoRestricted', el => { el.style.display = sleepAutoOn ? 'none' : 'block'; });
       set('sleepAutoKnob', el => { el.style.transform = sleepAutoOn ? 'translateX(20px)' : 'translateX(0)'; });
       drawSleepDial(); renderSleepFine(); renderSleepPills();
+      renderSleepNow();
     }
 
     // 24시간 시계: 위 0시, 오른쪽 6시, 아래 12시, 왼쪽 18시. 손잡이를 끌면 5분 단위로 움직인다
@@ -7877,6 +7899,165 @@
       renderActivityData();
       showToast('이 날 잠 기록을 지웠어요');
     }
+
+    // ── 1.2.11: '지금 잘게요' (누르면 자기, 한 번 더 누르면 깨기. 첫 화면 위 가운데 꾹 누르기로도) ──
+    // 하루 잠 기록은 하나. 누른 것도 결국 시계 위에 그려지고, 시계에서 고친다.
+    // 적히는 순서: ① 직접(눌렀거나 시계로 고친 것) ② 자동으로 잰 것(안드로이드) ③ 빈칸
+    // lifeguard_sleep_live: { start: ms } — 자는 중일 때만 있음
+    let sleepLive = (function() { const o = safeJsonParse('lifeguard_sleep_live', null); return o && o.start ? o : null; })();
+    const sleepNow = () => new Date();
+    function saveSleepLive() {
+      try { if (sleepLive) localStorage.setItem('lifeguard_sleep_live', JSON.stringify(sleepLive)); else localStorage.removeItem('lifeguard_sleep_live'); } catch (_) {}
+      updateSleepEntryLive();
+    }
+    const sleepMinOf = (ms) => { const d = new Date(ms); return d.getHours() * 60 + d.getMinutes(); };
+    // 밤 시각은 '밤 11:42', '밤 2:10'처럼 (오전 6시~오후 6시는 그대로)
+    const sleepClock = (ms) => { const m = sleepMinOf(ms), h = Math.floor(m / 60); return (h >= 19 || h < 5) ? `밤 ${h % 12 || 12}:${String(m % 60).padStart(2, '0')}` : sleepFmt(m); };
+    function sleepIsEvening() { const h = sleepNow().getHours(); return h >= 18 || h < 4; }
+
+    function sleepGoToBed(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      if (cloudWriteBlocked()) return;
+      triggerHaptic();
+      sleepLive = { start: sleepNow().getTime() };
+      saveSleepLive();
+      showToast('잘 자요 🌙');
+      renderSleepNow();
+    }
+    // 1.2.11 (사용자: 낮이고 밤이고 누르면 자기, 한 번 더 누르면 깨기 — 그럼 모두 커버):
+    // 잠 한 덩어리(잔 때~깬 때)가 생길 때마다 깬 날 칸에 이렇게 넣는다
+    //   · 그날 밤잠이 끝난 뒤 3시간 안에 다시 잤으면 → 밤잠을 이어 늘리고, 그 사이는 '밤중에 깬 때'
+    //   · 그날 밤잠이 이미 있으면 → 낮잠
+    //   · 그날 첫 잠: 3시간 넘게 잤거나 저녁·새벽(오후 8시~오전 9시)에 잠들었으면 → 밤잠, 아니면 낮잠
+    function sleepWakeUp(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      if (!sleepLive || cloudWriteBlocked()) return;
+      triggerHaptic();
+      const a = sleepLive.start, b = sleepNow().getTime();
+      sleepLive = null; saveSleepLive();
+      if (b - a < 10 * 60000) { showToast('10분이 안 돼서 적지 않았어요'); renderSleepNow(); return; }
+      if (b - a > 16 * 3600000) { // 깨기를 잊은 것
+        showToast('잠든 때부터 16시간이 넘었어요. 시계로 맞춰 주세요');
+        if (!sleepEdit) openSleepModal(localDateKey(new Date(b))); else { loadSleepEdit(localDateKey(new Date(b))); renderSleepModal(); }
+        return;
+      }
+      const res = sleepAddChunk(a, b);
+      try { renderActivityData(); } catch (_) {}
+      showToast(res.kind === 'nap' ? `깼어요 ☀ · 낮잠 ${formatSleepMin(res.min)}` : `깼어요 ☀ · 잠 ${formatSleepMin(res.total)}`);
+      if (sleepEdit) { loadSleepEdit(res.key); renderSleepModal(); }
+    }
+    function sleepAddChunk(a, b) {
+      const key = localDateKey(new Date(b));
+      const rec = sleepLog[key];
+      const segs = rec && Array.isArray(rec.segs) ? rec.segs.map(x => ({ kind: x.kind, start: x.start, end: x.end })) : [];
+      const sMin = sleepMinOf(a), eMin = sleepMinOf(b);
+      const night = segs.find(x => x.kind === 'night');
+      let kind;
+      if (night) {
+        const endAbs = parseLocalDate(key).getTime() + night.end * 60000; // 밤잠 끝은 그날 몇 시
+        const gap = a - endAbs;
+        if (gap >= 0 && gap <= 3 * 3600000) {
+          if (gap >= 60000) segs.push({ kind: 'wake', start: night.end, end: sMin });
+          night.end = eMin; kind = 'night';
+        } else { segs.push({ kind: 'nap', start: sMin, end: eMin }); kind = 'nap'; }
+      } else {
+        const h = new Date(a).getHours();
+        kind = (b - a >= 3 * 3600000 || h >= 20 || h < 9) ? 'night' : 'nap';
+        segs.push({ kind, start: sMin, end: eMin });
+      }
+      const sm = sleepSummary(segs);
+      sleepLog[key] = { mode: 'time', src: 'live', segs, sleep_min: sm.night + sm.nap, nap_min: sm.nap, wake_count: sm.wakes };
+      saveSleepLog();
+      return { key, kind, min: Math.round((b - a) / 60000), total: sm.night + sm.nap };
+    }
+    function sleepToggleLive() { if (sleepLive) sleepWakeUp(); else sleepGoToBed(); }
+    function sleepCancelLive(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      if (!sleepLive) return;
+      triggerHaptic();
+      sleepLive = null; saveSleepLive();
+      showToast("'잘게요'를 지웠어요");
+      renderSleepNow();
+    }
+    // 시계 위 단추 칸: 시간과 상태에 따라 바뀐다
+    function renderSleepNow() {
+      const box = document.getElementById('sleepNowCard');
+      if (!box) return;
+      const now = sleepNow();
+      const nowText = sleepClock(now.getTime());
+      const btn = (cls, text, fn) => `<button type="button" class="sl-now-btn ${cls}" onclick="${fn}(event)">${text}</button>`;
+      let html = '';
+      if (sleepLive) {
+        html = `<div class="sl-now dark"><div class="t">${sleepClock(sleepLive.start)}부터 자는 중 · 지금 ${nowText}</div><div class="q">깼나요?</div>
+          <div class="row">${btn('sun', '☀ 깼어요', 'sleepWakeUp')}</div>
+          <div class="t" style="margin-top:12px;">깼다가 다시 잘 때도 '잘게요'</div>
+          <button type="button" class="sl-now-undo" onclick="sleepCancelLive(event)">잘못 눌렀어요</button></div>`;
+      } else {
+        const ev = sleepIsEvening();
+        const rec = sleepLog[localDateKey(now)];
+        const morning = !ev && rec && rec.src === 'live' && sleepEdit && sleepEdit.date === localDateKey(now) && !sleepEdit.dirty;
+        html = `<div class="sl-now ${ev ? 'dark' : ''}"><div class="t">${morning ? '눌러서 적은 잠이에요. 다르면 시계에서 고쳐요.' : '지금 ' + nowText}</div><div class="q">${ev ? '이제 자러 가나요?' : (morning ? '☀ 좋은 하루예요' : '잠들 때 눌러요')}</div>
+          <div class="row">${btn('moon', '🌙 지금 잘게요', 'sleepGoToBed')}</div>
+          <div class="t" style="margin-top:10px;">첫 화면 위 가운데를 꾹 눌러도 돼요</div></div>`;
+      }
+      box.innerHTML = html;
+      // 자는 중에는 시계를 숨긴다 (밤에 눈부시지 않게, 아직 그릴 것도 없음)
+      const main = document.getElementById('sleepMainCard'); if (main) main.style.display = sleepLive ? 'none' : '';
+      const m = document.getElementById('sleepModal');
+      if (m) { if (sleepLive) { m.style.setProperty('--sl-bg', '#101415'); m.style.setProperty('--sl-ink', '#e6eeee'); m.style.setProperty('--sl-soft', 'rgba(158,192,196,0.14)'); } else applySleepTheme(); }
+      const autoC = document.getElementById('sleepAutoCard'); if (autoC && sleepLive) autoC.style.display = 'none';
+      const tag = document.getElementById('sleepSrcTag');
+      if (tag && sleepEdit) {
+        const r = sleepLog[sleepEdit.date];
+        const t = r && r.src === 'live' && !sleepEdit.dirty ? '🌙 눌러서 적음' : (sleepEdit.saved || sleepEdit.dirty) ? '✋ 직접 적음' : (sleepEdit.fromAuto ? '📱 자동' : '');
+        tag.textContent = t; tag.style.display = t ? 'inline-block' : 'none';
+      }
+    }
+    // 첫 화면 위 가운데 꾹 누르기 (1.2.11, 사용자 결정 ①): 1초 동안 원이 차오르고, 다 차면 진동과 함께
+    //   안 자면 '잘게요', 자는 중이면 '깼어요' (낮이고 밤이고 같음, 사용자 결정)
+    //   중간에 떼거나 손가락이 움직이면 없던 일 (그냥 누른 것으로)
+    let sleepHoldFired = false;
+    (function bindSleepHold() {
+      const btn = document.getElementById('sleepEntryBtn'), ring = document.getElementById('sleepHoldRing'), arc = document.getElementById('sleepHoldArc');
+      if (!btn || !ring || !arc) return;
+      const FULL = 119.4, HOLD_MS = 1000;
+      let timer = null, x0 = 0, y0 = 0;
+      const reset = () => {
+        clearTimeout(timer); timer = null;
+        arc.style.transition = 'none'; arc.style.strokeDashoffset = String(FULL);
+        ring.style.opacity = '0';
+      };
+      btn.addEventListener('pointerdown', (ev) => {
+        if (ev.button > 0) return;
+        x0 = ev.clientX; y0 = ev.clientY;
+        reset();
+        timer = setTimeout(() => { // 0.2초 뒤부터 원을 보인다 (그냥 톡 누를 때는 안 보이게)
+          ring.style.opacity = '1';
+          const icon = document.getElementById('sleepEntryIcon'); if (icon) icon.style.opacity = '0.6';
+          void arc.getBoundingClientRect();
+          arc.style.transition = `stroke-dashoffset ${HOLD_MS - 200}ms linear`; arc.style.strokeDashoffset = '0';
+          timer = setTimeout(() => { timer = null; sleepHoldFired = true; finishSleepHold(); setTimeout(reset, 250); }, HOLD_MS - 200);
+        }, 200);
+      });
+      btn.addEventListener('pointermove', (ev) => { if (timer && Math.hypot(ev.clientX - x0, ev.clientY - y0) > 12) reset(); });
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach(n => btn.addEventListener(n, () => { if (timer) reset(); }));
+    })();
+    function finishSleepHold() {
+      try { if (navigator.vibrate) navigator.vibrate([18, 60, 18]); } catch (_) {}
+      triggerHaptic();
+      hideSleepEntry();
+      sleepToggleLive(); // 낮이고 밤이고: 안 자면 잘게요, 자는 중이면 깼어요 (사용자 결정)
+    }
+
+    // 첫 화면 위 가운데: 자는 중이면 달 그림이 옅게 남아 '재는 중'임을 알린다
+    function updateSleepEntryLive() {
+      const icon = document.getElementById('sleepEntryIcon');
+      if (!icon) return;
+      icon.dataset.live = sleepLive ? '1' : '';
+      if (icon.dataset.shown !== '1') icon.style.opacity = sleepLive ? '0.28' : '0';
+    }
+    setInterval(() => { if (document.getElementById('sleepModal')?.style.display === 'block') renderSleepNow(); }, 30000);
+    try { updateSleepEntryLive(); } catch (_) {}
 
     // ── 자동으로 재기 (안드로이드 앱만): 오후 6시~낮 12시 화면이 꺼져 있던 때를 잠으로 짐작 ──
     function hasSleepAutoBridge() {
