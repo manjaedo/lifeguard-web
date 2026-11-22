@@ -705,7 +705,7 @@
           </div>
         </div>
 
-        <!-- 설문 (1.2.9, 사용자): 우울 PHQ-9 · 불안 GAD-7 · 몸 증상 PHQ-15. 줄을 누르면 지난 결과 또는 시작. 진료 완료해도 남는다 -->
+        <!-- 설문 (1.2.9, 사용자): 우울 PHQ-9 · 불안 GAD-7 · 몸 증상 PHQ-15. 줄을 누르면 지난 결과 또는 시작. 진료 완료하면 보관함으로 -->
         <div id="reportSurveyCard" class="bg-white rounded-xl p-3 border border-gray-100 shadow-sm text-xs transition-colors mb-3">
           <div id="reportSurveyTitle" class="text-[11px] font-bold text-[#597075] flex items-center gap-1 mb-1">
             <span>📝</span> 설문
@@ -4266,6 +4266,7 @@
         wrapper.style.opacity = '0';
 
         setTimeout(() => {
+          cloud.allowEmpty = true; // 1.2.9: 사용자가 직접 지운 것은 폰이 비어도 그대로 지운다
           doctorNotes.splice(idx, 1);
           localStorage.setItem('lifeguard_doctor_notes', JSON.stringify(doctorNotes));
           renderDoctorNotes();
@@ -4413,24 +4414,34 @@
         localStorage.setItem('lifeguard_pill_records', '[]');
         localStorage.setItem('lifeguard_doctor_notes', '[]');
         localStorage.setItem('lifeguard_last_visit_date', todayStr);
+        localStorage.setItem('lifeguard_surveys', '[]'); // 1.2.9: 설문도 이 주기 것은 보관함에 담겼으니 비운다
       } catch(e) {}
       clearActivityData();
       clearSleepLog();
       updateMedicationSettingUI();
       renderDoctorNotes();
-      renderReportData();
+      renderReportData(); // 설문 칸도 함께 다시 그린다
     }
 
     // 진료 완료: 블러 팝업 모달에서 확인 시 실행
-    function executeFinishVisit(e) {
+    let finishVisitBusy = false;
+    async function executeFinishVisit(e) {
       if (e && e.stopPropagation) e.stopPropagation();
       const finishVisitModal = document.getElementById('finishVisitModal');
       if (!finishVisitModal || finishVisitModal.classList.contains('opacity-0') || finishVisitModal.classList.contains('hidden') || finishVisitModal.style.display === 'none') {
         return;
       }
+      if (cloudWriteBlocked()) return;
+      if (finishVisitBusy) return;
+      finishVisitBusy = true;
+      // 비우기 전에 지난 주기를 보관함에 담고, 담긴 것을 확인한 뒤에만 비운다 (1.2.9)
+      const res = await cloudArchiveCycle();
+      finishVisitBusy = false;
+      if (res === 'fail') { showToast('보관함에 담지 못했어요. 인터넷이 이어지면 다시 눌러 주세요.'); return; }
+      const archived = res === 'done';
       modalClosingUntil = Date.now() + 2000;
       hideControls();
-      const archived = cloudArchiveCycle(); // 비우기 전에 지난 주기를 보관함으로 (켠 경우만)
+      cloud.allowEmpty = true; // 일부러 비움: 빈 것을 DB에 담아도 됨
       performDataReset();
 
       // 블러 팝업 내부를 '초기화 완료' 상태로 전환
@@ -6237,9 +6248,8 @@
     }
 
     function clearAllData() {
+      cloud.allowEmpty = true; // 일부러 비움
       performDataReset();
-      try { localStorage.setItem('lifeguard_surveys', '[]'); } catch (_) {} // 1.2.9: 설문도 (진료 완료 때는 남김)
-      renderSurveyCard();
       showToast('모든 데이터가 비워졌습니다. 새로운 백지(0)에서 시작합니다. 🌿');
     }
 
@@ -7668,6 +7678,7 @@
       clearTimeout(sleepSaveTimer); sleepSaveTimer = null; sleepSavedSinceOpen = false;
       if (!sleepLog[st.date]) return;
       triggerHaptic();
+      cloud.allowEmpty = true; // 직접 지운 것
       delete sleepLog[st.date];
       saveSleepLog();
       loadSleepEdit(st.date);
@@ -7792,7 +7803,7 @@
 
     // ── 설문 (1.2.9, 사용자: "설문하는 폼을 만들어 보자") ──
     // 우울 PHQ-9 · 불안 GAD-7 · 몸 증상 PHQ-15. 문항·답·점수 기준은 docs/questionnaires의 표준 설문지 그대로 (글을 바꾸지 않는다).
-    // 저장: lifeguard_surveys = [{ id, time, answers[], score, extra }] — 진료 완료해도 남아 지난번과 견줄 수 있다. 기록 지키기에도 담긴다.
+    // 저장: lifeguard_surveys = [{ id, time, answers[], score, extra }] — DB에 담기고, 진료 완료하면 그 주기 보관함으로 넘어가며 폰에서는 비운다.
     const SURVEY_FREQ = ['전혀 방해받지 않았다', '며칠 동안 방해받았다', '7일 이상 방해받았다', '거의 매일 방해받았다'];
     const SURVEY_EXTRA = { q: '위에서 고른 문제들이 있다면, 이로 인해 직장 일, 집안일, 또는 다른 사람들과 어울리는 것이 얼마나 어려웠습니까?',
       options: ['전혀 어렵지 않았다', '다소 어려웠다', '매우 어려웠다', '극도로 어려웠다'] };
@@ -7826,7 +7837,15 @@
     function surveyList() {
       return safeJsonParse('lifeguard_surveys', []).filter(r => r && SURVEYS[r.id] && typeof r.time === 'string');
     }
-    function surveyHistory(id) { return surveyList().filter(r => r.id === id).sort((a, b) => a.time < b.time ? 1 : -1); }
+    // 지난 점수: 이 주기 것(폰) + 보관함에 넘어간 지난 주기 것(DB, cloudCountArchive가 읽어 둠)
+    function surveyHistory(id) {
+      const seen = new Set();
+      let past = [];
+      try { past = cloud.archSurveys || []; } catch (_) {} // 앱이 막 켜지는 중에는 cloud가 아직 없을 수 있음
+      return surveyList().concat(past)
+        .filter(r => r && r.id === id && typeof r.time === 'string' && !seen.has(r.time) && seen.add(r.time))
+        .sort((a, b) => a.time < b.time ? 1 : -1);
+    }
     function surveyLevel(id, score) { const lv = SURVEYS[id].levels; const i = lv.findIndex(([hi]) => score <= hi); return i < 0 ? lv.length - 1 : i; }
     function surveyMax(def, rec) { return def.naItem != null && rec && rec.answers && rec.answers[def.naItem] === null ? def.max - 2 : def.max; }
     const surveyDate = (iso) => { const d = new Date(iso); return `${d.getMonth() + 1}.${d.getDate()}`; };
@@ -8111,7 +8130,7 @@
       appId: '1:6418622627:web:551e87825217d28fa0b716'
     };
     const CLOUD_SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
-    const CLOUD_SKIP = /^lifeguard_(patient_name|ios_guide_dismissed|whats_new_hidden|activity_granted|activity_daily|sleep_auto|sleep_auto_days|mood_glyph_sets|mood_glyphs|mood_glyph_active|cloud_.*)$/;
+    const CLOUD_SKIP = /^lifeguard_(patient_name|ios_guide_dismissed|whats_new_hidden|activity_granted|sleep_auto|sleep_auto_days|mood_glyph_sets|mood_glyphs|mood_glyph_active|cloud_.*)$/;
     const cloud = { fb: null, loading: null, user: null, ready: false, status: 'idle', timer: null, checked: false, archiveCount: null };
     const cloudOrigSet = Storage.prototype.setItem;
     const cloudOrigRemove = Storage.prototype.removeItem;
@@ -8233,8 +8252,30 @@
       cloud.status = 'saving';
       renderCloudCard();
       const at = Date.now();
+      const snap = cloudSnapshot();
+      // 1.2.9 안전장치 (사용자): 이 폰에 기록이 하나도 없는데 DB에는 있으면, 빈 것으로 덮지 않고 DB 것을 가져온다.
+      // (예전 판에서 지워진 폰이 빈 기록으로 DB를 덮어 기록이 사라진 일이 있었다)
+      // 진료 완료·데이터 비우기·사용자가 직접 지운 때는 빈 것도 담는다 (cloud.allowEmpty)
+      if (!cloudHasRecords(snap) && !cloud.allowEmpty) {
+        try {
+          const cur = await cloud.fb.fsM.getDoc(cloudRef('current'));
+          const rd = cur.exists() ? cur.data() : null;
+          if (rd && rd.data && cloudHasRecords(rd.data)) {
+            cloud.status = 'idle';
+            cloudWriteLocal(rd.data, rd.savedAt, false);
+            cloudReloadWith('');
+            return;
+          }
+        } catch (_) {
+          cloud.status = 'failed';
+          renderCloudCard();
+          cloudOfflineCheck();
+          return;
+        }
+      }
       try {
-        await cloud.fb.fsM.setDoc(cloudRef('current'), { savedAt: at, app: 'web', data: cloudSnapshot() });
+        await cloud.fb.fsM.setDoc(cloudRef('current'), { savedAt: at, app: 'web', data: snap });
+        cloud.allowEmpty = false;
         cloudPut('lifeguard_cloud_saved_at', String(at));
         cloudPut('lifeguard_cloud_dirty', null);
         cloud.status = 'idle';
@@ -8345,8 +8386,14 @@
       try {
         const { fsM, db } = cloud.fb;
         const qs = await fsM.getDocs(fsM.collection(db, 'lifeguard', cloud.user.uid, 'cycles'));
-        cloud.archiveCount = qs.docs.filter(d => d.id !== 'current').length;
+        const arch = qs.docs.filter(d => d.id !== 'current');
+        cloud.archiveCount = arch.length;
+        // 1.2.9 (사용자: "지난 점수는 DB에서 불러와 보면 되지"): 보관함에 넘어간 지난 주기 설문 결과
+        const past = [];
+        arch.forEach(d => { try { const v = JSON.parse(((d.data() || {}).data || {}).lifeguard_surveys || '[]'); if (Array.isArray(v)) past.push(...v); } catch (_) {} });
+        cloud.archSurveys = past;
         renderCloudCard();
+        try { renderSurveyCard(); if (surveyRun && surveyRun.stage === 'result') renderSurvey(); } catch (_) {}
       } catch (_) {}
     }
 
@@ -8364,19 +8411,23 @@
     }
 
     // 진료 완료: 비우기 전에 지금 주기를 보관함으로 넘긴다
-    function cloudArchiveCycle() {
-      if (!cloudOn() || !cloud.fb || !cloud.user) return false;
+    // 1.2.9 (사용자): 보관함에 담긴 것을 확인한 뒤에만 비운다. 돌려주는 값: 'done' 담음 / 'none' 담을 것 없음 / 'fail' 못 담음
+    async function cloudArchiveCycle() {
+      if (!cloudOn() || !cloud.fb || !cloud.user) return cloudAvailable() ? 'fail' : 'none';
       const data = cloudSnapshot();
-      if (!cloudHasRecords(data)) return false;
+      if (!cloudHasRecords(data) && !(JSON.parse(data.lifeguard_surveys || '[]').length)) return 'none';
       const now = new Date();
       const p = (n) => String(n).padStart(2, '0');
       const id = 'c' + now.getFullYear() + p(now.getMonth() + 1) + p(now.getDate()) + '-' + p(now.getHours()) + p(now.getMinutes()) + p(now.getSeconds());
-      cloud.fb.fsM.setDoc(cloudRef(id), {
-        savedAt: now.getTime(), app: 'web', archived: true,
-        from: data.lifeguard_last_visit_date || null, to: id.slice(1, 9),
-        data
-      }).then(() => { cloud.archiveCount = (cloud.archiveCount || 0) + 1; renderCloudCard(); }).catch(() => {});
-      return true;
+      try {
+        await cloud.fb.fsM.setDoc(cloudRef(id), {
+          savedAt: now.getTime(), app: 'web', archived: true,
+          from: data.lifeguard_last_visit_date || null, to: id.slice(1, 9),
+          data
+        });
+      } catch (_) { return 'fail'; }
+      cloud.archiveCount = (cloud.archiveCount || 0) + 1;
+      return 'done';
     }
 
     // ── 화면 ──
