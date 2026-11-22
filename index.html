@@ -327,7 +327,7 @@
     #settingsAlarmTimeBox { background: transparent !important; border: 0 !important; padding: 0 !important; gap: 10px !important; }
     /* 활동 정보 칸은 1.2.8부터 상세 칸의 '걸음 기록' 한 줄로 (스위치·동작은 같음) */
     #settingsActivityCard { display: none !important; }
-    #settingsModal[data-tab="detail"] :is(#settingsPatientCard, #cloudCard, #settingsMedCard, #settingsAlarmCard) { display: none !important; }
+    #settingsModal[data-tab="detail"] :is(#settingsPatientCard, #cloudCard, #settingsMedCard, #settingsAlarmCard, #settingsHelplineCard) { display: none !important; }
     /* 잠 기록을 끄면 첫 화면 침대를 숨긴다 (자리는 남김) */
     body[data-sleep="off"] #sleepEntryBtn { visibility: hidden; pointer-events: none; }
   </style>
@@ -486,43 +486,36 @@
       </style>
       <div class="w-full h-full overflow-y-auto" style="padding: max(14px, env(safe-area-inset-top)) 16px max(14px, env(safe-area-inset-bottom));">
         <div class="w-full max-w-md mx-auto flex flex-col gap-3" style="min-height: 100%;">
+          <!-- 1.2.8: 닫기는 카드 밖 오른쪽 위에 따로 (사용자: 날짜 옆 ✕는 애매) -->
+          <div class="flex items-center justify-between" style="margin-bottom: -4px;">
+            <div class="font-bold pl-1" style="color: var(--sl-ink); font-size: calc(18px * var(--sl-fs));">🛏️ 잠 기록</div>
+            <button type="button" onclick="closeSleepModal(event)" aria-label="닫기" class="rounded-full px-4 py-2 font-bold flex items-center gap-1.5" style="background: var(--sl-soft); color: var(--sl-ink); font-size: calc(14px * var(--sl-fs));">닫기 <span aria-hidden="true">✕</span></button>
+          </div>
           <div class="sl-card">
-            <div class="flex items-center justify-center gap-1">
-              <button type="button" onclick="moveSleepDate(-1, event)" aria-label="전날" class="w-10 h-10 rounded-full text-2xl" style="color: var(--sl-muted);">‹</button>
+            <!-- 1.2.8 정리: 닫기는 위로, 시각/숫자 바꾸기는 아래 작은 글씨로 (사용자: 너무 산만) -->
+            <div class="relative flex items-center justify-center gap-1">
+              <button type="button" onclick="moveSleepDate(-1, event)" aria-label="전날" class="shrink-0 w-10 h-10 rounded-full text-2xl" style="color: var(--sl-muted);">‹</button>
               <!-- 날짜를 누르면 폰의 달력이 열려 지난 날을 바로 고른다 (1.2.7, 사용자 요청) -->
-              <button type="button" onclick="pickSleepDate(event)" class="relative rounded-full px-5 py-2.5 font-bold text-center" style="background: var(--sl-soft); min-width: 190px; font-size: calc(16px * var(--sl-fs)); color: var(--sl-ink);">
+              <button type="button" id="sleepDatePill" onclick="pickSleepDate(event)" class="relative rounded-full px-4 py-2.5 font-bold text-center whitespace-nowrap overflow-hidden" style="background: var(--sl-soft); min-width: 0; flex: 0 1 auto; font-size: calc(16px * var(--sl-fs)); color: var(--sl-ink);">
                 <span id="sleepDateLabel"></span> <span aria-hidden="true" style="font-size: 0.8em; opacity: 0.6;">📅</span>
                 <input id="sleepDateInput" type="date" tabindex="-1" aria-hidden="true" onchange="onSleepDatePicked(event)" onclick="event.stopPropagation()" style="position: absolute; inset: 0; opacity: 0; pointer-events: none; width: 100%;">
               </button>
-              <button type="button" id="sleepNextBtn" onclick="moveSleepDate(1, event)" aria-label="다음 날" class="w-10 h-10 rounded-full text-2xl" style="color: var(--sl-muted);">›</button>
-            </div>
-            <div class="flex justify-center mt-3">
-              <div class="sl-seg flex rounded-full p-0.5" style="background: var(--sl-soft);">
-                <button type="button" data-mode="time" onclick="setSleepMode('time', event)">시각으로</button>
-                <button type="button" data-mode="num" onclick="setSleepMode('num', event)">숫자로</button>
-              </div>
+              <button type="button" id="sleepNextBtn" onclick="moveSleepDate(1, event)" aria-label="다음 날" class="shrink-0 w-10 h-10 rounded-full text-2xl" style="color: var(--sl-muted);">›</button>
             </div>
             <div id="sleepTimeBox">
               <div id="sleepAutoNote" class="sl-small text-center mt-3" style="display: none;"></div>
               <svg id="sleepDial" viewBox="0 0 320 320" class="block mx-auto mt-1" style="width: 100%; max-width: 330px;"></svg>
               <!-- 고른 구간을 5분씩 맞추는 −/+ (누르고 있으면 계속 움직임). 1.2.7: 끌기만으로는 예민하다는 사용자 의견 -->
-              <div id="sleepFine" class="mb-3"></div>
-              <div id="sleepTotal" class="text-center font-bold" style="color: var(--sl-main); font-size: calc(17px * var(--sl-fs));"></div>
-              <div id="sleepPills" class="flex flex-wrap gap-2 justify-center mt-3"></div>
-              <p class="sl-small text-center mt-3">침대와 해를 끌면 10분씩 움직여요. −/+로 5분씩 맞출 수 있어요.<br>밤중에 깬 때는 주황 띠를 끌어 옮기고, 아래에서 깬 시각과 깬 동안을 맞춰요. 지울 때는 단추의 ×나 '이 깬 때 지우기'.</p>
+              <div id="sleepPills" style="display:none"></div>
+              <div id="sleepFine"></div>
+              <div id="sleepTotal" style="display:none"></div>
             </div>
             <div id="sleepNumBox" class="mt-3" style="display: none;">
               <div id="sleepSteps"></div>
-              <p class="sl-small text-center mt-2">시각을 몰라도 괜찮아요. 대강의 시간만 적어 두세요.</p>
+
             </div>
-            <div class="text-center mt-2">
-              <button type="button" id="sleepDeleteBtn" onclick="deleteSleepEdit(event)" class="sl-small underline" style="display: none;">이 날 기록 지우기</button>
-            </div>
-          </div>
-          <!-- 1.2.8: 고치면 저절로 저장 (사용자 결정). 저장 단추 대신 닫기만 -->
-          <div class="flex justify-center pt-1">
-            <div class="sl-bar">
-              <button type="button" onclick="closeSleepModal(event)">닫기</button>
+            <div class="flex items-center justify-center gap-4 mt-3">
+              <button type="button" id="sleepModeLink" onclick="setSleepMode(sleepEdit && sleepEdit.mode === 'num' ? 'time' : 'num', event)" class="sl-small underline">숫자로 적기</button>
             </div>
           </div>
           <!-- 안드로이드 앱에서만: 자동으로 재기 -->
@@ -533,10 +526,12 @@
                 <span id="sleepAutoKnob" class="inline-block h-5 w-5 rounded-full bg-white shadow-md transform transition-transform duration-200"></span>
               </button>
             </div>
-            <p class="sl-small mt-2">오후 6시부터 낮 12시 사이에 폰 화면이 가장 오래 꺼져 있던 때를 잠으로 짐작해요. 잠깐 화면을 켠 때는 밤중에 깬 것으로 세요. 직접 적은 날은 적은 것을 써요.</p>
-            <p class="sl-small mt-1">처음 켤 때 '사용정보 접근 허용'에서 Life Guard를 켜 주세요. 화면이 켜지고 꺼진 시각만 보고, 이 폰 밖으로 보내지 않아요.</p>
-            <!-- 플레이 스토어 밖에서 설치한 앱은 이 허락이 잠겨 있다 (안드로이드 13+, '제한된 설정으로 제어됨') -->
-            <p id="sleepAutoRestricted" class="sl-small mt-2 rounded-xl px-3 py-2" style="background: var(--sl-soft); color: var(--sl-ink);">스위치가 눌리지 않고 '제한된 설정으로 제어됨'이라고 나오면: 폰 설정 → 애플리케이션 → Life Guard → 오른쪽 위 ⋮ → <b>'제한된 설정 허용'</b>을 누른 뒤 다시 켜 주세요.</p>
+            <p class="sl-small mt-1.5">밤사이 폰 화면이 꺼져 있던 때로 잠을 짐작해요. 화면 켜짐·꺼짐 시각만 보고, 폰 밖으로 보내지 않아요.</p>
+            <!-- 플레이 스토어 밖에서 설치한 앱은 이 허락이 잠겨 있다 (안드로이드 13+, '제한된 설정으로 제어됨'). 1.2.8: 접어 둠 -->
+            <details id="sleepAutoRestricted" class="sl-small mt-1.5">
+              <summary style="cursor:pointer;">켜지지 않을 때</summary>
+              <div class="mt-1 rounded-xl px-3 py-2" style="background: var(--sl-soft); color: var(--sl-ink);">처음 켤 때 '사용정보 접근 허용'에서 Life Guard를 켜 주세요. '제한된 설정으로 제어됨'이라고 나오면: 폰 설정 → 애플리케이션 → Life Guard → 오른쪽 위 ⋮ → <b>'제한된 설정 허용'</b> 뒤 다시 켜 주세요.</div>
+            </details>
           </div>
         </div>
       </div>
@@ -545,7 +540,7 @@
     <!-- Modal 1: Hospital Clinical Summary (좌측 상단 리포트 - 최대한 심플하게: 지난 진료~이번 진료만 & 진료 완료 시 휘발) -->
     <!-- 기분 그래프 크게 보기 (1.2.6). 세로로 든 폰에서는 화면째 옆으로 눕혀 그린다. 빨간 기준선을 좌우로 움직이면 그 자리의 날짜·시각 -->
     <div id="chartZoom" onclick="event.stopPropagation()" class="fixed inset-0 z-40 hidden" style="display: none;">
-      <div id="chartZoomStage" class="absolute flex flex-col" style="touch-action: none;">
+      <div id="chartZoomStage" class="absolute flex flex-col">
         <div class="flex items-center justify-between px-5 pt-4 pb-1 gap-3">
           <div id="chartZoomReadout" class="text-sm font-semibold tabular-nums min-w-0 truncate"></div>
           <!-- 작은 그래프와 같은 스위치. ⤡는 작은 그래프로 돌아가기 (닫기 대신, 사용자 결정) -->
@@ -555,7 +550,19 @@
             <button type="button" onclick="closeChartZoom(event)" aria-label="작은 그래프로 돌아가기" class="zoom-out-btn px-3 py-1 rounded-full transition flex items-center"><svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 6.5h-4v-4M9.5 6.5 14 2M2.5 9.5h4v4M6.5 9.5 2 14"/></svg></button>
           </div>
         </div>
-        <svg id="chartZoomSvg" class="flex-1 w-full" style="display:block;"></svg>
+        <!-- 1.2.8 (사용자: 한 화면에 구겨 넣으면 이상한 그래프): 기분 → 잠 → 걸음을 위아래로 내려 보며 각각 크게.
+             기분 그래프는 화면 높이에서 조금 덜 차지해 아래 '잠' 제목이 살짝 보이게 (내려 보라는 표시) -->
+        <div id="chartZoomScroll" class="flex-1 w-full overflow-y-auto" style="touch-action: pan-y; overscroll-behavior: contain;">
+          <svg id="chartZoomSvg" class="w-full" style="display:block; touch-action: none;"></svg>
+          <div id="chartZoomSleepWrap" style="display:none;">
+            <div class="zoom-panel-title px-5 pt-3 text-sm font-bold"></div>
+            <svg id="chartZoomSleepSvg" class="w-full" style="display:block;"></svg>
+          </div>
+          <div id="chartZoomStepsWrap" style="display:none;">
+            <div class="zoom-panel-title px-5 pt-3 text-sm font-bold"></div>
+            <svg id="chartZoomStepsSvg" class="w-full" style="display:block;"></svg>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -614,11 +621,28 @@
         </div>
 
         <!-- 활동 정보 (안드로이드 앱 + 설정에서 켰을 때만). 기분 그래프와 같은 날짜 축. 안내·경고 문구와 색 강조 없음 -->
+        <!-- 잠 (1.2.8, 사용자 요청: 따로 그려 줘): 날마다 세로 띠로 잠든~깬 시각. 깬 때는 주황 점, 낮잠은 옅은 띠.
+             시각을 모르는 날(숫자로 적음·워치)은 띠 대신 잔 시간만 숫자로 -->
+        <div id="reportSleepCard" class="bg-white rounded-xl p-3 border border-gray-100 shadow-sm mb-3 transition-colors" style="display: none;">
+          <div class="flex justify-between items-center text-[10px] font-semibold mb-1">
+            <span id="sleepChartLabel" class="text-[#597075]">잠</span>
+            <span id="sleepChartLegend" class="font-normal opacity-70 flex items-center gap-2"></span>
+          </div>
+          <!-- 높이는 기분 그래프(h-24, 세로 90)와 같은 배율이 되게: 날짜 칸이 위아래로 맞는다 -->
+          <svg id="sleepChartSvg" class="w-full cursor-pointer" viewBox="0 0 260 110" onclick="selectActivityDay(event, 'sleepChartSvg')" style="display:block; height: calc(6rem * 110 / 90);"></svg>
+          <div class="flex justify-between text-[10px] text-gray-400 mt-0.5 px-1">
+            <span id="sleepChartStart"></span>
+            <span>오늘</span>
+          </div>
+          <div id="sleepChartDetail" class="text-[10.5px] mt-1 px-1 text-gray-500 leading-relaxed" style="word-break: keep-all;"></div>
+        </div>
+
         <div id="reportActivityCard" class="bg-white rounded-xl p-3 border border-gray-100 shadow-sm mb-3 transition-colors" style="display: none;">
           <div class="flex justify-between items-center text-[10px] font-semibold mb-1">
-            <span id="activityLabel" class="text-[#597075]">잠 · 걸음</span>
+            <span id="activityLabel" class="text-[#597075]">걸음</span>
           </div>
-          <svg id="activitySvg" class="w-full h-20 cursor-pointer" viewBox="0 0 260 76" onclick="selectActivityDay(event)">
+          <!-- 1.2.8: 기분 그래프와 같은 배율(날짜 칸이 위아래로 맞게) + 왼쪽에 k 단위 눈금 -->
+          <svg id="activitySvg" class="w-full cursor-pointer" viewBox="0 0 260 76" onclick="selectActivityDay(event)" style="display:block; height: calc(6rem * 76 / 90);">
             <g id="activitySleep"></g>
             <g id="activitySteps"></g>
           </svg>
@@ -856,19 +880,15 @@
           </div>
         </div>
 
-        <!-- 테스트용 샘플 데이터 도구 (스마트폰 전체화면에서도 즉시 테스트 가능) -->
-        <div class="stab-detail grid grid-cols-2 gap-2 mb-3 pt-2">
-          <button id="settingsFillSampleBtn" type="button" onclick="fillSampleData()" class="py-2 px-2.5 rounded-xl bg-[#597075]/10 hover:bg-[#597075]/20 text-[#597075] text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95">
-            <span>📊</span> 14일 샘플 채우기
-          </button>
-          <button id="settingsClearDataBtn" type="button" onclick="clearAllData()" class="py-2 px-2.5 rounded-xl border border-gray-200 bg-white/60 hover:bg-gray-100 text-gray-600 text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95">
-            <span>🗑️</span> 데이터 비우기
-          </button>
-        </div>
+        <!-- 1.2.8: 14일 샘플 채우기 · 데이터 비우기 버튼은 뺌 (사용자: 이제 필요 없음). 함수는 테스트·데스크톱 미리보기용으로 남김 -->
 
-        <!-- 상세 칸 아래: 설명은 따로 (1.2.8 사용자 결정) -->
-        <div class="stab-detail text-center pb-1">
-          <button type="button" onclick="openSettingsHelp(event)" class="text-[11px] opacity-60 hover:opacity-100 underline underline-offset-4 transition cursor-pointer" style="color: inherit;">설정 설명 보기</button>
+        <!-- 상세 칸 아래: 설정 설명 · 개인정보처리방침 · 새로워진 점을 한 줄로 (1.2.8 사용자) -->
+        <div class="stab-detail flex items-center justify-center gap-2 pt-1 pb-3 whitespace-nowrap">
+          <button type="button" onclick="openSettingsHelp(event)" class="text-[11px] opacity-60 hover:opacity-100 underline underline-offset-4 transition cursor-pointer" style="color: inherit;">설정 설명</button>
+          <span class="text-[11px] opacity-30" aria-hidden="true">·</span>
+          <a href="privacy.html" target="_blank" rel="noopener noreferrer" class="text-[11px] opacity-60 hover:opacity-100 underline underline-offset-4 transition cursor-pointer" style="color: inherit;">개인정보처리방침</a>
+          <span class="text-[11px] opacity-30" aria-hidden="true">·</span>
+          <button type="button" onclick="event.stopPropagation(); triggerHaptic(); showWhatsNew(true)" class="text-[11px] opacity-60 hover:opacity-100 underline underline-offset-4 transition cursor-pointer" style="color: inherit;">새로워진 점</button>
         </div>
 
         <!-- 예전 칸들(테마·터치·진동·활동 정보): 화면에는 안 보이고, 테마 코드가 찾는 자리로만 남긴다 (1.2.8) -->
@@ -962,29 +982,26 @@
 
         </div>
 
-        <!-- 개인정보처리방침 웹페이지 링크 -->
-        <div class="text-center pt-1 pb-3">
+        <!-- 전문 상담 전화 안내 (24시간 마음건강 상담전화). 1.2.8: 기본 칸에서만, 개인정보처리방침 바로 위 (사용자) -->
+        <div id="settingsHelplineCard" class="bg-white rounded-2xl p-3.5 mt-2 mb-3 border border-gray-100 shadow-sm text-xs space-y-2 transition-colors">
+          <a id="settingsHelplineItem" href="tel:1577-0199" class="flex items-center justify-between bg-white rounded-xl px-1 py-1.5 transition">
+            <span id="settingsHelplineLabel" class="text-gray-700 font-semibold flex items-center gap-1.5"><span>📞</span> 24시간 마음건강 상담전화</span>
+            <span id="settingsHelplineNumber" class="font-bold text-[#597075] flex items-center gap-1 shrink-0">1577-0199 <span>›</span></span>
+          </a>
+          <p id="settingsHelplineDesc" class="text-[10px] text-gray-400 leading-relaxed text-center pt-0.5">
+            마음이 버겁거나 도움이 필요할 때 언제든 편안하게 연결할 수 있습니다.
+          </p>
+        </div>
+
+        <!-- 개인정보처리방침 웹페이지 링크 (기본 칸. 상세 칸은 위 한 줄에) -->
+        <div class="stab-basic text-center pt-1 pb-3">
           <a href="privacy.html" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-[#597075] underline underline-offset-4 transition">
             <span>🔒</span> 개인정보처리방침
           </a>
         </div>
       </div>
       <div class="pt-2">
-      <!-- 전문 상담 전화 안내 (24시간 마음건강 상담전화). 1.2.8: 설정 칸들과 떼어 화면 맨 아래에 따로 -->
-      <div id="settingsHelplineCard" class="bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs space-y-2 transition-colors">
-        <a id="settingsHelplineItem" href="tel:1577-0199" class="flex items-center justify-between bg-white rounded-xl px-1 py-1.5 transition">
-          <span id="settingsHelplineLabel" class="text-gray-700 font-semibold flex items-center gap-1.5"><span>📞</span> 24시간 마음건강 상담전화</span>
-          <span id="settingsHelplineNumber" class="font-bold text-[#597075] flex items-center gap-1 shrink-0">1577-0199 <span>›</span></span>
-        </a>
-        <p id="settingsHelplineDesc" class="text-[10px] text-gray-400 leading-relaxed text-center pt-0.5">
-          마음이 버겁거나 도움이 필요할 때 언제든 편안하게 연결할 수 있습니다.
-        </p>
-      </div>
-
-      <div class="stab-detail text-center pb-1">
-        <button type="button" onclick="event.stopPropagation(); triggerHaptic(); showWhatsNew(true)" class="text-[11px] opacity-60 hover:opacity-100 underline underline-offset-4 transition cursor-pointer" style="color: inherit;">새로워진 점 보기</button>
-      </div>
-      <div id="settingsVersion" class="text-center text-[10px] text-gray-400">Life Guard v1.2.7-alpha (알파판)</div>
+      <div id="settingsVersion" class="text-center text-[10px] text-gray-400">Life Guard v1.2.8-alpha (알파판)</div>
       </div>
     </div>
 
@@ -4390,7 +4407,12 @@
     // 원칙: 가공 지표(점수·평균·목표) 없음, 안내·경고 문구 없음, 적은 날을 다른 색으로 칠하지 않음,
     //       기록이 없는 날은 0이 아니라 '기록 없음', 진료 완료 때 이 앱에 둔 값만 함께 비움.
     const ACTIVITY_SLEEP_MAX_MIN = 12 * 60;  // 막대 높이 고정 눈금 (넘으면 꼭대기에서 멈춤)
-    const ACTIVITY_STEPS_MAX = 15000;
+    const ACTIVITY_STEPS_MAX = 10000; // 1.2.8 사용자: 그래프 꼭대기는 1만 보. 넘는 날이 있으면 그만큼 늘린다 (stepsMaxOf)
+    function stepsMaxOf(days) {
+      const top = Math.max(0, ...days.map(d => (d && typeof d.steps === 'number') ? d.steps : 0));
+      return Math.max(ACTIVITY_STEPS_MAX, Math.ceil(top / 5000) * 5000);
+    }
+    const stepsTicks = (max) => { const t = []; for (let v = 0; v <= max; v += 5000) t.push(v); return t; };
     const ACTIVITY_MAX_DAYS = 190;           // 가장 긴 진료 주기(6달) + 여유
 
     let isActivityEnabled = (function() {
@@ -4598,7 +4620,9 @@
     function applyActivityTheme() {
       const pairs = [
         ['reportActivityCard', 'reportChartCard'],
+        ['reportSleepCard', 'reportChartCard'],
         ['activityLabel', 'chartLabel'],
+        ['sleepChartLabel', 'chartLabel'],
         ['settingsActivityCard', 'settingsMedCard'],
         ['settingsActivityTitle', 'settingsMedTitle'],
         ['settingsActivityDesc', 'settingsMedDesc']
@@ -4607,11 +4631,11 @@
         const a = document.getElementById(to), b = document.getElementById(from);
         if (a && b) a.className = b.className;
       });
-      const detail = document.getElementById('activityDetail');
-      if (detail) {
-        detail.className = 'text-[10.5px] mt-1 px-1 leading-relaxed ' +
+      ['activityDetail', 'sleepChartDetail'].forEach(id => {
+        const detail = document.getElementById(id);
+        if (detail) detail.className = 'text-[10.5px] mt-1 px-1 leading-relaxed ' +
           (getEffectiveTheme(currentTheme) === 'dark' ? 'text-white/60' : 'text-gray-500');
-      }
+      });
       updateActivitySettingUI();
     }
 
@@ -4623,15 +4647,14 @@
     }
 
     function renderActivityData() {
+      const days = reportActivityDays();
+      try { renderSleepChart(days); } catch (err) { console.warn('renderSleepChart error:', err); }
       const card = document.getElementById('reportActivityCard');
       if (!card) return;
-      // 1.2.7: 잠을 직접 적었거나 자동으로 잰 것이 있으면 웹·아이폰에서도 보인다
-      const days = reportActivityDays();
-      const hcOn = isActivityEnabled && hasActivityBridge() && (activityGranted.sleep || activityGranted.steps);
-      const ownSleep = days.some(d => d.sleep_min !== null && d.src !== 'watch');
-      const visible = hcOn || ownSleep;
-      card.style.display = visible ? 'block' : 'none';
-      if (!visible) return;
+      // 1.2.8: 잠은 따로 그리고(renderSleepChart), 여기는 걸음만 (안드로이드 앱 + 걸음 기록 켬)
+      const showSteps = isActivityEnabled && hasActivityBridge() && activityGranted.steps;
+      card.style.display = showSteps ? 'block' : 'none';
+      if (!showSteps) return;
       try {
         const SVG_NS = 'http://www.w3.org/2000/svg';
         const chartPathEl = document.getElementById('chartPath');
@@ -4642,101 +4665,53 @@
         const barW = Math.min(6, Math.max(1, dayW * 0.55));
         const byDate = new Map(days.map(d => [d.date, d]));
         const dayKey = (i) => { const d = new Date(d1); d.setDate(d1.getDate() + i); return localDateKey(d); };
-
-        // 두 줄: 잠(위), 걸음(아래). 보여 줄 줄만 세로 공간을 나눠 쓴다.
-        // 이번 기간에 기록이 하나도 없는 줄은 숨긴다 (예: 워치 없이 자서 잠 기록이 없을 때). 둘 다 비면 둘 다 둔다.
-        const hasAny = (k) => days.some(d => d[k] !== null && d[k] !== undefined);
-        let showSleep = (hcOn && activityGranted.sleep) || ownSleep, showSteps = hcOn && activityGranted.steps;
-        if (showSleep && showSteps) {
-          const s1 = hasAny('sleep_min'), s2 = hasAny('steps');
-          if (s1 !== s2) { showSleep = s1; showSteps = s2; }
-        }
-        const rows = [];
-        // 칼라: 잠은 6시간 기준 1시간마다, 걸음은 3천 걸음 기준 1천 걸음마다 기분 색처럼 (모자라면 빨강 쪽, 넘치면 연두 쪽)
-        if (showSleep) rows.push({ g: 'activitySleep', label: '잠', value: d => d.sleep_min, max: ACTIVITY_SLEEP_MAX_MIN, tone: v => (v / 60 - 6) });
-        if (showSteps) rows.push({ g: 'activitySteps', label: '걸음', value: d => d.steps, max: ACTIVITY_STEPS_MAX, tone: v => (v - 3000) / 1000 });
         ['activitySleep', 'activitySteps'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = ''; });
-        const rowH = 76 / rows.length;
         const labelEl = document.getElementById('activityLabel');
-        if (labelEl) labelEl.textContent = rows.map(r => r.label).join(' · ');
-
-        rows.forEach((row, ri) => {
-          const g = document.getElementById(row.g);
-          if (!g) return;
-          const top = ri * rowH + 4, base = (ri + 1) * rowH - 4;
-          const h = base - top;
-          const lbl = document.createElementNS(SVG_NS, 'text');
-          lbl.setAttribute('x', '10'); lbl.setAttribute('y', String(base - h / 2 + 3));
-          lbl.setAttribute('text-anchor', 'middle'); lbl.setAttribute('font-size', '7.5');
-          lbl.setAttribute('fill', color); lbl.setAttribute('opacity', '0.6');
-          lbl.textContent = row.label;
-          g.appendChild(lbl);
-          const ln = document.createElementNS(SVG_NS, 'line');
-          ln.setAttribute('x1', String(X0)); ln.setAttribute('x2', String(X1));
-          ln.setAttribute('y1', base.toFixed(1)); ln.setAttribute('y2', base.toFixed(1));
-          ln.setAttribute('stroke', color); ln.setAttribute('stroke-width', '0.6'); ln.setAttribute('opacity', '0.2');
-          g.appendChild(ln);
-          for (let i = 0; i < diffDays; i++) {
-            const key = dayKey(i);
-            const rec = byDate.get(key);
-            const v = rec ? row.value(rec) : null;
-            const cx = X0 + (i + 0.5) * dayW;
-            const selected = key === activitySelectedDate;
-            if (v === null || v === undefined) {
-              // 기록 없음: 0과 구별되게 옅은 짧은 선
-              const dash = document.createElementNS(SVG_NS, 'line');
-              dash.setAttribute('x1', (cx - barW / 2).toFixed(2)); dash.setAttribute('x2', (cx + barW / 2).toFixed(2));
-              dash.setAttribute('y1', (base - 1.5).toFixed(1)); dash.setAttribute('y2', (base - 1.5).toFixed(1));
-              dash.setAttribute('stroke', color); dash.setAttribute('stroke-width', '0.8');
-              dash.setAttribute('opacity', '0.25');
-              g.appendChild(dash);
-              continue;
-            }
-            const bh = Math.max(0.8, Math.min(1, v / row.max) * h);
-            const rect = document.createElementNS(SVG_NS, 'rect');
-            rect.setAttribute('x', (cx - barW / 2).toFixed(2));
-            rect.setAttribute('y', (base - bh).toFixed(2));
-            rect.setAttribute('width', barW.toFixed(2));
-            rect.setAttribute('height', bh.toFixed(2));
-            rect.setAttribute('rx', Math.min(1.2, barW / 2).toFixed(2));
-            rect.setAttribute('fill', chartColorOn ? moodColorAt(row.tone(v)) : color);
-            rect.setAttribute('opacity', selected ? '0.95' : (chartColorOn ? '0.8' : '0.6'));
-            g.appendChild(rect);
-          }
+        if (labelEl) labelEl.textContent = '걸음';
+        // 칼라: 3천 걸음 기준 1천 걸음마다 기분 색처럼 (모자라면 빨강 쪽, 넘치면 연두 쪽)
+        const g = document.getElementById('activitySteps');
+        const top = 6, base = 70, h = base - top;
+        // 눈금 (1.2.8, 사용자: 단위·기준선이 있어야): 5k마다, 꼭대기는 1만(넘으면 늘어남)
+        const mkS = (tag, attrs) => { const el = document.createElementNS(SVG_NS, tag); Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, String(v))); g.appendChild(el); return el; };
+        const SMAX = stepsMaxOf(days);
+        stepsTicks(SMAX).forEach(v => {
+          const yy = (base - h * v / SMAX).toFixed(1);
+          mkS('line', { x1: X0, x2: X1, y1: yy, y2: yy, stroke: color, 'stroke-width': v ? 0.5 : 0.6, opacity: v ? 0.14 : 0.25, 'stroke-dasharray': v ? '2,2' : '' });
+          const t = mkS('text', { x: 11, y: (parseFloat(yy) + 2.6).toFixed(1), 'text-anchor': 'middle', 'font-size': 7, fill: color, opacity: 0.6 });
+          t.textContent = v ? (v / 1000) + 'k' : '0';
         });
-
-        // 고른 날(없으면 가장 최근에 값이 있는 날)의 숫자를 그대로 보여 준다
+        for (let i = 0; i < diffDays; i++) {
+          const key = dayKey(i);
+          const rec = byDate.get(key);
+          const v = rec ? rec.steps : null;
+          const cx = X0 + (i + 0.5) * dayW;
+          if (v === null || v === undefined) {
+            const dash = document.createElementNS(SVG_NS, 'line');
+            dash.setAttribute('x1', (cx - barW / 2).toFixed(2)); dash.setAttribute('x2', (cx + barW / 2).toFixed(2));
+            dash.setAttribute('y1', (base - 1.5).toFixed(1)); dash.setAttribute('y2', (base - 1.5).toFixed(1));
+            dash.setAttribute('stroke', color); dash.setAttribute('stroke-width', '0.8'); dash.setAttribute('opacity', '0.25');
+            g.appendChild(dash);
+            continue;
+          }
+          const bh = Math.max(0.8, Math.min(1, v / SMAX) * h);
+          const rect = document.createElementNS(SVG_NS, 'rect');
+          rect.setAttribute('x', (cx - barW / 2).toFixed(2)); rect.setAttribute('y', (base - bh).toFixed(2));
+          rect.setAttribute('width', barW.toFixed(2)); rect.setAttribute('height', bh.toFixed(2));
+          rect.setAttribute('rx', Math.min(1.2, barW / 2).toFixed(2));
+          rect.setAttribute('fill', chartColorOn ? moodColorAt((v - 3000) / 1000) : color);
+          rect.setAttribute('opacity', key === activitySelectedDate ? '0.95' : (chartColorOn ? '0.8' : '0.6'));
+          g.appendChild(rect);
+        }
         const detail = document.getElementById('activityDetail');
         if (detail) {
           let key = activitySelectedDate;
-          if (!key) {
-            const withData = days.filter(d => d.sleep_min !== null || d.steps !== null);
-            key = withData.length ? withData[withData.length - 1].date : null;
-          }
+          if (!key) { const w = days.filter(d => d.steps !== null); key = w.length ? w[w.length - 1].date : null; }
           const rec = key ? byDate.get(key) : null;
-          if (!key) {
-            detail.textContent = '아직 읽어 온 기록이 없어요';
-          } else {
+          if (!key) detail.textContent = '아직 읽어 온 기록이 없어요';
+          else {
             const dt = parseLocalDate(key);
             const wd = ['일', '월', '화', '수', '목', '금', '토'][dt.getDay()];
-            const parts = [`${dt.getMonth() + 1}.${dt.getDate()} (${wd})`];
-            if (showSleep) {
-              if (!rec || rec.sleep_min === null) {
-                parts.push('잠 기록 없음');
-              } else {
-                let t = `잠 ${formatSleepMin(rec.sleep_min)}`;
-                if (rec.nap_min) t += ` (낮잠 ${formatSleepMin(rec.nap_min)} 포함)`;
-                // 어디서 온 잠인지: 직접 적음 / 자동으로 잰 때(시각) / 워치는 따로 적지 않음
-                if (rec.src === 'manual') t += ' (적음)';
-                else if (rec.src === 'auto' && rec.start && rec.end) t += ` (자동, ${sleepFmt(sleepMinOfDay(rec.start))}~${sleepFmt(sleepMinOfDay(rec.end))})`;
-                parts.push(t);
-                parts.push((rec.wake_count === null || rec.wake_count === undefined) ? '깬 횟수 기록 없음' : `깸 ${rec.wake_count}번`);
-              }
-            }
-            if (showSteps) {
-              parts.push((!rec || rec.steps === null) ? '걸음 기록 없음' : `걸음 ${rec.steps.toLocaleString('ko-KR')}`);
-            }
-            detail.textContent = parts.join(' · ');
+            detail.textContent = `${dt.getMonth() + 1}.${dt.getDate()} (${wd}) · ` + ((!rec || rec.steps === null) ? '걸음 기록 없음' : `걸음 ${rec.steps.toLocaleString('ko-KR')}`);
           }
         }
       } catch (err) {
@@ -4744,10 +4719,110 @@
       }
     }
 
+    // 잠 띠 그리기 (1.2.8): 함께 보기 '잠' 칸 · 크게 보기 · 보내기 사진이 같이 쓴다.
+    // o = { mk(tag, attrs, parent), axis(눈금 놓을 곳), bands(띠 놓을 곳), days(reportActivityDays), cx(i) 칸 가운데, dayW,
+    //       T, B(위·아래), labelX, labelSize, lineX0, lineX1, color, light, selectedKey }
+    function drawSleepStrip(o) {
+      const WAKE = '#D99A6C';
+      const rel = (m) => ((m - 18 * 60) % 1440 + 1440) % 1440; // 오후 6시를 0으로
+      const span = (x) => { const a = rel(x.start); let b = rel(x.end); if (b <= a) b = Math.min(1440, a + sleepDur(x)); return [a, b]; };
+      let lo = 180, hi = 900; // 적어도 오후 9시~오전 9시
+      o.days.forEach(d => (d.segs || []).forEach(x => { const [a, b] = span(x); lo = Math.min(lo, a); hi = Math.max(hi, b); }));
+      lo = Math.max(0, Math.floor(lo / 180) * 180); hi = Math.min(1440, Math.ceil(hi / 180) * 180);
+      const T = o.T, B = o.B;
+      const y = (r) => T + (Math.min(hi, Math.max(lo, r)) - lo) / (hi - lo) * (B - T);
+      const stepH = Math.max(o.minStep || 180, (B - T) / ((hi - lo) / 180) < o.labelSize * 1.25 ? 360 : 180);
+      for (let r = lo; r <= hi; r += 180) {
+        const hh = (18 + r / 60) % 24;
+        o.mk('line', { x1: o.lineX0, x2: o.lineX1, y1: y(r).toFixed(1), y2: y(r).toFixed(1), stroke: o.color, 'stroke-width': hh === 0 ? 0.7 : 0.5, opacity: hh === 0 ? 0.28 : 0.14, 'stroke-dasharray': hh === 0 ? '' : '2,2' }, o.axis);
+        if (hh % (stepH / 60) === 0) {
+          const t = o.mk('text', { x: o.labelX, y: (y(r) + o.labelSize * 0.35).toFixed(1), 'text-anchor': 'middle', 'font-size': o.labelSize, fill: o.color, opacity: 0.6 }, o.axis);
+          t.textContent = String(hh);
+        }
+      }
+      const bandW = Math.min(o.maxBand || 9, Math.max(1.6, o.dayW * 0.62));
+      o.days.forEach((rec, i) => {
+        if (!rec || rec.sleep_min === null || rec.sleep_min === undefined) return;
+        const cx = o.cx(i);
+        const selected = rec.date === o.selectedKey;
+        const tone = chartColorOn ? moodColorAt(rec.sleep_min / 60 - 6, o.light) : o.color;
+        if (rec.segs && rec.segs.length) {
+          rec.segs.slice().sort((a, b) => (a.kind === 'wake') - (b.kind === 'wake')).forEach(x => {
+            const [a, b] = span(x);
+            const y1 = y(a), y2 = Math.max(y(b), y1 + 1.2);
+            if (x.kind === 'wake') o.mk('rect', { x: (cx - bandW / 2 - 0.6).toFixed(2), y: y1.toFixed(2), width: (bandW + 1.2).toFixed(2), height: Math.max(1.6, y2 - y1).toFixed(2), rx: 0.8, fill: WAKE, opacity: 0.95 }, o.bands);
+            else o.mk('rect', { x: (cx - bandW / 2).toFixed(2), y: y1.toFixed(2), width: bandW.toFixed(2), height: (y2 - y1).toFixed(2), rx: Math.min(2, bandW / 2).toFixed(2),
+              fill: tone, opacity: x.kind === 'nap' ? 0.32 : (selected ? 0.95 : (chartColorOn ? 0.8 : 0.62)) }, o.bands);
+          });
+        } else {
+          // 시각 모름(숫자로 적음·워치): 띠를 지어내지 않고 잔 시간만 숫자로
+          const t = o.mk('text', { x: cx.toFixed(2), y: ((T + B) / 2 + o.labelSize * 0.35).toFixed(1), 'text-anchor': 'middle', 'font-size': Math.min(o.labelSize, Math.max(o.labelSize * 0.6, o.dayW * 0.7)).toFixed(1), fill: tone, opacity: selected ? 1 : 0.75, 'font-weight': 700 }, o.bands);
+          t.textContent = String(Math.round(rec.sleep_min / 30) / 2);
+        }
+        if (selected && o.highlight) o.mk('rect', { x: (cx - o.dayW / 2 + 0.3).toFixed(2), y: T - 3, width: (o.dayW - 0.6).toFixed(2), height: B - T + 6, rx: 2, fill: o.color, opacity: 0.07 }, o.bands);
+      });
+    }
+    function sleepStripHasData(days) { return sleepEnabled && days.some(d => d.sleep_min !== null && d.sleep_min !== undefined); }
+
+    // 잠 그래프 (1.2.8): 날마다 세로 띠. 위가 전날 저녁, 아래가 낮. 칸은 아침에 깬 날 (기분 그래프와 같은 칸).
+    // 시각이 있는 날(시계로 적음·자동)은 잠든~깬 띠 + 깬 때 주황 + 낮잠 옅은 띠.
+    // 시각을 모르는 날(숫자로 적음·워치)은 띠 대신 잔 시간을 숫자로 (지어내지 않는다).
+    function renderSleepChart(days) {
+      const card = document.getElementById('reportSleepCard');
+      const svg = document.getElementById('sleepChartSvg');
+      if (!card || !svg) return;
+      const hcSleep = isActivityEnabled && hasActivityBridge() && activityGranted.sleep;
+      const any = days.some(d => d.sleep_min !== null);
+      const visible = sleepEnabled && (any || hcSleep);
+      card.style.display = visible ? 'block' : 'none';
+      if (!visible) return;
+      const SVG_NS = 'http://www.w3.org/2000/svg';
+      const mk = (tag, attrs) => { const el = document.createElementNS(SVG_NS, tag); Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, String(v))); return el; };
+      const chartPathEl = document.getElementById('chartPath');
+      const color = (chartPathEl && chartPathEl.getAttribute('stroke')) || '#597075';
+      const WAKE = '#D99A6C';
+      const { d1, diffDays } = getReportRange();
+      const X0 = 22, X1 = 254;
+      const dayW = (X1 - X0) / diffDays;
+      const dayKey = (i) => { const d = new Date(d1); d.setDate(d1.getDate() + i); return localDateKey(d); };
+      const byDate = new Map(days.map(d => [d.date, d]));
+      svg.textContent = '';
+      drawSleepStrip({ mk: (t, a, p) => { const el = mk(t, a); (p || svg).appendChild(el); return el; }, axis: svg, bands: svg, days, cx: (i) => X0 + (i + 0.5) * dayW, dayW,
+        T: 8, B: 106, labelX: 12, labelSize: 7.5, lineX0: X0, lineX1: X1, color, light: false, selectedKey: activitySelectedDate, highlight: true });
+      // 아래 날짜: 처음과 끝
+      const fmtD = (k) => { const d = parseLocalDate(k); return `${d.getMonth() + 1}.${d.getDate()}`; };
+      const sl0 = document.getElementById('sleepChartStart'); if (sl0) sl0.textContent = fmtD(dayKey(0));
+      const legend = document.getElementById('sleepChartLegend');
+      if (legend) legend.innerHTML = `<span class="flex items-center gap-1"><i style="display:inline-block;width:6px;height:10px;border-radius:2px;background:${color};opacity:.65"></i>잔 때</span>` +
+        `<span class="flex items-center gap-1"><i style="display:inline-block;width:8px;height:4px;border-radius:1px;background:${WAKE}"></i>깬 때</span>` +
+        `<span class="flex items-center gap-1"><i style="display:inline-block;width:6px;height:10px;border-radius:2px;background:${color};opacity:.3"></i>낮잠</span>`;
+      // 고른 날(없으면 가장 최근 잠)의 숫자
+      const detail = document.getElementById('sleepChartDetail');
+      if (detail) {
+        let key = activitySelectedDate && byDate.get(activitySelectedDate) && byDate.get(activitySelectedDate).sleep_min !== null ? activitySelectedDate : null;
+        if (!key) { const w = days.filter(d => d.sleep_min !== null); key = w.length ? w[w.length - 1].date : null; }
+        const rec = key ? byDate.get(key) : null;
+        if (!rec) { detail.textContent = '아직 적은 잠이 없어요. 첫 화면 위 침대를 눌러 적어요.'; }
+        else {
+          const dt = parseLocalDate(key);
+          const wd = ['일', '월', '화', '수', '목', '금', '토'][dt.getDay()];
+          const parts = [`${dt.getMonth() + 1}.${dt.getDate()} (${wd}) 아침에 깸`];
+          let t = `잠 ${formatSleepMin(rec.sleep_min)}`;
+          if (rec.nap_min) t += ` (낮잠 ${formatSleepMin(rec.nap_min)} 포함)`;
+          parts.push(t);
+          const night = (rec.segs || []).find(x => x.kind === 'night');
+          if (night) parts.push(`${sleepFmt(night.start)}~${sleepFmt(night.end)}`);
+          parts.push((rec.wake_count === null || rec.wake_count === undefined) ? '깬 횟수 기록 없음' : `깸 ${rec.wake_count}번`);
+          if (rec.src === 'auto') parts.push('자동');
+          detail.textContent = parts.join(' · ');
+        }
+      }
+    }
+
     // 막대를 누르면 그날의 숫자를 보여 준다
-    function selectActivityDay(e) {
+    function selectActivityDay(e, svgId) {
       if (e && e.stopPropagation) e.stopPropagation();
-      const svg = document.getElementById('activitySvg');
+      const svg = document.getElementById(svgId || 'activitySvg');
       if (!svg || !e) return;
       const rect = svg.getBoundingClientRect();
       if (!rect.width) return;
@@ -4864,8 +4939,7 @@
         ['터치', '화면을 누를 때 퍼지는 모양이에요. 파문 · 숨결 · 별빛.'],
         ['기분 모양', '첫 화면 기분 단추의 모양을 글자·이모지·그림으로 바꿀 수 있어요. 그림은 이 기기에만 두고, 기록과 그래프는 그대로예요.'],
         ['잠 기록', '켜면 첫 화면 위 가운데에 침대가 생겨 잠을 적을 수 있고, 함께 보기에 잠 줄이 보여요. 꺼도 적어 둔 잠은 지워지지 않아요.'],
-        app ? ['걸음 기록', 'Health Connect에서 하루 걸음 수를 읽어 함께 보기에 보여 줘요. 읽기만 하고, 하루 합계만 이 기기에 둬요.'] : null,
-        ['샘플 채우기 · 데이터 비우기', '써 보기용으로 14일치 기록을 채우거나, 이 기기의 기록을 모두 지워요.']
+        app ? ['걸음 기록', 'Health Connect에서 하루 걸음 수를 읽어 함께 보기에 보여 줘요. 읽기만 하고, 하루 합계만 이 기기에 둬요.'] : null
       ].filter(Boolean);
       const dark = getEffectiveTheme(currentTheme) === 'dark';
       const sub = dark ? 'text-white/60' : 'text-gray-500';
@@ -5408,7 +5482,10 @@
       const X0 = 44, X1 = W - 24, PW = X1 - X0;
       const showPills = opts.showPills != null ? opts.showPills : !!isMedicationEnabled;
       const PILL_ROW = showPills ? 24 : 0;
-      const top = 18, bottom = H - 44 - PILL_ROW;
+      // 1.2.8: opts.sleep이면 약 줄 아래에 잠 띠 (크게 보기·보내기 사진)
+      const sleepDays = opts.sleep ? reportActivityDays() : null;
+      const SLEEP_H = sleepDays && sleepStripHasData(sleepDays) ? Math.round((H - 62 - PILL_ROW) * (opts.sleepFrac || 0.36)) : 0;
+      const top = 18, bottom = H - 44 - PILL_ROW - SLEEP_H;
       const MID = (top + bottom) / 2, LEVEL = (bottom - top) / 5; // ○~△ 한 칸. △~▲는 1.5배
       // 확대: 하루가 화면 너비를 넘지 않을 만큼까지
       const kMax = Math.max(1, diffDays);
@@ -5431,7 +5508,7 @@
       });
       const g = mk('g', { 'clip-path': `url(#${clipId})` });
       // 날짜 눈금: 매일 짧게, 5일마다 길고 진하게 + 날짜. 크게 벌려 하루 칸이 넓어지면 날마다 날짜
-      const tickTop = bottom + 8 + PILL_ROW;
+      const tickTop = bottom + 8 + PILL_ROW + SLEEP_H;
       // 복약 기록을 켰으면 그래프 바로 아래에 날마다 약 표시 (먹은 날 = 채운 캡슐, 안 먹은 날 = 빈 캡슐)
       if (showPills) {
         const taken = pillDayIndexes(d1, diffDays);
@@ -5441,6 +5518,15 @@
           if (x < X0 - 20 || x > X1 + 20) continue;
           drawPillMark(g, x, bottom + 16, Math.min(14, dayW * 0.6), 6, taken.has(i), color);
         }
+      }
+      if (SLEEP_H) {
+        const sT = bottom + PILL_ROW + 40, sB = bottom + PILL_ROW + SLEEP_H - 2;
+        // 기분과 잠 사이 옅은 가름줄 + '잠' 글자
+        mk('line', { x1: 6, x2: X1, y1: sT - 22, y2: sT - 22, stroke: color, 'stroke-width': 0.8, opacity: 0.15 });
+        const lt = mk('text', { x: 20, y: sT - 6, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700, fill: color, opacity: 0.7 });
+        lt.textContent = '잠';
+        drawSleepStrip({ mk, axis: svg, bands: g, days: sleepDays, cx: (i) => dayStartX(i) + dayW / 2, dayW, maxBand: 14,
+          T: sT, B: sB, labelX: 20, labelSize: 10, minStep: 360, lineX0: X0, lineX1: X1, color, light: opts.light, selectedKey: null });
       }
       const step = Math.max(1, Math.ceil(diffDays / (62 * k)));
       const labelEvery = dayW >= 40 ? 1 : 5;
@@ -5506,28 +5592,97 @@
           }
         });
       }
-      return { mk, g, X0, X1, PW, dayW, d1, diffDays, pts, top, bottom, k, offset, W, H };
+      return { mk, g, X0, X1, PW, dayW, d1, diffDays, pts, top, bottom, k, offset, W, H, lineBottom: bottom + PILL_ROW + SLEEP_H, sleepDays: SLEEP_H ? sleepDays : null };
     }
 
     function drawChartZoom() {
       const svg = document.getElementById('chartZoomSvg');
+      const scroller = document.getElementById('chartZoomScroll');
       const st = chartZoomState;
-      if (!svg || !st) return;
-      const W = svg.clientWidth, H = svg.clientHeight;
-      if (!W || !H) return;
+      if (!svg || !st || !scroller) return;
+      const W = scroller.clientWidth, VH = scroller.clientHeight;
+      if (!W || !VH) return;
+      const days = reportActivityDays();
+      const hasSleep = sleepStripHasData(days);
+      const hasSteps = days.some(d => d.steps !== null && d.steps !== undefined);
+      const H = (hasSleep || hasSteps) ? VH - 34 : VH;
+      svg.style.height = H + 'px';
       const gr = drawMoodGraph(svg, { W, H, color: st.color, k: st.k, offset: st.offset, clipId: 'chartZoomClip' });
       st.k = gr.k; st.offset = gr.offset;
       const { mk, g, X0, X1, PW, dayW, d1, diffDays, pts, top, bottom } = gr;
+      const sleepDays = hasSleep ? days : null;
+      const panelLines = drawChartZoomPanels(days, hasSleep, hasSteps, { W, VH, X0, X1, PW, dayW: gr.dayW, offset: gr.offset, color: st.color, diffDays });
       // 빨간 기준선 + 고른 기록 표시
       // 1.2.7: 빨강은 '매우 나쁨' 색이 되어 기준선은 진한 회색 (사용자 결정). 어두운 화면에서는 밝은 회색
       const RED = getEffectiveTheme(currentTheme) === 'dark' ? '#d5dcdd' : '#3f4a4c';
       const ring = mk('circle', { r: 7, fill: 'none', stroke: RED, 'stroke-width': 2, opacity: 0 }, g);
       const line = mk('line', { y1: top - 8, y2: bottom + 4, stroke: RED, 'stroke-width': 2, opacity: 0.85 }, g);
       const handle = mk('circle', { cy: bottom + 4, r: 6, fill: RED }, g);
-      st.geo = { X0, X1, PW, dayW, d1, diffDays, pts, line, ring, handle, W };
+      st.geo = { X0, X1, PW, dayW, d1, diffDays, pts, line, ring, handle, W, sleepDays, days, panelLines };
       if (st.lineFrac == null) st.lineFrac = pts.length ? (pts[pts.length - 1].x - X0 + st.offset) / (PW * st.k) : 1 - 0.5 / diffDays;
       placeChartZoomLine();
       bindChartZoomGestures(svg);
+    }
+
+    // 크게 보기 아래 칸: 잠(시각 띠)·걸음(막대). 기분 그래프와 같은 날짜 자리(확대·이동도 같이), 기준선도 같은 자리에.
+    function drawChartZoomPanels(days, hasSleep, hasSteps, o) {
+      const SVG_NS = 'http://www.w3.org/2000/svg';
+      const lines = [];
+      const cx = (i) => o.X0 + i * o.dayW - o.offset + o.dayW / 2;
+      const setup = (wrapId, svgId, title, show, Hp) => {
+        const wrap = document.getElementById(wrapId), svg = document.getElementById(svgId);
+        if (!wrap || !svg) return null;
+        wrap.style.display = show ? 'block' : 'none';
+        if (!show) return null;
+        const t = wrap.querySelector('.zoom-panel-title'); if (t) { t.textContent = title; t.style.color = o.color; }
+        svg.style.height = Hp + 'px';
+        svg.setAttribute('viewBox', `0 0 ${o.W} ${Hp}`);
+        svg.textContent = '';
+        const mk = (tag, attrs, parent) => { const el = document.createElementNS(SVG_NS, tag); for (const k in attrs) el.setAttribute(k, String(attrs[k])); (parent || svg).appendChild(el); return el; };
+        const defs = mk('defs', {}); const cp = mk('clipPath', { id: svgId + 'Clip' }, defs);
+        mk('rect', { x: o.X0 - 1, y: 0, width: o.PW + 2, height: Hp }, cp);
+        const g = mk('g', { 'clip-path': `url(#${svgId}Clip)` });
+        // 날짜 (기분 그래프와 같은 규칙)
+        const labelEvery = o.dayW >= 40 ? 1 : 5;
+        const { d1 } = getReportRange();
+        for (let i = 0; i < o.diffDays; i++) {
+          if (i % labelEvery) continue;
+          const x = cx(i); if (x < o.X0 - 40 || x > o.X1 + 40) continue;
+          const d = new Date(d1.getFullYear(), d1.getMonth(), d1.getDate() + i);
+          const tx = mk('text', { x, y: Hp - 8, 'text-anchor': 'middle', 'font-size': 12, fill: o.color, opacity: 0.6 }, g);
+          tx.textContent = `${d.getMonth() + 1}.${d.getDate()}`;
+        }
+        const RED = getEffectiveTheme(currentTheme) === 'dark' ? '#d5dcdd' : '#3f4a4c';
+        lines.push(mk('line', { y1: 4, y2: Hp - 24, stroke: RED, 'stroke-width': 2, opacity: 0.5 }, svg));
+        // 칸을 누르면 기준선이 그날로
+        if (!svg.dataset.bound) {
+          svg.dataset.bound = '1';
+          svg.addEventListener('click', (ev) => { if (chartZoomState && chartZoomState.geo) moveChartZoomLine(chartZoomPos(svg, ev)); });
+        }
+        return { mk, svg, g, Hp };
+      };
+      const sp = setup('chartZoomSleepWrap', 'chartZoomSleepSvg', '잠', hasSleep, Math.max(260, Math.round(o.VH * 0.95)));
+      if (sp) {
+        drawSleepStrip({ mk: sp.mk, axis: sp.svg, bands: sp.g, days, cx, dayW: o.dayW, maxBand: 22,
+          T: 14, B: sp.Hp - 34, labelX: 22, labelSize: 12, lineX0: o.X0, lineX1: o.X1, color: o.color, light: false, selectedKey: null });
+      }
+      const pp = setup('chartZoomStepsWrap', 'chartZoomStepsSvg', '걸음', hasSteps, Math.max(200, Math.round(o.VH * 0.7)));
+      if (pp) {
+        const T = 14, B = pp.Hp - 34, h = B - T;
+        const SMAX = stepsMaxOf(days);
+        stepsTicks(SMAX).forEach(v => {
+          const yy = B - h * v / SMAX;
+          pp.mk('line', { x1: o.X0, x2: o.X1, y1: yy, y2: yy, stroke: o.color, 'stroke-width': v ? 0.5 : 0.8, opacity: v ? 0.14 : 0.25, 'stroke-dasharray': v ? '2,2' : '' });
+          const t = pp.mk('text', { x: 22, y: yy + 4, 'text-anchor': 'middle', 'font-size': 11, fill: o.color, opacity: 0.6 }); t.textContent = v ? (v / 1000) + 'k' : '0';
+        });
+        const bw = Math.min(22, Math.max(2, o.dayW * 0.55));
+        days.forEach((d, i) => {
+          const v = d.steps; if (v === null || v === undefined) return;
+          const bh = Math.max(1, Math.min(1, v / SMAX) * h);
+          pp.mk('rect', { x: cx(i) - bw / 2, y: B - bh, width: bw, height: bh, rx: Math.min(3, bw / 2), fill: chartColorOn ? moodColorAt((v - 3000) / 1000) : o.color, opacity: chartColorOn ? 0.85 : 0.62 }, pp.g);
+        });
+      }
+      return lines;
     }
     // 손가락 자리 → 그래프 가로 좌표 (눕혀 그렸으면 그래프의 가로는 화면의 세로)
     function chartZoomPos(svg, ev) {
@@ -5613,6 +5768,7 @@
       g.pts.forEach(p => { if (p.day === day && (!pick || Math.abs(p.x - x) < Math.abs(pick.x - x))) pick = p; });
       const lx = (pick ? pick.x : x).toFixed(1); // 기록이 있는 날은 그 기록에 붙는다
       g.line.setAttribute('x1', lx); g.line.setAttribute('x2', lx);
+      (g.panelLines || []).forEach(l => { l.setAttribute('x1', lx); l.setAttribute('x2', lx); });
       g.handle.setAttribute('cx', lx);
       if (pick) { g.ring.setAttribute('cx', pick.x.toFixed(1)); g.ring.setAttribute('cy', pick.y.toFixed(1)); g.ring.setAttribute('opacity', '1'); }
       else g.ring.setAttribute('opacity', '0');
@@ -5626,6 +5782,11 @@
       } else {
         text += '  기록 없음';
       }
+      // 1.2.8: 잠 띠가 있으면 그날 잠도 같이
+      const sd = g.sleepDays && g.sleepDays[day];
+      const stp = g.days && g.days[day];
+      const sleepText = (sd && sd.sleep_min !== null ? `  · 잠 ${formatSleepMin(sd.sleep_min)}` : '') +
+        (stp && stp.steps !== null && stp.steps !== undefined ? `  · 걸음 ${stp.steps.toLocaleString('ko-KR')}` : '');
       const ro = document.getElementById('chartZoomReadout');
       if (ro) {
         ro.textContent = text;
@@ -5637,6 +5798,7 @@
           drawMoodSymbol(ic, 8, 8, 13, pick.score, st.color, 1);
           ro.appendChild(ic);
         }
+        if (sleepText) ro.appendChild(document.createTextNode(sleepText));
       }
     }
 
@@ -5660,12 +5822,14 @@
       const { now, d1, diffDays } = getReportRange();
       const fmt = (d) => `${d.getMonth() + 1}.${d.getDate()}`;
       // 그래프: 화면의 큰 그래프와 같은 그림을 절반 크기로 그려 두 배로 키운다 (글자·막대가 사진에서 읽기 좋은 크기)
-      const GW = INNER / 2 - 24, GH = 220;
+      // 1.2.8: 잠은 기분 그래프 아래에 시각 띠로 같이 (함께 보기 '잠' 칸과 같은 그림)
+      const sleepInGraph = sleepStripHasData(reportActivityDays());
+      const GW = INNER / 2 - 24, GH = sleepInGraph ? 330 : 220;
       const gsvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       gsvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
       gsvg.setAttribute('width', String(GW * 2)); gsvg.setAttribute('height', String(GH * 2));
       gsvg.setAttribute('font-family', FONT);
-      drawMoodGraph(gsvg, { W: GW, H: GH, color: ACCENT, clipId: 'reportGraphClip', light: true }); // 보낼 사진은 늘 밝은 바탕
+      drawMoodGraph(gsvg, { W: GW, H: GH, color: ACCENT, clipId: 'reportGraphClip', light: true, sleep: true, sleepFrac: 0.42 }); // 보낼 사진은 늘 밝은 바탕
       const graphImg = await svgToImage(gsvg);
 
       const c = document.createElement('canvas');
@@ -5692,7 +5856,7 @@
       // 잠 (1.2.7, 사용자 요청): 기간에 잠 기록이 있으면 기분 그래프 아래에 날마다 막대 한 줄 + 평균
       const sleepDays = reportActivityDays();
       const sleepVals = sleepDays.filter(d => d.sleep_min !== null && d.sleep_min !== undefined);
-      const showSleep = sleepVals.length > 0;
+      const showSleep = false; // 1.2.8: 막대 칸 대신 그래프 안 시각 띠 (아래 제목 줄에 평균)
       const SLEEP_CARD_H = 330;
       // 걸음도 (1.2.7, 사용자 요청): 걸음 기록이 있으면 잠 아래에 같은 모양으로 (3천 걸음 점선)
       const stepVals = sleepDays.filter(d => d.steps !== null && d.steps !== undefined);
@@ -5719,11 +5883,17 @@
       ctx.fillStyle = ACCENT; ctx.font = font(46, true); ctx.fillText('함께 보는 기록', PAD, y);
       y += 18 + 36;
       ctx.fillStyle = SUB; ctx.font = font(30);
-      ctx.fillText(diffDays > 1 ? `${fmt(d1)} ~ ${fmt(now)} · ${diffDays}일간 기분 기록` : `${fmt(now)} 기분 기록`, PAD, y);
+      ctx.fillText((diffDays > 1 ? `${fmt(d1)} ~ ${fmt(now)} · ${diffDays}일간 기분` : `${fmt(now)} 기분`) + (sleepInGraph ? '과 잠' : ' 기록'), PAD, y);
       y += 36;
       // 그래프 칸
       rr(PAD, y, INNER, graphCardH, 28, CARD, LINE);
       ctx.drawImage(graphImg, PAD + 24, y + 44, GW * 2, GH * 2);
+      if (sleepInGraph && sleepVals.length) {
+        const avg = Math.round(sleepVals.reduce((a, d) => a + d.sleep_min, 0) / sleepVals.length);
+        ctx.fillStyle = SUB; ctx.font = font(26); ctx.textAlign = 'right';
+        ctx.fillText(`잠 평균 ${formatSleepMin(avg)} · ${sleepVals.length}일 기록`, PAD + INNER - 32, y + 40);
+        ctx.textAlign = 'left';
+      }
       y += graphCardH;
       // 잠·걸음 칸: 날짜 칸은 기분 그래프와 같은 자리 (drawMoodGraph의 X0=44, X1=W-24를 두 배로)
       const drawDailyCard = (title, key, maxV, refV, refLabel, avgText, tone) => {
@@ -5759,7 +5929,7 @@
       }
       if (showSteps) {
         const avg = Math.round(stepVals.reduce((a, d) => a + d.steps, 0) / stepVals.length);
-        drawDailyCard('걸음', 'steps', ACTIVITY_STEPS_MAX, 3000, '3천', `평균 ${avg.toLocaleString('ko-KR')}걸음 · ${stepVals.length}일 기록`, v => (v - 3000) / 1000);
+        drawDailyCard('걸음', 'steps', stepsMaxOf(sleepDays), 3000, '3k', `평균 ${avg.toLocaleString('ko-KR')}걸음 · ${stepVals.length}일 기록`, v => (v - 3000) / 1000);
       }
       // 복약 일수
       if (showMed) {
@@ -5882,6 +6052,23 @@
       try { localStorage.setItem('lifeguard_doctor_notes', JSON.stringify(doctorNotes)); } catch(e){}
 
       fillActivitySample(start, 14);
+      // 1.2.8: 잠 샘플 — 들뜰 때 늦게 자고 일찍 깸, 가라앉을 때 길게 자고 낮잠 (시계로 적은 것 + 숫자로 적은 하루)
+      try {
+        const beds = [23*60, 23*60+30, 60, 150, 180, 90, 23*60+30, 23*60, 22*60+30, 22*60, 23*60, 23*60+30, 23*60, 23*60];
+        const ups  = [7*60, 7*60, 6*60+30, 6*60, 5*60+30, 6*60, 7*60, 7*60+30, 9*60, 9*60+30, 8*60+30, 7*60+30, 7*60, 7*60];
+        const wk   = [[], [180], [240, 300], [270, 330, 360], [240, 300], [240], [], [180], [], [240], [], [], [], []];
+        const nap  = [null, null, null, null, null, null, null, null, [14*60, 15*60+30], [13*60, 15*60], null, null, null, null];
+        for (let i = 0; i < 14; i++) {
+          const d = new Date(start); d.setDate(start.getDate() + i);
+          if (i === 6) { sleepLog[localDateKey(d)] = { mode: 'num', sleep_min: 450, nap_min: 0, wake_count: 1 }; continue; }
+          const segs = [{ kind: 'night', start: beds[i], end: ups[i] }];
+          wk[i].forEach(w => segs.push({ kind: 'wake', start: w, end: w + 15 }));
+          if (nap[i]) segs.push({ kind: 'nap', start: nap[i][0], end: nap[i][1] });
+          const sm = sleepSummary(segs);
+          sleepLog[localDateKey(d)] = { mode: 'time', segs, sleep_min: sm.night + sm.nap, nap_min: sm.nap, wake_count: sm.wakes };
+        }
+        saveSleepLog();
+      } catch (_) {}
       renderDoctorNotes();
       renderReportData();
       showToast('14일간의 기분 기록 샘플 데이터가 채워졌습니다! 📊');
@@ -6763,17 +6950,15 @@
     }
 
     // ── 새로워진 점 안내 (버전별). 저절로는 한 번만 뜬다. 다시 보려면 설정 맨 아래 '새로워진 점 보기' ──
-    const WHATS_NEW_VERSION = '1.2.7';
-    // 1.2.7에서 바뀐 것. 세 번째 값 'android'는 안드로이드 앱에서만, 'web'은 웹·아이폰에서만 보여주는 항목
+    const WHATS_NEW_VERSION = '1.2.8';
+    // 1.2.8에서 바뀐 것 (문구 사용자 확인 11.22). 세 번째 값 'android'는 안드로이드 앱에서만, 'web'은 웹·아이폰에서만 보여주는 항목
     const WHATS_NEW_ITEMS = [
-      ['🛏️', '첫 화면 위 가운데 침대를 누르면 잠 기록을 적을 수 있어요. 24시간 시계나 숫자로 잔 시간을 적어요.'],
-      ['🌙', '밤중에 깬 때와 낮잠도 함께 적을 수 있어요.'],
-      ['📅', '날짜 단추를 누르면 달력에서 지난 날을 골라 그날 잠도 적을 수 있어요.'],
-      ['📱', '켜 두면 밤사이 폰 화면이 꺼져 있던 때로 잠을 짐작해 적어 줘요. 처음에는 꺼져 있어요.', 'android'],
-      ['📝', '함께 보는 기록의 잠 줄에는 직접 적은 것이 먼저 보여요.'],
-      ['🎨', '설정 ‘그래프 색’에서 칼라를 고르면 기분·잠·걸음이 색으로 보여요. 처음에는 흑백이에요.'],
-      ['✉️', '함께 보는 기록을 보낼 때 사진에 잠과 걸음도 함께 담겨요.'],
-      ['🌿', '이 안내는 한 번만 떠요. 설정 맨 아래 ‘새로워진 점 보기’에서 다시 볼 수 있어요.']
+      ['🛟', '설정 ‘기록 지키기’를 켜고 구글로 로그인하면 기록을 저절로 담아 두어, 폰을 바꾸거나 기록이 지워져도 다시 불러올 수 있어요.'],
+      ['🗂️', '기록 지키기를 켜 두면 진료 완료 뒤에도 지난 기록이 보관함에 남아요.'],
+      ['⚙️', '설정이 [기본 | 상세] 두 칸으로 나뉘었어요. 자주 쓰는 것은 기본, 화면·터치·기록은 상세에 있어요.'],
+      ['🛏️', '잠 기록은 고치면 저절로 저장돼요. 상세 칸에서 켜고 끌 수 있어요.'],
+      ['👟', '걸음 기록도 상세 칸에서 따로 켜고 꺼요.', 'android'],
+      ['🌿', '이 안내는 한 번만 떠요. 설정 상세 칸 맨 아래 ‘새로워진 점 보기’에서 다시 볼 수 있어요.']
     ];
     let whatsNewEl = null;
 
@@ -6925,7 +7110,7 @@
       if (saved && saved.mode === 'num') {
         num = { night: Math.max(0, (saved.sleep_min || 0) - (saved.nap_min || 0)), wakes: saved.wake_count || 0, nap: saved.nap_min || 0 };
       }
-      sleepEdit = { date: key, mode: saved && saved.mode === 'num' ? 'num' : 'time', segs, sel: 0, num, fromAuto, saved: !!saved, dirty: false };
+      sleepEdit = { date: key, mode: saved && saved.mode === 'num' ? 'num' : 'time', segs, sel: 0, num, fromAuto, saved: !!saved, dirty: false, open: { wake: false, nap: false } };
     }
 
     function applySleepTheme() {
@@ -7008,8 +7193,14 @@
       if (!st) return;
       const set = (id, f) => { const el = document.getElementById(id); if (el) f(el); };
       set('sleepDateLabel', el => { el.textContent = sleepDateLabel(st.date); });
-      set('sleepNextBtn', el => { el.style.visibility = st.date >= localDateKey(new Date()) ? 'hidden' : 'visible'; });
-      document.querySelectorAll('#sleepModal .sl-seg button').forEach(b => b.classList.toggle('on', b.dataset.mode === st.mode));
+      // 1.2.8: 글자를 크게 쓰면 날짜가 두 줄로 꺾임(사용자 폰) → 한 줄에 들어갈 때까지 글자만 조금 줄인다
+      set('sleepDatePill', el => {
+        const base = 16 * (parseFloat(getComputedStyle(document.getElementById('sleepModal')).getPropertyValue('--sl-fs')) || 1);
+        let fs = base; el.style.fontSize = fs + 'px';
+        while (el.scrollWidth > el.clientWidth + 1 && fs > base * 0.65) { fs -= 0.5; el.style.fontSize = fs + 'px'; }
+      });
+      set('sleepNextBtn', el => { const last = st.date >= localDateKey(new Date()); el.disabled = last; el.style.opacity = last ? '0.25' : '1'; }); // 1.2.8: 숨기면 날짜가 한쪽으로 쏠려 보임(사용자) → 옅게만
+      set('sleepModeLink', el => { el.textContent = st.mode === 'num' ? '시계로 적기' : '숫자로 적기'; });
       set('sleepTimeBox', el => { el.style.display = st.mode === 'time' ? 'block' : 'none'; });
       set('sleepNumBox', el => { el.style.display = st.mode === 'num' ? 'block' : 'none'; });
       set('sleepDeleteBtn', el => { el.style.display = st.saved ? 'inline' : 'none'; });
@@ -7080,19 +7271,13 @@
         });
       });
       // 가운데: 고른 구간의 시각
-      const x = st.segs[st.sel] || st.segs[0];
-      const isW = x.kind === 'wake';
-      const cap = mk('text', { x: C, y: C - 26, 'text-anchor': 'middle', 'font-size': 13, fill: 'var(--sl-muted)' });
-      cap.textContent = x.kind === 'night' ? '밤잠' : isW ? '밤중에 깬 때' : '낮잠';
-      const line = (y, label, m) => {
-        const t = mk('text', { x: C, y, 'text-anchor': 'middle' });
-        const l = mk('tspan', { 'font-size': 13, fill: 'var(--sl-muted)' }, t); l.textContent = label + '  ';
-        const v = mk('tspan', { 'font-size': 21, 'font-weight': 700, fill: 'var(--sl-ink)' }, t); v.textContent = sleepFmt(m);
-      };
-      line(C + 4, isW ? '깸' : '잠듦', x.start);
-      line(C + 34, isW ? '다시 잠' : '깸', x.end);
-      // 아래 합계
+      // 가운데: 잠잔 시간 하나만 (1.2.8: 시각은 바로 아래 −/+ 줄에 있어 겹치던 것을 뺌)
       const sm = sleepSummary(st.segs);
+      const cap = mk('text', { x: C, y: C - 14, 'text-anchor': 'middle', 'font-size': 13, fill: 'var(--sl-muted)' });
+      cap.textContent = '잠잔 시간';
+      const big = mk('text', { x: C, y: C + 20, 'text-anchor': 'middle', 'font-size': 26, 'font-weight': 700, fill: 'var(--sl-ink)' });
+      big.textContent = formatSleepMin(sm.night + sm.nap);
+      if (sm.wakes) { const w = mk('text', { x: C, y: C + 44, 'text-anchor': 'middle', 'font-size': 12, fill: 'var(--sl-muted)' }); w.textContent = `깸 ${sm.wakes}번`; }
       const parts = [`밤잠 ${formatSleepMin(sm.night)}`];
       if (sm.wakes) parts.push(`깸 ${sm.wakes}번 · ${formatSleepMin(sm.awake)}`);
       if (sm.nap) parts.push(`낮잠 ${formatSleepMin(sm.nap)}`);
@@ -7101,35 +7286,10 @@
         (sm.wakes || sm.nap ? `<div class="sl-small" style="font-weight:500;margin-top:2px;">${parts.join(' · ')}</div>` : '');
       bindSleepDial(svg);
     }
+    // 1.2.8: 깬 때·낮잠은 아래 접는 줄(renderSleepFine 안)로 옮김. 예전 단추 줄은 비워 둔다
     function renderSleepPills() {
       const box = document.getElementById('sleepPills');
-      const st = sleepEdit;
-      if (!box || !st) return;
-      box.textContent = '';
-      st.segs.forEach((x, i) => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'sl-pill' + (i === st.sel ? ' on' : '');
-        const name = x.kind === 'night' ? '🌙 밤잠 ' : x.kind === 'wake' ? '👁 깸 ' : '☀️ 낮잠 ';
-        b.textContent = name + formatSleepMin(sleepDur(x));
-        if (x.kind !== 'night') {
-          const del = document.createElement('span');
-          del.textContent = '×'; del.setAttribute('aria-label', '지우기');
-          del.style.cssText = 'padding-left:4px;font-weight:700;color:var(--sl-muted);';
-          b.appendChild(del);
-          del.onclick = (ev) => { ev.stopPropagation(); triggerHaptic(); st.segs.splice(i, 1); st.sel = 0; st.dirty = true; sleepAutoSave(); renderSleepModal(); };
-        }
-        b.onclick = (ev) => { ev.stopPropagation(); st.sel = i; renderSleepModal(); };
-        box.appendChild(b);
-      });
-      const add = (label, f) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'sl-pill add'; b.textContent = label; b.onclick = (ev) => { ev.stopPropagation(); triggerHaptic(); f(); st.dirty = true; sleepAutoSave(); renderSleepModal(); }; box.appendChild(b); };
-      add('+ 밤중에 깬 때', () => {
-        const n = st.segs.find(x => x.kind === 'night');
-        const mid = n ? (n.start + Math.round(sleepDur(n) / 2 / 5) * 5) % 1440 : 180;
-        st.segs.push({ kind: 'wake', start: mid, end: (mid + 15) % 1440 });
-        st.sel = st.segs.length - 1;
-      });
-      add('+ 낮잠 더하기', () => { st.segs.push({ kind: 'nap', start: 14 * 60, end: 15 * 60 }); st.sel = st.segs.length - 1; });
+      if (box) box.textContent = '';
     }
     function bindSleepDial(svg) {
       if (svg.dataset.bound) return;
@@ -7206,41 +7366,71 @@
       b.addEventListener('click', (ev) => ev.stopPropagation());
       return b;
     }
-    // 고른 구간을 5분씩: 밤잠·낮잠 = 잠든 시각·깬 시각, 밤중에 깬 때 = 깬 시각·깬 동안
+    // 1.2.8 (사용자 결정 '나. 접어 두기'): 시계 아래에는 늘 밤잠 −/+ 두 줄.
+    // 그 아래 '👁 밤중에 깸 N번 ›', '☀️ 낮잠 N번 ›' 두 줄이 접혀 있고, 누르면 펼쳐서 하나씩 고르고 −/+로 맞춘다.
     function renderSleepFine() {
       const box = document.getElementById('sleepFine');
       const st = sleepEdit;
       if (!box || !st) return;
-      const x = st.segs[st.sel] || st.segs[0];
+      if (!st.open) st.open = { wake: false, nap: false };
       const wrap = (v) => ((v % 1440) + 1440) % 1440;
-      const after = () => { st.dirty = true; sleepAutoSave(); drawSleepDial(); renderSleepPills(); updateVals(); const n = document.getElementById('sleepAutoNote'); if (n) n.style.display = 'none'; };
-      const rows = x.kind === 'wake'
-        ? [ { label: '깬 시각', val: () => sleepFmt(x.start), step: (d) => { const len = sleepDur(x); x.start = wrap(x.start + d); x.end = wrap(x.start + len); } },
-            { label: '깬 동안', val: () => formatSleepMin(sleepDur(x)), step: (d) => { const len = Math.min(240, Math.max(5, sleepDur(x) + d)); x.end = wrap(x.start + len); } } ]
-        : [ { label: '잠듦', val: () => sleepFmt(x.start), step: (d) => { x.start = wrap(x.start + d); } },
-            { label: '깸', val: () => sleepFmt(x.end), step: (d) => { x.end = wrap(x.end + d); } } ];
+      const nightIdx = () => Math.max(0, st.segs.findIndex(x => x.kind === 'night'));
+      const cur = st.segs[st.sel];
+      if (cur && cur.kind !== 'night') st.open[cur.kind] = true;
+      // 1.2.8: 시각은 시계에서 끌어 맞춘다 (사용자: 시계 아래 숫자 조정은 필요 없음). 여기는 고르기·지우기·더하기만
+      const chipText = (x) => x.kind === 'wake' ? `${sleepFmt(x.start)} · ${formatSleepMin(sleepDur(x))}` : `${sleepFmt(x.start)}~${sleepFmt(x.end).replace(/^오[전후] /, '')}`;
       box.textContent = '';
-      const vals = [];
-      rows.forEach(r => {
-        const row = document.createElement('div'); row.className = 'sl-fine';
-        const lb = document.createElement('div'); lb.className = 'lbl'; lb.textContent = r.label;
-        const v = document.createElement('div'); v.className = 'val'; v.textContent = r.val(); vals.push([v, r]);
-        row.appendChild(lb);
-        row.appendChild(sleepHoldButton('−', r.label + ' 5분 앞으로', () => { r.step(-5); after(); }));
-        row.appendChild(v);
-        row.appendChild(sleepHoldButton('+', r.label + ' 5분 뒤로', () => { r.step(5); after(); }));
-        box.appendChild(row);
+      // 깬 때 · 낮잠: 접는 줄
+      [['wake', '👁 밤중에 깸', '+ 깸 추가'], ['nap', '☀️ 낮잠', '+ 낮잠 추가']].forEach(([kind, title, addLabel]) => {
+        const items = st.segs.map((x, i) => [x, i]).filter(([x]) => x.kind === kind);
+        const sec = document.createElement('div');
+        sec.style.borderTop = '1px solid var(--sl-line)'; sec.className = 'mt-1';
+        const head = document.createElement('button');
+        head.type = 'button';
+        head.className = 'w-full flex items-center justify-between py-2.5 px-1';
+        const open = !!st.open[kind];
+        head.innerHTML = `<span style="font-size:calc(14px * var(--sl-fs));font-weight:700;color:var(--sl-ink);">${title}</span>` +
+          `<span class="sl-small" style="font-weight:600;">${items.length ? items.length + '번' : '없음'} <span style="display:inline-block;transition:transform .2s;transform:rotate(${open ? 90 : 0}deg);">›</span></span>`;
+        head.onclick = (ev) => {
+          ev.stopPropagation(); triggerHaptic();
+          st.open[kind] = !st.open[kind];
+          if (!st.open[kind] && st.segs[st.sel] && st.segs[st.sel].kind === kind) st.sel = nightIdx();
+          renderSleepModal();
+        };
+        sec.appendChild(head);
+        if (open) {
+          const list = document.createElement('div'); list.className = 'flex flex-wrap gap-2 pb-2 px-1';
+          items.forEach(([x, i]) => {
+            const b = document.createElement('button'); b.type = 'button';
+            b.className = 'sl-pill' + (i === st.sel ? ' on' : '');
+            b.style.fontSize = 'calc(12.5px * var(--sl-fs))'; b.style.padding = '5px 11px';
+            b.appendChild(document.createTextNode(chipText(x)));
+            const del = document.createElement('span');
+            del.textContent = '×'; del.setAttribute('aria-label', '지우기');
+            del.style.cssText = 'padding-left:4px;font-weight:700;color:var(--sl-muted);';
+            del.onclick = (ev) => { ev.stopPropagation(); triggerHaptic(); st.segs.splice(i, 1); st.sel = nightIdx(); st.dirty = true; sleepAutoSave(); renderSleepModal(); };
+            b.appendChild(del);
+            b.onclick = (ev) => { ev.stopPropagation(); triggerHaptic(); st.sel = st.sel === i ? nightIdx() : i; renderSleepModal(); };
+            list.appendChild(b);
+          });
+          const add = document.createElement('button'); add.type = 'button'; add.className = 'sl-pill add';
+          add.style.fontSize = 'calc(12.5px * var(--sl-fs))'; add.style.padding = '5px 11px';
+          add.textContent = addLabel;
+          add.onclick = (ev) => {
+            ev.stopPropagation(); triggerHaptic();
+            if (kind === 'wake') {
+              const n = st.segs[nightIdx()];
+              const mid = n ? (n.start + Math.round(sleepDur(n) / 2 / 5) * 5) % 1440 : 180;
+              st.segs.push({ kind: 'wake', start: mid, end: (mid + 15) % 1440 });
+            } else st.segs.push({ kind: 'nap', start: 14 * 60, end: 15 * 60 });
+            st.sel = st.segs.length - 1; st.dirty = true; sleepAutoSave();
+            renderSleepModal();
+          };
+          list.appendChild(add);
+          sec.appendChild(list);
+        }
+        box.appendChild(sec);
       });
-      // 밤중에 깬 때·낮잠은 여기서도 지울 수 있게 (1.2.7, 사용자 요청)
-      if (x.kind !== 'night') {
-        const del = document.createElement('button');
-        del.type = 'button';
-        del.className = 'sl-small underline block mx-auto mt-1';
-        del.textContent = x.kind === 'wake' ? '이 깬 때 지우기' : '이 낮잠 지우기';
-        del.onclick = (ev) => { ev.stopPropagation(); triggerHaptic(); st.segs.splice(st.sel, 1); st.sel = 0; st.dirty = true; sleepAutoSave(); renderSleepModal(); };
-        box.appendChild(del);
-      }
-      function updateVals() { vals.forEach(([v, r]) => { v.textContent = r.val(); }); }
     }
 
     // 숫자로: 밤잠(시간·분), 밤중에 깬 횟수, 낮잠
@@ -7401,10 +7591,18 @@
     // 함께 보는 기록에 쓸 그날 잠: 직접 적은 것 → 워치(Health Connect) → 자동으로 잰 것
     function sleepForDate(key, hc) {
       const m = sleepLog[key];
-      if (m && typeof m.sleep_min === 'number') return { sleep_min: m.sleep_min, nap_min: m.nap_min || 0, wake_count: (typeof m.wake_count === 'number') ? m.wake_count : null, src: 'manual' };
+      if (m && typeof m.sleep_min === 'number') return { sleep_min: m.sleep_min, nap_min: m.nap_min || 0, wake_count: (typeof m.wake_count === 'number') ? m.wake_count : null, src: 'manual',
+        segs: Array.isArray(m.segs) && m.segs.length ? m.segs : null };
       if (hc && hc.sleep_min !== null && hc.sleep_min !== undefined) return { sleep_min: hc.sleep_min, nap_min: hc.nap_min, wake_count: hc.wake_count, src: 'watch' };
       const a = sleepAutoOn ? sleepAuto[key] : null;
-      if (a && typeof a.sleep_min === 'number') return { sleep_min: a.sleep_min, nap_min: 0, wake_count: a.wake_count, src: 'auto', start: a.start, end: a.end };
+      if (a && typeof a.sleep_min === 'number') {
+        let segs = null;
+        if (a.start && a.end) {
+          segs = [{ kind: 'night', start: sleepMinOfDay(a.start), end: sleepMinOfDay(a.end) }];
+          (a.wakes || []).forEach(w => { if (Array.isArray(w) && w.length === 2) segs.push({ kind: 'wake', start: sleepMinOfDay(w[0]), end: sleepMinOfDay(w[1]) }); });
+        }
+        return { sleep_min: a.sleep_min, nap_min: 0, wake_count: a.wake_count, src: 'auto', start: a.start, end: a.end, segs };
+      }
       return null;
     }
     // 기간 안 날마다 { date, sleep_min, nap_min, wake_count, steps, src }
@@ -7419,7 +7617,7 @@
         const hc = useHc ? hcBy.get(key) : null;
         const sl = sleepEnabled ? sleepForDate(key, hc && activityGranted.sleep ? hc : null) : null; // 잠 기록을 끄면 잠은 빼고 걸음만
         out.push({ date: key, sleep_min: sl ? sl.sleep_min : null, nap_min: sl ? sl.nap_min : null, wake_count: sl ? sl.wake_count : null,
-          src: sl ? sl.src : null, start: sl ? sl.start : null, end: sl ? sl.end : null, steps: hc && activityGranted.steps ? hc.steps : null });
+          src: sl ? sl.src : null, start: sl ? sl.start : null, end: sl ? sl.end : null, segs: sl ? (sl.segs || null) : null, steps: hc && activityGranted.steps ? hc.steps : null });
       }
       return out;
     }
@@ -7572,7 +7770,7 @@
       appId: '1:6418622627:web:551e87825217d28fa0b716'
     };
     const CLOUD_SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
-    const CLOUD_SKIP = /^lifeguard_(patient_name|ios_guide_dismissed|whats_new_hidden|activity_granted|sleep_auto|sleep_auto_days|mood_glyph_sets|mood_glyphs|mood_glyph_active|cloud_.*)$/;
+    const CLOUD_SKIP = /^lifeguard_(patient_name|ios_guide_dismissed|whats_new_hidden|activity_granted|activity_daily|sleep_auto|sleep_auto_days|mood_glyph_sets|mood_glyphs|mood_glyph_active|cloud_.*)$/;
     const cloud = { fb: null, loading: null, user: null, ready: false, status: 'idle', timer: null, checked: false, archiveCount: null };
     const cloudOrigSet = Storage.prototype.setItem;
     const cloudOrigRemove = Storage.prototype.removeItem;
