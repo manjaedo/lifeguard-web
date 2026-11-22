@@ -327,6 +327,7 @@
     #settingsAlarmTimeBox { background: transparent !important; border: 0 !important; padding: 0 !important; gap: 10px !important; }
     /* 활동 정보 칸은 1.2.8부터 상세 칸의 '걸음 기록' 한 줄로 (스위치·동작은 같음) */
     #settingsActivityCard { display: none !important; }
+    #settingsPatientCard { display: none !important; } /* 1.2.9: 이름 칸 숨김 (사용자) */
     #settingsModal[data-tab="detail"] :is(#settingsPatientCard, #cloudCard, #settingsMedCard, #settingsAlarmCard, #settingsHelplineCard) { display: none !important; }
     /* 잠 기록을 끄면 첫 화면 침대를 숨긴다 (자리는 남김) */
     body[data-sleep="off"] #sleepEntryBtn { visibility: hidden; pointer-events: none; }
@@ -552,7 +553,8 @@
         </div>
         <!-- 1.2.8 (사용자: 한 화면에 구겨 넣으면 이상한 그래프): 기분 → 잠 → 걸음을 위아래로 내려 보며 각각 크게.
              기분 그래프는 화면 높이에서 조금 덜 차지해 아래 '잠' 제목이 살짝 보이게 (내려 보라는 표시) -->
-        <div id="chartZoomScroll" class="flex-1 w-full overflow-y-auto" style="touch-action: pan-y; overscroll-behavior: contain;">
+        <!-- 1.2.9: 손가락 내려 보기는 직접 (눕혀 그린 화면에서는 브라우저가 못 내려 줌, 사용자 폰 확인) -->
+        <div id="chartZoomScroll" class="flex-1 w-full overflow-y-auto" style="touch-action: none; overscroll-behavior: contain;">
           <svg id="chartZoomSvg" class="w-full" style="display:block; touch-action: none;"></svg>
           <div id="chartZoomSleepWrap" style="display:none;">
             <div class="zoom-panel-title px-5 pt-3 text-sm font-bold"></div>
@@ -567,6 +569,44 @@
     </div>
 
     <!-- 함께 보는 기록 보내기 (1.2.6): 리포트 한 장 사진을 먼저 보여 주고, 보내기를 누르면 폰의 공유 창(문자·카톡 등). 앱이 스스로 보내지 않는다 -->
+    <!-- 설문 창 (1.2.9): 한 화면에 한 문항, 다 하면 점수와 지난번. 문항·답은 표준 설문지 글 그대로 (docs/questionnaires) -->
+    <div id="surveyModal" onclick="event.stopPropagation()" class="fixed inset-0 z-40 hidden" style="display: none;">
+      <style>
+        #surveyModal { --sv-fs: 1; background: var(--sv-bg); color: var(--sv-ink); }
+        #surveyModal .sv-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; max-width: 480px; margin: 0 auto;
+          padding: calc(env(safe-area-inset-top, 0px) + 20px) 20px calc(env(safe-area-inset-bottom, 0px) + 20px); overflow-y: auto; }
+        #surveyModal .sv-top { display: flex; justify-content: space-between; align-items: center; font-size: calc(14px * var(--sv-fs)); font-weight: 700; color: var(--sv-main); }
+        #surveyModal .sv-close { font-size: calc(13px * var(--sv-fs)); font-weight: 600; color: var(--sv-main); opacity: .75; padding: 6px 2px 6px 12px; }
+        #surveyModal .sv-bar { height: 4px; background: var(--sv-soft); border-radius: 4px; margin: 12px 0 22px; overflow: hidden; }
+        #surveyModal .sv-bar i { display: block; height: 100%; background: var(--sv-main); opacity: .7; border-radius: 4px; transition: width .25s; }
+        #surveyModal .sv-ask { font-size: calc(12.5px * var(--sv-fs)); color: var(--sv-muted); line-height: 1.55; word-break: keep-all; }
+        #surveyModal .sv-q { font-size: calc(20px * var(--sv-fs)); font-weight: 700; line-height: 1.45; margin: 10px 0 26px; word-break: keep-all; }
+        #surveyModal .sv-opt { display: block; width: 100%; text-align: left; padding: 14px 16px; margin-bottom: 10px; border-radius: 16px; border: 1.5px solid var(--sv-line);
+          background: var(--sv-card); font-size: calc(15px * var(--sv-fs)); font-weight: 600; color: var(--sv-main); transition: background .15s, border-color .15s; }
+        #surveyModal .sv-opt.on { border-color: var(--sv-main); background: var(--sv-soft); }
+        #surveyModal .sv-back { margin-top: auto; padding-top: 16px; font-size: calc(13px * var(--sv-fs)); font-weight: 600; color: var(--sv-main); opacity: .75; align-self: flex-start; }
+        #surveyModal .sv-score { text-align: center; margin: 30px 0 6px; color: var(--sv-main); }
+        #surveyModal .sv-score b { font-size: calc(52px * var(--sv-fs)); font-weight: 800; }
+        #surveyModal .sv-score span { font-size: calc(16px * var(--sv-fs)); color: var(--sv-muted); }
+        #surveyModal .sv-lvl { text-align: center; font-size: calc(14px * var(--sv-fs)); font-weight: 600; color: var(--sv-main); }
+        #surveyModal .sv-scale { display: flex; gap: 4px; margin: 20px 2px 4px; }
+        #surveyModal .sv-scale i { flex: 1; height: 7px; border-radius: 4px; background: var(--sv-soft); }
+        #surveyModal .sv-scale i.on { background: var(--sv-main); opacity: .7; }
+        #surveyModal .sv-ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--sv-muted); margin: 0 2px 18px; }
+        #surveyModal .sv-hist { display: flex; justify-content: space-between; font-size: calc(13px * var(--sv-fs)); color: var(--sv-muted); padding: 8px 2px; border-top: 1px solid var(--sv-line); }
+        #surveyModal .sv-hist b { color: var(--sv-main); }
+        #surveyModal .sv-note { font-size: calc(12px * var(--sv-fs)); color: var(--sv-muted); line-height: 1.6; text-align: center; margin-top: 16px; word-break: keep-all; }
+        #surveyModal .sv-call { display: block; margin-bottom: 12px; background: var(--sv-card); border: 1.5px solid var(--sv-main); border-radius: 16px; padding: 13px 14px; margin-top: 18px;
+          font-size: calc(13px * var(--sv-fs)); line-height: 1.6; color: var(--sv-ink); word-break: keep-all; text-decoration: none; }
+        #surveyModal .sv-call b { display: block; color: var(--sv-main); font-size: calc(15px * var(--sv-fs)); margin-bottom: 2px; }
+        #surveyModal .sv-btns { margin-top: auto; padding-top: 20px; display: flex; gap: 10px; }
+        #surveyModal .sv-btns button { flex: 1; padding: 14px; border-radius: 16px; font-size: calc(15px * var(--sv-fs)); font-weight: 700; }
+        #surveyModal .sv-btns .main { background: var(--sv-main); color: var(--sv-card); }
+        #surveyModal .sv-btns .sub { background: var(--sv-soft); color: var(--sv-main); }
+      </style>
+      <div class="sv-wrap" id="surveyBody"></div>
+    </div>
+
     <div id="reportShare" onclick="event.stopPropagation()" class="fixed inset-0 z-40 hidden flex-col items-center justify-center p-5" style="display: none; background: rgba(20,24,26,0.55);">
       <div id="reportShareCard" class="w-full max-w-md rounded-2xl p-4 flex flex-col gap-3" style="max-height: 92vh;">
         <div id="reportShareTitle" class="text-sm font-bold">이 사진을 보내요</div>
@@ -616,6 +656,8 @@
           </svg>
           <div class="flex justify-between text-[10px] text-gray-400 mt-0.5 px-1">
             <span id="chartStartLabel"></span>
+            <!-- 1.2.9 (사용자): 복약 일수는 따로 칸 없이 날짜 줄 가운데에 작게 -->
+            <span id="chartMedLabel" class="items-center gap-1 font-semibold" style="display:none;"></span>
             <span id="chartEndLabel">오늘</span>
           </div>
         </div>
@@ -661,6 +703,14 @@
             <div id="statMed" class="text-sm font-bold text-[#597075] mt-0.5">0 / 1일</div>
           </div>
           </div>
+        </div>
+
+        <!-- 설문 (1.2.9, 사용자): 우울 PHQ-9 · 불안 GAD-7 · 몸 증상 PHQ-15. 줄을 누르면 지난 결과 또는 시작. 진료 완료해도 남는다 -->
+        <div id="reportSurveyCard" class="bg-white rounded-xl p-3 border border-gray-100 shadow-sm text-xs transition-colors mb-3">
+          <div id="reportSurveyTitle" class="text-[11px] font-bold text-[#597075] flex items-center gap-1 mb-1">
+            <span>📝</span> 설문
+          </div>
+          <div id="surveyRows"></div>
         </div>
 
         <!-- 의사 선생님께 전할 한 줄 메모 (좌로 밀어서 삭제) -->
@@ -731,6 +781,8 @@
         </div>
 
         <!-- 이름 (1.2.8: 한 칸에 제목과 입력) -->
+        <!-- 1.2.9 (사용자): 이름 칸 대신 구글로 로그인한 이메일만. 이름 칸은 숨겨 둠 -->
+        <div id="cloudCard" class="bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2 transition-colors" style="display: none;"></div>
         <div id="settingsPatientCard" class="bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2 transition-colors">
           <div class="flex items-center gap-3">
             <div id="settingsPatientTitle" class="font-bold text-[#597075] text-[13px] flex items-center gap-1.5 shrink-0"><span>👤</span> 이름</div>
@@ -773,7 +825,6 @@
         </div>
 
         <!-- 기록 지키기 (1.2.8): 켠 사람만 Firebase에 저절로 담는다. 한 칸 (renderCloudCard) -->
-        <div id="cloudCard" class="bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2 transition-colors" style="display: none;"></div>
 
         <div class="stab-detail dgroup mb-4">
           <div class="dhead text-[11px] font-semibold mb-1.5 px-1">화면</div>
@@ -2754,6 +2805,7 @@
     // 터치한 그 자리에서 연하게 나타났다 사라지는 피드백 ("기분 기록")
     function recordMood(e, sym, btn, clickedIdx) {
       e.stopPropagation();
+      if (cloudWriteBlocked()) return; // 1.2.9: 인터넷이 없으면 보기만
       triggerHaptic();
       resetCanvasTimers();
       let cx = e.clientX;
@@ -2803,6 +2855,7 @@
     // 터치한 그 자리에서 연하게 나타났다 사라지는 피드백 ("약 먹었음")
     function recordPill(e, btn) {
       e.stopPropagation();
+      if (cloudWriteBlocked()) return; // 1.2.9: 인터넷이 없으면 보기만
       triggerHaptic();
       resetCanvasTimers();
       let cx = e.clientX;
@@ -3254,6 +3307,7 @@
     }
 
     function openMemoModal() {
+      if (cloudWriteBlocked()) return; // 1.2.9: 인터넷이 없으면 보기만
       const backdrop = document.getElementById('memoBackdrop');
       const modal = document.getElementById('memoModal');
       if (backdrop) {
@@ -3395,7 +3449,7 @@
       }
 
       if (reportStatsCard) {
-        reportStatsCard.style.display = isMedicationEnabled ? 'block' : 'none';
+        reportStatsCard.style.display = 'none';
       }
 
       // 안드로이드 홈 위젯의 캡슐도 같은 설정을 따른다
@@ -3683,6 +3737,7 @@
     let dailyCheckinClosing = false;   // 저장하고 닫히는 중. 이때 누른 것은 받지 않는다 (두 번 눌러 기록이 두 개 생기지 않게)
 
     function openDailyCheckinModal() {
+      if (cloudWriteBlocked()) return; // 1.2.9: 인터넷이 없으면 보기만
       hideIntro();
       triggerHaptic();
       dailyCheckinMedChecked = false;
@@ -3866,6 +3921,7 @@
 
     // 안드로이드 상단 알림 내부 5개 도형(▲ △ ○ ▽ ▼) 직접 터치 시 호출: 즉시 기록 & 파문 연출
     window.recordMoodFromNativeNotification = function(scoreNum) {
+      if (cloudWriteBlocked()) return; // 1.2.9: 인터넷이 없으면 보기만
       const s = Number(scoreNum);
       const symMap = { '2': '▲', '1': '△', '0': '○', '-1': '▽', '-2': '▼' };
       const sym = symMap[String(s)] || '○';
@@ -4221,6 +4277,7 @@
     // 창은 닫지 않고 칸을 비워 두어, 이어서 여러 줄을 정리할 수 있게 한다.
     function addReportMemo(e) {
       if (e && e.stopPropagation) e.stopPropagation();
+      if (cloudWriteBlocked()) return; // 1.2.9: 인터넷이 없으면 보기만
       const input = document.getElementById('reportMemoInput');
       const val = (input?.value || '').trim();
       if (!val) { if (input) input.focus(); return; }
@@ -4283,6 +4340,7 @@
     // 진료 완료: 블러 팝업 모달 열기 (함께보는기록 화면이 열려있을 때만 안전하게 실행)
     function confirmResetCycle(e) {
       if (e && e.stopPropagation) e.stopPropagation();
+      if (cloudWriteBlocked()) return; // 1.2.9: 인터넷이 없으면 보기만
       const reportModal = document.getElementById('reportModal');
       if (!reportModal || reportModal.classList.contains('opacity-0') || reportModal.classList.contains('hidden') || reportModal.style.display === 'none') {
         return;
@@ -5065,6 +5123,22 @@
       return set;
     }
     // 약 표시 캡슐 하나. 먹은 날은 채우고, 안 먹은 날은 옅은 테두리만 (색은 한 가지, 강조하지 않음)
+    // 1.2.9 (사용자): 색 약 아이콘 — 비스듬한 두 색 캡슐 (함께 보기 복약 일수 · 보내기 사진 약 줄 왼쪽)
+    const PILL_ICON_A = '#E8836F', PILL_ICON_B = '#FFF6F1', PILL_ICON_LINE = '#C9654F';
+    function PILL_ICON_SVG(size) {
+      return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" style="flex:none">` +
+        `<g transform="rotate(-40 12 12)"><rect x="2" y="7.5" width="20" height="9" rx="4.5" fill="${PILL_ICON_B}" stroke="${PILL_ICON_LINE}" stroke-width="1.3"/>` +
+        `<path d="M6.5 7.5H12v9H6.5a4.5 4.5 0 0 1 0-9z" fill="${PILL_ICON_A}"/>` +
+        `<rect x="2" y="7.5" width="20" height="9" rx="4.5" fill="none" stroke="${PILL_ICON_LINE}" stroke-width="1.3"/></g></svg>`;
+    }
+    function drawPillIcon(parent, cx, cy, size) {
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.innerHTML = PILL_ICON_SVG(24).replace(/^<svg[^>]*>|<\/svg>$/g, '');
+      const sc = size / 24;
+      g.setAttribute('transform', `translate(${(cx - size / 2).toFixed(2)} ${(cy - size / 2).toFixed(2)}) scale(${sc.toFixed(3)})`);
+      parent.appendChild(g);
+      return g;
+    }
     function drawPillMark(parent, cx, cy, w, h, taken, color, opacity) {
       const el = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
       const sw = Math.max(0.6, h * 0.18);
@@ -5174,6 +5248,7 @@
     }
 
     function renderReportData() {
+      try { renderSurveyCard(); } catch (err) { console.warn('renderSurveyCard error:', err); }
       try {
         const { now, last, d1, d2, diffDays } = getReportRange();
         const fmt = (d) => `${d.getMonth() + 1}.${d.getDate()}`;
@@ -5203,9 +5278,7 @@
 
         // 3. 복약 일수 카드 표시 여부 (복약 기록 설정 연동)
         const reportStatsCard = document.getElementById('reportStatsCard');
-        if (reportStatsCard) {
-          reportStatsCard.style.display = isMedicationEnabled ? 'block' : 'none';
-        }
+        if (reportStatsCard) reportStatsCard.style.display = 'none'; // 1.2.9: 날짜 줄 가운데로 옮김 (글자는 보내기 사진이 읽어 감)
 
         const statMedEl = document.getElementById('statMed');
         if (statMedEl) {
@@ -5217,6 +5290,11 @@
             }).filter(Boolean)
           ).size;
           statMedEl.textContent = `${Math.min(uniqueDates, diffDays)} / ${diffDays}일`;
+          const ml = document.getElementById('chartMedLabel');
+          if (ml) {
+            ml.style.display = isMedicationEnabled ? 'inline-flex' : 'none';
+            ml.innerHTML = PILL_ICON_SVG(14) + `<span>복약 ${Math.min(uniqueDates, diffDays)}/${diffDays}일</span>`;
+          }
         }
 
         // 4. 기분 기록 막대그래프 (기록 하나 = 막대 하나)
@@ -5479,7 +5557,7 @@
       const SVG_NS = 'http://www.w3.org/2000/svg';
       const mk = (tag, attrs, parent) => { const el = document.createElementNS(SVG_NS, tag); for (const k in attrs) el.setAttribute(k, String(attrs[k])); (parent || svg).appendChild(el); return el; };
       const { d1, diffDays } = getReportRange();
-      const X0 = 44, X1 = W - 24, PW = X1 - X0;
+      const X0 = 44, X1 = W - (opts.rightPad || 24), PW = X1 - X0;
       const showPills = opts.showPills != null ? opts.showPills : !!isMedicationEnabled;
       const PILL_ROW = showPills ? 24 : 0;
       // 1.2.8: opts.sleep이면 약 줄 아래에 잠 띠 (크게 보기·보내기 사진)
@@ -5512,11 +5590,17 @@
       // 복약 기록을 켰으면 그래프 바로 아래에 날마다 약 표시 (먹은 날 = 채운 캡슐, 안 먹은 날 = 빈 캡슐)
       if (showPills) {
         const taken = pillDayIndexes(d1, diffDays);
-        drawPillMark(svg, 20, bottom + 16, 14, 6, true, color, 0.6);
+        if (opts.pillIcon) drawPillIcon(svg, 20, bottom + 16, 18); // 1.2.9: 보내기 사진은 색 약 아이콘
+        else drawPillMark(svg, 20, bottom + 16, 14, 6, true, color, 0.6);
         for (let i = 0; i < diffDays; i++) {
           const x = dayStartX(i) + dayW / 2;
           if (x < X0 - 20 || x > X1 + 20) continue;
           drawPillMark(g, x, bottom + 16, Math.min(14, dayW * 0.6), 6, taken.has(i), color);
+        }
+        // 1.2.9 (사용자): 복약 일수를 약 줄 바로 오른쪽에 작게 (보내기 사진)
+        if (opts.pillLabel) {
+          const pt = mk('text', { x: X1 + 8, y: bottom + 16 + 3.6, 'font-size': 10, 'font-weight': 700, fill: color, opacity: 0.8 });
+          pt.textContent = opts.pillLabel;
         }
       }
       if (SLEEP_H) {
@@ -5622,6 +5706,62 @@
       if (st.lineFrac == null) st.lineFrac = pts.length ? (pts[pts.length - 1].x - X0 + st.offset) / (PW * st.k) : 1 - 0.5 / diffDays;
       placeChartZoomLine();
       bindChartZoomGestures(svg);
+      bindChartZoomTouchDrag(scroller);
+    }
+
+    // 1.2.9 (사용자 폰 확인: 세로로 든 폰에서 크게 보기가 아래로 안 내려감)
+    // 눕혀 그린 화면은 브라우저가 손가락으로 내려 주지 못해서 직접 내린다. 한 손가락으로
+    //  · 그래프 가로(날짜) 쪽으로 밀면 기준선을 옮기고 · 세로 쪽으로 밀면 기분 → 잠 → 걸음으로 내려 본다 · 톡 누르면 기준선이 그 자리로.
+    // 두 손가락 벌리기(확대)는 그대로 bindChartZoomGestures가 맡는다.
+    function bindChartZoomTouchDrag(scroller) {
+      if (scroller.dataset.dragBound) return;
+      scroller.dataset.dragBound = '1';
+      const axes = (st, dx, dy) => st.rotated ? { along: dy, across: -dx } : { along: dx, across: dy };
+      const stopFling = (st) => { if (st && st.fling) { cancelAnimationFrame(st.fling); st.fling = 0; } };
+      scroller.addEventListener('pointerdown', (ev) => {
+        const st = chartZoomState;
+        if (!st || !st.geo || ev.pointerType === 'mouse') return;
+        stopFling(st);
+        if (st.drag || st.pinchedTouch) { st.drag = null; return; } // 두 번째 손가락
+        const svg = ev.target && ev.target.closest ? ev.target.closest('svg') : null;
+        st.drag = { id: ev.pointerId, sx: ev.clientX, sy: ev.clientY, mode: null, top0: scroller.scrollTop, svg,
+          lastT: performance.now(), lastA: 0, v: 0 };
+      });
+      scroller.addEventListener('pointermove', (ev) => {
+        const st = chartZoomState;
+        const d = st && st.drag;
+        if (!d || d.id !== ev.pointerId || st.pinchedTouch) return;
+        const { along, across } = axes(st, ev.clientX - d.sx, ev.clientY - d.sy);
+        if (!d.mode) {
+          if (Math.abs(along) < 8 && Math.abs(across) < 8) return;
+          d.mode = (Math.abs(along) > Math.abs(across) && d.svg) ? 'line' : 'scroll';
+        }
+        if (d.mode === 'line') { moveChartZoomLine(chartZoomPos(d.svg, ev)); return; }
+        scroller.scrollTop = d.top0 - across;
+        const t = performance.now(), dt = t - d.lastT;
+        if (dt > 0) { d.v = 0.8 * ((across - d.lastA) / dt) + 0.2 * d.v; d.lastT = t; d.lastA = across; }
+      });
+      const end = (ev) => {
+        const st = chartZoomState;
+        const d = st && st.drag;
+        if (!d || d.id !== ev.pointerId) return;
+        st.drag = null;
+        if (!d.mode) { if (d.svg && ev.type === 'pointerup' && !st.pinchedTouch) moveChartZoomLine(chartZoomPos(d.svg, ev)); return; }
+        st.dragEnd = Date.now();
+        if (d.mode !== 'scroll' || performance.now() - d.lastT > 80) return;
+        // 손을 떼도 조금 더 미끄러지게
+        let v = d.v, last = performance.now();
+        const step = (now) => {
+          const s2 = chartZoomState; if (!s2) return;
+          const dt = now - last; last = now;
+          scroller.scrollTop -= v * dt;
+          v *= Math.pow(0.995, dt);
+          s2.fling = Math.abs(v) > 0.02 ? requestAnimationFrame(step) : 0;
+        };
+        st.fling = requestAnimationFrame(step);
+      };
+      scroller.addEventListener('pointerup', end);
+      scroller.addEventListener('pointercancel', end);
     }
 
     // 크게 보기 아래 칸: 잠(시각 띠)·걸음(막대). 기분 그래프와 같은 날짜 자리(확대·이동도 같이), 기준선도 같은 자리에.
@@ -5657,7 +5797,7 @@
         // 칸을 누르면 기준선이 그날로
         if (!svg.dataset.bound) {
           svg.dataset.bound = '1';
-          svg.addEventListener('click', (ev) => { if (chartZoomState && chartZoomState.geo) moveChartZoomLine(chartZoomPos(svg, ev)); });
+          svg.addEventListener('click', (ev) => { const st = chartZoomState; if (st && st.geo && !(st.dragEnd && Date.now() - st.dragEnd < 400)) moveChartZoomLine(chartZoomPos(svg, ev)); });
         }
         return { mk, svg, g, Hp };
       };
@@ -5710,8 +5850,9 @@
           const { dist, mid } = pinchInfo();
           st.pinch = { dist0: Math.max(10, dist), k0: st.k, anchor: (mid - st.geo.X0 + st.offset) / (st.geo.PW * st.k) };
           st.pinchedTouch = true;
-        } else if (st.pointers.size === 1 && !st.pinchedTouch) {
-          moveChartZoomLine(chartZoomPos(svg, ev));
+          if (st.drag) { st.drag = null; } // 두 손가락이 되면 내려 보기는 멈춤
+        } else if (st.pointers.size === 1 && !st.pinchedTouch && ev.pointerType === 'mouse') {
+          moveChartZoomLine(chartZoomPos(svg, ev)); // 손가락은 아래 chartZoomTouchDrag가 맡음
         }
       });
       svg.addEventListener('pointermove', (ev) => {
@@ -5724,7 +5865,7 @@
           st.k = Math.min(Math.max(1, g.diffDays), Math.max(1, st.pinch.k0 * dist / st.pinch.dist0));
           st.offset = st.pinch.anchor * g.PW * st.k - (mid - g.X0);
           drawChartZoom();
-        } else if (st.pointers.size === 1 && !st.pinchedTouch) {
+        } else if (st.pointers.size === 1 && !st.pinchedTouch && ev.pointerType === 'mouse') {
           moveChartZoomLine(chartZoomPos(svg, ev));
         }
       });
@@ -5821,16 +5962,70 @@
       const FONT = getComputedStyle(document.body).fontFamily || 'sans-serif';
       const { now, d1, diffDays } = getReportRange();
       const fmt = (d) => `${d.getMonth() + 1}.${d.getDate()}`;
-      // 그래프: 화면의 큰 그래프와 같은 그림을 절반 크기로 그려 두 배로 키운다 (글자·막대가 사진에서 읽기 좋은 크기)
-      // 1.2.8: 잠은 기분 그래프 아래에 시각 띠로 같이 (함께 보기 '잠' 칸과 같은 그림)
-      const sleepInGraph = sleepStripHasData(reportActivityDays());
-      const GW = INNER / 2 - 24, GH = sleepInGraph ? 330 : 220;
-      const gsvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      gsvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-      gsvg.setAttribute('width', String(GW * 2)); gsvg.setAttribute('height', String(GH * 2));
-      gsvg.setAttribute('font-family', FONT);
-      drawMoodGraph(gsvg, { W: GW, H: GH, color: ACCENT, clipId: 'reportGraphClip', light: true, sleep: true, sleepFrac: 0.42 }); // 보낼 사진은 늘 밝은 바탕
+      // 1.2.9 (사용자 폰 확인): 보내기 사진을 함께 보기 화면처럼 — 기분 · 잠 · 걸음을 칸마다 따로, 복약 일수에 알약 그림.
+      // 그래프는 화면 그림을 절반 크기로 그려 두 배로 키운다 (글자·막대가 사진에서 읽기 좋은 크기).
+      // 세 칸 모두 날짜 자리가 같다 (drawMoodGraph의 X0=44, X1=W-24).
+      const SVG_NS = 'http://www.w3.org/2000/svg';
+      const GW = INNER / 2 - 24, GH = 220;
+      const newSvg = (h) => {
+        const s = document.createElementNS(SVG_NS, 'svg');
+        s.setAttribute('xmlns', SVG_NS);
+        s.setAttribute('width', String(GW * 2)); s.setAttribute('height', String(h * 2));
+        s.setAttribute('font-family', FONT);
+        return s;
+      };
+      const showMed = !!isMedicationEnabled;
+      let medText = '';
+      if (showMed) { const el = document.getElementById('statMed'); medText = el ? el.textContent.replace(/\s+/g, '') : ''; }
+      // 1.2.9 (사용자): 복약 일수는 따로 칸 없이 약 줄 바로 옆에 작게. 그 자리만큼 오른쪽을 비우고, 잠·걸음 칸도 같은 날짜 자리로
+      const RP = showMed && medText ? 56 : 24;
+      const gsvg = newSvg(GH);
+      drawMoodGraph(gsvg, { W: GW, H: GH, color: ACCENT, clipId: 'reportGraphClip', light: true, rightPad: RP, pillLabel: showMed ? medText : '', pillIcon: true }); // 보낼 사진은 늘 밝은 바탕
       const graphImg = await svgToImage(gsvg);
+
+      const actDays = reportActivityDays();
+      const sleepVals = actDays.filter(d => d.sleep_min !== null && d.sleep_min !== undefined);
+      const showSleep = sleepStripHasData(actDays);
+      const stepVals = actDays.filter(d => d.steps !== null && d.steps !== undefined);
+      const showSteps = stepVals.length > 0;
+      // 잠·걸음 그림 (기분 그래프와 같은 날짜 칸, 아래에 날짜)
+      const PX0 = 44, PX1 = GW - RP, pDayW = (PX1 - PX0) / diffDays, pcx = (i) => PX0 + (i + 0.5) * pDayW;
+      const panelSvg = (h) => {
+        const s = newSvg(h);
+        s.setAttribute('viewBox', `0 0 ${GW} ${h}`);
+        const mk = (tag, attrs, parent) => { const el = document.createElementNS(SVG_NS, tag); for (const k in attrs) el.setAttribute(k, String(attrs[k])); (parent || s).appendChild(el); return el; };
+        for (let i = 0; i < diffDays; i += (pDayW >= 40 ? 1 : 5)) {
+          const d = new Date(d1.getFullYear(), d1.getMonth(), d1.getDate() + i);
+          const t = mk('text', { x: pcx(i), y: h - 6, 'text-anchor': 'middle', 'font-size': 12, fill: ACCENT, opacity: 0.8 });
+          t.textContent = `${d.getMonth() + 1}.${d.getDate()}`;
+        }
+        return { s, mk };
+      };
+      const SLEEP_GH = 150, STEPS_GH = 120;
+      let sleepImg = null, stepsImg = null;
+      if (showSleep) {
+        const p = panelSvg(SLEEP_GH);
+        drawSleepStrip({ mk: p.mk, axis: p.s, bands: p.s, days: actDays, cx: pcx, dayW: pDayW, maxBand: 14,
+          T: 8, B: SLEEP_GH - 28, labelX: 20, labelSize: 10, minStep: 360, lineX0: PX0, lineX1: PX1, color: ACCENT, light: true, selectedKey: null });
+        sleepImg = await svgToImage(p.s);
+      }
+      if (showSteps) {
+        const p = panelSvg(STEPS_GH);
+        const T = 8, B = STEPS_GH - 28, h = B - T, SMAX = stepsMaxOf(actDays);
+        stepsTicks(SMAX).forEach(v => {
+          const yy = B - h * v / SMAX;
+          p.mk('line', { x1: PX0, x2: PX1, y1: yy, y2: yy, stroke: ACCENT, 'stroke-width': v ? 0.5 : 0.8, opacity: v ? 0.18 : 0.3, 'stroke-dasharray': v ? '2,2' : '' });
+          const t = p.mk('text', { x: 20, y: yy + 3.5, 'text-anchor': 'middle', 'font-size': 10, fill: ACCENT, opacity: 0.6 }); t.textContent = v ? (v / 1000) + 'k' : '0';
+        });
+        const bw = Math.min(14, Math.max(1.6, pDayW * 0.55));
+        actDays.forEach((d, i) => {
+          const v = d.steps;
+          if (v === null || v === undefined) { p.mk('line', { x1: pcx(i) - bw / 2, x2: pcx(i) + bw / 2, y1: B - 1.5, y2: B - 1.5, stroke: ACCENT, 'stroke-width': 0.8, opacity: 0.25 }); return; }
+          const bh = Math.max(0.8, Math.min(1, v / SMAX) * h);
+          p.mk('rect', { x: pcx(i) - bw / 2, y: B - bh, width: bw, height: bh, rx: Math.min(2, bw / 2), fill: chartColorOn ? moodColorAt((v - 3000) / 1000, true) : ACCENT, opacity: chartColorOn ? 0.85 : 0.62 });
+        });
+        stepsImg = await svgToImage(p.s);
+      }
 
       const c = document.createElement('canvas');
       const ctx = c.getContext('2d');
@@ -5849,25 +6044,15 @@
       };
       const notes = (doctorNotes || []).map(n => String(n).trim()).filter(Boolean);
       const noteLines = notes.map(n => wrap(n, INNER - 48 - 40, 32));
-      const showMed = !!isMedicationEnabled;
-      let medText = '';
-      if (showMed) { const el = document.getElementById('statMed'); medText = el ? el.textContent.trim() : ''; }
 
-      // 잠 (1.2.7, 사용자 요청): 기간에 잠 기록이 있으면 기분 그래프 아래에 날마다 막대 한 줄 + 평균
-      const sleepDays = reportActivityDays();
-      const sleepVals = sleepDays.filter(d => d.sleep_min !== null && d.sleep_min !== undefined);
-      const showSleep = false; // 1.2.8: 막대 칸 대신 그래프 안 시각 띠 (아래 제목 줄에 평균)
-      const SLEEP_CARD_H = 330;
-      // 걸음도 (1.2.7, 사용자 요청): 걸음 기록이 있으면 잠 아래에 같은 모양으로 (3천 걸음 점선)
-      const stepVals = sleepDays.filter(d => d.steps !== null && d.steps !== undefined);
-      const showSteps = stepVals.length > 0;
-
-      // 높이 계산
-      const graphCardH = GH * 2 + 44 + 20;
+      // 높이 계산 (칸 = 제목 줄 + 그림)
+      const HEAD = 96;
+      const graphCardH = HEAD + GH * 2 + 20;
+      const sleepCardH = HEAD + 44 + SLEEP_GH * 2 + 20;
+      const stepsCardH = HEAD + STEPS_GH * 2 + 20;
       let H = PAD + 52 + 18 + 40 + 36 + graphCardH;
-      if (showSleep) H += 28 + SLEEP_CARD_H;
-      if (showSteps) H += 28 + SLEEP_CARD_H;
-      if (showMed) H += 28 + 110;
+      if (showSleep) H += 28 + sleepCardH;
+      if (showSteps) H += 28 + stepsCardH;
       const notesCardH = 40 + 36 + 28 + noteLines.reduce((a, l) => a + l.length * 46 + 22, 0) - 22 + 44;
       if (notes.length) H += 28 + notesCardH;
       H += 40 + 34 + PAD;
@@ -5883,61 +6068,38 @@
       ctx.fillStyle = ACCENT; ctx.font = font(46, true); ctx.fillText('함께 보는 기록', PAD, y);
       y += 18 + 36;
       ctx.fillStyle = SUB; ctx.font = font(30);
-      ctx.fillText((diffDays > 1 ? `${fmt(d1)} ~ ${fmt(now)} · ${diffDays}일간 기분` : `${fmt(now)} 기분`) + (sleepInGraph ? '과 잠' : ' 기록'), PAD, y);
+      ctx.fillText(diffDays > 1 ? `${fmt(d1)} ~ ${fmt(now)} · ${diffDays}일간 기록` : `${fmt(now)} 기록`, PAD, y);
       y += 36;
-      // 그래프 칸
-      rr(PAD, y, INNER, graphCardH, 28, CARD, LINE);
-      ctx.drawImage(graphImg, PAD + 24, y + 44, GW * 2, GH * 2);
-      if (sleepInGraph && sleepVals.length) {
-        const avg = Math.round(sleepVals.reduce((a, d) => a + d.sleep_min, 0) / sleepVals.length);
-        ctx.fillStyle = SUB; ctx.font = font(26); ctx.textAlign = 'right';
-        ctx.fillText(`잠 평균 ${formatSleepMin(avg)} · ${sleepVals.length}일 기록`, PAD + INNER - 32, y + 40);
-        ctx.textAlign = 'left';
-      }
-      y += graphCardH;
-      // 잠·걸음 칸: 날짜 칸은 기분 그래프와 같은 자리 (drawMoodGraph의 X0=44, X1=W-24를 두 배로)
-      const drawDailyCard = (title, key, maxV, refV, refLabel, avgText, tone) => {
-        y += 28;
-        rr(PAD, y, INNER, SLEEP_CARD_H, 28, CARD, LINE);
-        ctx.fillStyle = ACCENT; ctx.font = font(34, true); ctx.fillText(title, PAD + 40, y + 70);
-        ctx.fillStyle = SUB; ctx.font = font(28); ctx.textAlign = 'right';
-        ctx.fillText(avgText, PAD + INNER - 40, y + 70); ctx.textAlign = 'left';
-        const gx0 = PAD + 24 + 44 * 2, gx1 = PAD + 24 + (GW - 24) * 2, dayW = (gx1 - gx0) / diffDays;
-        const base = y + SLEEP_CARD_H - 50, top = y + 110, hMax = base - top;
-        // 기준선 (점선)
-        const yr = base - hMax * Math.min(1, refV / maxV);
-        ctx.strokeStyle = '#b9c6c7'; ctx.lineWidth = 2; ctx.setLineDash([8, 8]);
-        ctx.beginPath(); ctx.moveTo(gx0, yr); ctx.lineTo(gx1, yr); ctx.stroke(); ctx.setLineDash([]);
-        ctx.fillStyle = SUB; ctx.font = font(22); ctx.textAlign = 'right'; ctx.fillText(refLabel, gx0 - 12, yr + 8); ctx.textAlign = 'left';
-        ctx.strokeStyle = LINE; ctx.beginPath(); ctx.moveTo(gx0, base); ctx.lineTo(gx1, base); ctx.stroke();
-        const bw = Math.max(4, Math.min(28, dayW * 0.55));
-        sleepDays.forEach((d, i) => {
-          const cx = gx0 + (i + 0.5) * dayW, v = d[key];
-          if (v === null || v === undefined) {
-            ctx.strokeStyle = '#d6dfe0'; ctx.lineWidth = 3;
-            ctx.beginPath(); ctx.moveTo(cx - bw / 2, base - 4); ctx.lineTo(cx + bw / 2, base - 4); ctx.stroke();
-            return;
-          }
-          const h = Math.max(4, Math.min(1, v / maxV) * hMax);
-          rr(cx - bw / 2, base - h, bw, h, Math.min(6, bw / 2), chartColorOn ? moodColorAt(tone(v), true) : ACCENT);
-        });
-        y += SLEEP_CARD_H;
+      // 칸 하나: 흰 카드 + 왼쪽 위 제목 + 오른쪽 위 작은 글씨
+      const cardHead = (h, title, right) => {
+        rr(PAD, y, INNER, h, 28, CARD, LINE);
+        ctx.fillStyle = ACCENT; ctx.font = font(34, true); ctx.textAlign = 'left'; ctx.fillText(title, PAD + 40, y + 66);
+        if (right) { ctx.fillStyle = SUB; ctx.font = font(26); ctx.textAlign = 'right'; ctx.fillText(right, PAD + INNER - 40, y + 64); ctx.textAlign = 'left'; }
       };
+      cardHead(graphCardH, '기분 기록', '');
+      ctx.drawImage(graphImg, PAD + 24, y + HEAD, GW * 2, GH * 2);
+      y += graphCardH;
       if (showSleep) {
-        const avg = Math.round(sleepVals.reduce((a, d) => a + d.sleep_min, 0) / sleepVals.length);
-        drawDailyCard('잠', 'sleep_min', 12 * 60, 360, '6시간', `평균 ${formatSleepMin(avg)} · ${sleepVals.length}일 기록`, v => v / 60 - 6);
+        y += 28;
+        const avg = sleepVals.length ? Math.round(sleepVals.reduce((a, d) => a + d.sleep_min, 0) / sleepVals.length) : null;
+        cardHead(sleepCardH, '잠', avg !== null ? `평균 ${formatSleepMin(avg)} · ${sleepVals.length}일 기록` : '');
+        // 함께 보기와 같은 알림표: 잔 때 · 깬 때 · 낮잠
+        let lx = PAD + 40; const ly = y + HEAD + 12;
+        ctx.font = font(24);
+        [['잔 때', ACCENT, 0.62, 12, 22], ['깬 때', '#D99A6C', 1, 18, 8], ['낮잠', ACCENT, 0.32, 12, 22]].forEach(([label, col, op, w, h]) => {
+          ctx.globalAlpha = op; rr(lx, ly - 4 - h / 2 - 4, w, h, 3, col); ctx.globalAlpha = 1;
+          lx += w + 10;
+          ctx.fillStyle = SUB; ctx.fillText(label, lx, ly); lx += ctx.measureText(label).width + 28;
+        });
+        ctx.drawImage(sleepImg, PAD + 24, y + HEAD + 44, GW * 2, SLEEP_GH * 2);
+        y += sleepCardH;
       }
       if (showSteps) {
-        const avg = Math.round(stepVals.reduce((a, d) => a + d.steps, 0) / stepVals.length);
-        drawDailyCard('걸음', 'steps', stepsMaxOf(sleepDays), 3000, '3k', `평균 ${avg.toLocaleString('ko-KR')}걸음 · ${stepVals.length}일 기록`, v => (v - 3000) / 1000);
-      }
-      // 복약 일수
-      if (showMed) {
         y += 28;
-        rr(PAD, y, INNER, 110, 28, CARD, LINE);
-        ctx.fillStyle = SUB; ctx.font = font(30); ctx.fillText('복약 일수', PAD + 40, y + 66);
-        ctx.fillStyle = ACCENT; ctx.font = font(40, true); ctx.textAlign = 'right'; ctx.fillText(medText, PAD + INNER - 40, y + 70); ctx.textAlign = 'left';
-        y += 110;
+        const avg = Math.round(stepVals.reduce((a, d) => a + d.steps, 0) / stepVals.length);
+        cardHead(stepsCardH, '걸음', `평균 ${avg.toLocaleString('ko-KR')}걸음 · ${stepVals.length}일 기록`);
+        ctx.drawImage(stepsImg, PAD + 24, y + HEAD, GW * 2, STEPS_GH * 2);
+        y += stepsCardH;
       }
       // 선생님께 드릴 말씀
       if (notes.length) {
@@ -6076,6 +6238,8 @@
 
     function clearAllData() {
       performDataReset();
+      try { localStorage.setItem('lifeguard_surveys', '[]'); } catch (_) {} // 1.2.9: 설문도 (진료 완료 때는 남김)
+      renderSurveyCard();
       showToast('모든 데이터가 비워졌습니다. 새로운 백지(0)에서 시작합니다. 🌿');
     }
 
@@ -6323,6 +6487,7 @@
         if (chartCircle) chartCircle.setAttribute('fill', '#9ec0c4');
 
         if (reportMemoCard) reportMemoCard.className = "bg-[#222628] rounded-xl p-3 border border-[#333a3d] shadow-sm text-xs transition-colors text-white";
+        { const sc = document.getElementById('reportSurveyCard'); if (sc && reportMemoCard) sc.className = reportMemoCard.className + ' mb-3'; }
         if (reportMemoTitle) reportMemoTitle.className = "text-[11px] font-bold text-[#9ec0c4] flex items-center gap-1";
         if (reportFooterText) reportFooterText.className = "text-[10px] text-center text-white/40 mt-2 leading-relaxed";
 
@@ -6399,6 +6564,7 @@
         if (chartCircle) chartCircle.setAttribute('fill', '#455a5c');
 
         if (reportMemoCard) reportMemoCard.className = "bg-white/80 rounded-xl p-3 border border-[#dce2dc] shadow-sm text-xs transition-colors";
+        { const sc = document.getElementById('reportSurveyCard'); if (sc && reportMemoCard) sc.className = reportMemoCard.className + ' mb-3'; }
         if (reportMemoTitle) reportMemoTitle.className = "text-[11px] font-bold text-[#455a5c] flex items-center gap-1";
         if (reportFooterText) reportFooterText.className = "text-[10px] text-center text-gray-400 mt-2 leading-relaxed";
 
@@ -6470,6 +6636,7 @@
         if (chartCircle) chartCircle.setAttribute('fill', '#597075');
 
         if (reportMemoCard) reportMemoCard.className = "bg-white rounded-xl p-3 border border-gray-100 shadow-sm text-xs transition-colors";
+        { const sc = document.getElementById('reportSurveyCard'); if (sc && reportMemoCard) sc.className = reportMemoCard.className + ' mb-3'; }
         if (reportMemoTitle) reportMemoTitle.className = "text-[11px] font-bold text-[#597075] flex items-center gap-1";
         if (reportFooterText) reportFooterText.className = "text-[10px] text-center text-gray-400 mt-2 leading-relaxed";
 
@@ -7127,6 +7294,7 @@
     }
 
     function openSleepModal(key) {
+      if (cloudWriteBlocked()) return; // 1.2.9: 인터넷이 없으면 보기만
       const m = document.getElementById('sleepModal');
       if (!m) return;
       loadSleepEdit(key || localDateKey(new Date()));
@@ -7622,8 +7790,180 @@
       return out;
     }
 
+    // ── 설문 (1.2.9, 사용자: "설문하는 폼을 만들어 보자") ──
+    // 우울 PHQ-9 · 불안 GAD-7 · 몸 증상 PHQ-15. 문항·답·점수 기준은 docs/questionnaires의 표준 설문지 그대로 (글을 바꾸지 않는다).
+    // 저장: lifeguard_surveys = [{ id, time, answers[], score, extra }] — 진료 완료해도 남아 지난번과 견줄 수 있다. 기록 지키기에도 담긴다.
+    const SURVEY_FREQ = ['전혀 방해받지 않았다', '며칠 동안 방해받았다', '7일 이상 방해받았다', '거의 매일 방해받았다'];
+    const SURVEY_EXTRA = { q: '위에서 고른 문제들이 있다면, 이로 인해 직장 일, 집안일, 또는 다른 사람들과 어울리는 것이 얼마나 어려웠습니까?',
+      options: ['전혀 어렵지 않았다', '다소 어려웠다', '매우 어려웠다', '극도로 어려웠다'] };
+    const SURVEYS = {
+      phq9: { name: '우울', period: '지난 2주', max: 27, extra: true,
+        ask: '지난 2주일 동안, 당신은 다음의 문제들로 인해서 얼마나 자주 방해를 받았습니까?',
+        options: SURVEY_FREQ,
+        items: ['일 또는 여가 활동을 하는 데 흥미나 즐거움을 느끼지 못함', '기분이 가라앉거나, 우울하거나, 희망이 없음',
+          '잠이 들거나 계속 잠을 자는 것이 어려움, 또는 잠을 너무 많이 잠', '피곤하다고 느끼거나 기운이 거의 없음', '입맛이 없거나 과식을 함',
+          '자신을 부정적으로 봄 — 혹은 자신이 실패자라고 느끼거나 자신 또는 가족을 실망시킴', '신문을 읽거나 텔레비전을 보는 것과 같은 일에 집중하는 것이 어려움',
+          '다른 사람들이 주목할 정도로 너무 느리게 움직이거나 말을 함, 또는 반대로 평상시보다 많이 움직여서 너무 안절부절못하거나 들떠 있음',
+          '자신이 죽는 것이 더 낫다고 생각하거나 어떤 식으로든 자신을 해칠 것이라고 생각함'],
+        levels: [[4, '거의 없음'], [9, '가벼운 정도'], [14, '중간 정도'], [19, '약간 심한 정도'], [27, '심한 정도']],
+        safetyItem: 8 },
+      gad7: { name: '불안', period: '지난 2주', max: 21, extra: true,
+        ask: '지난 2주일 동안, 당신은 다음의 문제들로 인해서 얼마나 자주 방해를 받았습니까?',
+        options: SURVEY_FREQ,
+        items: ['초조하거나 불안하거나 조마조마하게 느낀다', '걱정하는 것을 멈추거나 조절할 수가 없다', '여러 가지 것들에 대해 걱정을 너무 많이 한다',
+          '편하게 있기가 어렵다', '너무 안절부절못해서 가만히 있기가 힘들다', '쉽게 짜증이 나거나 쉽게 성을 내게 된다', '마치 끔찍한 일이 생길 것처럼 두렵게 느껴진다'],
+        levels: [[4, '거의 없음'], [9, '가벼운 정도'], [14, '중간 정도'], [21, '심한 정도']] },
+      phq15: { name: '몸 증상', period: '지난 4주', max: 30, extra: false,
+        ask: '지난 4주 동안, 다음의 문제들로 인해 얼마나 시달렸습니까?',
+        options: ['전혀 시달리지 않았다', '조금 시달렸다', '많이 시달렸다'],
+        items: ['복통 (위통)', '등·허리 통증', '팔, 다리 또는 관절(무릎, 고관절 등) 통증', '월경통 또는 월경 관련 문제 (여성 해당 시)',
+          '성관계 중 통증이나 그 밖의 문제', '두통', '가슴 통증 (흉통)', '어지럼증', '정신을 잃고 쓰러짐 (실신)', '심장이 세게 두근거리거나 빨리 뜀',
+          '숨이 참 (호흡곤란)', '변비, 묽은 변 또는 설사', '메스꺼움, 배에 가스가 참 또는 소화불량', '잠들기 어렵거나 자주 깨거나 너무 많이 잠', '피곤하거나 기운이 없음'],
+        naItem: 3, // 4번(월경)은 '해당 없음'을 고를 수 있다 → 28점 만점
+        levels: [[4, '최소'], [9, '가벼운 정도'], [14, '중간 정도'], [30, '심한 정도']] },
+    };
+    const SURVEY_ORDER = ['phq9', 'gad7', 'phq15'];
+    function surveyList() {
+      return safeJsonParse('lifeguard_surveys', []).filter(r => r && SURVEYS[r.id] && typeof r.time === 'string');
+    }
+    function surveyHistory(id) { return surveyList().filter(r => r.id === id).sort((a, b) => a.time < b.time ? 1 : -1); }
+    function surveyLevel(id, score) { const lv = SURVEYS[id].levels; const i = lv.findIndex(([hi]) => score <= hi); return i < 0 ? lv.length - 1 : i; }
+    function surveyMax(def, rec) { return def.naItem != null && rec && rec.answers && rec.answers[def.naItem] === null ? def.max - 2 : def.max; }
+    const surveyDate = (iso) => { const d = new Date(iso); return `${d.getMonth() + 1}.${d.getDate()}`; };
+
+    // 함께 보기의 '설문' 칸
+    function renderSurveyCard() {
+      const box = document.getElementById('surveyRows');
+      if (!box) return;
+      const dark = getEffectiveTheme(currentTheme) === 'dark';
+      const main = (document.getElementById('chartPath') || {}).getAttribute?.('stroke') || (dark ? '#9ec0c4' : '#597075');
+      const muted = dark ? 'rgba(230,238,238,0.5)' : '#9aa7aa';
+      const line = dark ? 'rgba(255,255,255,0.1)' : '#eef2f2';
+      box.innerHTML = SURVEY_ORDER.map((id, n) => {
+        const def = SURVEYS[id], last = surveyHistory(id)[0];
+        const right = last
+          ? `<div style="text-align:right;color:${main};font-weight:700;font-size:12px">${last.score}점 ›<div style="font-weight:400;font-size:10px;color:${muted};margin-top:1px">${surveyDate(last.time)}</div></div>`
+          : `<div style="color:${main};opacity:.6;font-weight:600;font-size:12px">하기 ›</div>`;
+        return `<button type="button" onclick="openSurvey('${id}', event)" style="display:flex;width:100%;align-items:center;justify-content:space-between;text-align:left;padding:9px 2px;${n ? `border-top:1px solid ${line};` : ''}">` +
+          `<div><div style="color:${main};font-weight:700;font-size:13px">${def.name}</div><div style="font-size:10.5px;color:${muted};margin-top:1px">${def.items.length}문항 · ${def.period}</div></div>${right}</button>`;
+      }).join('');
+      const t = document.getElementById('reportSurveyTitle'); if (t) t.style.color = main;
+    }
+
+    let surveyRun = null; // { id, i, answers[], extra, stage: 'q' | 'extra' | 'result', rec, fresh }
+    function applySurveyTheme() {
+      const m = document.getElementById('surveyModal');
+      if (!m) return;
+      const dark = getEffectiveTheme(currentTheme) === 'dark';
+      const main = (document.getElementById('chartPath') || {}).getAttribute?.('stroke') || (dark ? '#9ec0c4' : '#597075');
+      const vars = dark
+        ? { bg: '#101415', card: '#1a2022', ink: '#e6eeee', muted: 'rgba(230,238,238,0.55)', line: 'rgba(255,255,255,0.12)', soft: 'rgba(158,192,196,0.14)' }
+        : { bg: '#f1f4f4', card: '#fbfcfc', ink: '#2c3e40', muted: '#7f9294', line: '#dbe3e3', soft: 'rgba(89,112,117,0.09)' };
+      vars.main = main;
+      Object.keys(vars).forEach(k => m.style.setProperty('--sv-' + k, vars[k]));
+      m.style.setProperty('--sv-fs', String(currentFontStep === 5 ? 1.2 : currentFontStep === 3 ? 1.1 : 1));
+    }
+    // 줄을 누르면: 한 적이 있으면 지난 결과(다시 하기 단추), 처음이면 바로 1번 문항
+    function openSurvey(id, e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      if (!SURVEYS[id]) return;
+      triggerHaptic();
+      const last = surveyHistory(id)[0];
+      if (!last && cloudWriteBlocked()) return;
+      surveyRun = last ? { id, stage: 'result', rec: last, fresh: false } : surveyStartRun(id);
+      applySurveyTheme();
+      const m = document.getElementById('surveyModal');
+      m.classList.remove('hidden'); m.style.display = 'block';
+      renderSurvey();
+    }
+    function surveyStartRun(id) { return { id, i: 0, answers: new Array(SURVEYS[id].items.length).fill(undefined), extra: null, stage: 'q' }; }
+    function closeSurvey(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      const m = document.getElementById('surveyModal');
+      if (m) { m.classList.add('hidden'); m.style.display = 'none'; }
+      surveyRun = null; // 다 하지 않고 닫으면 남기지 않는다
+      renderSurveyCard();
+    }
+    function surveyRestart(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      if (!surveyRun || cloudWriteBlocked()) return;
+      surveyRun = surveyStartRun(surveyRun.id);
+      renderSurvey();
+    }
+    function surveyBack(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      const r = surveyRun; if (!r) return;
+      if (r.stage === 'extra') { r.stage = 'q'; r.i = SURVEYS[r.id].items.length - 1; }
+      else if (r.i > 0) r.i--;
+      renderSurvey();
+    }
+    function surveyPick(v, e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      const r = surveyRun; if (!r || r.busy) return;
+      const def = SURVEYS[r.id];
+      triggerHaptic();
+      if (r.stage === 'extra') r.extra = v; else r.answers[r.i] = v;
+      r.busy = true;
+      renderSurvey(); // 고른 단추가 잠깐 보이고 넘어간다
+      setTimeout(() => {
+        if (surveyRun !== r) return;
+        r.busy = false;
+        if (r.stage === 'q' && r.i < def.items.length - 1) r.i++;
+        else if (r.stage === 'q' && def.extra && r.answers.some(a => a > 0)) r.stage = 'extra';
+        else surveyFinish(r);
+        renderSurvey();
+      }, 220);
+    }
+    function surveyFinish(r) {
+      const def = SURVEYS[r.id];
+      const answers = r.answers.map(a => a === undefined ? 0 : a);
+      const score = answers.reduce((s, a) => s + (a || 0), 0);
+      const rec = { id: r.id, time: new Date().toISOString(), answers, score, extra: def.extra && answers.some(a => a > 0) ? r.extra : null };
+      const all = surveyList(); all.push(rec);
+      try { localStorage.setItem('lifeguard_surveys', JSON.stringify(all)); } catch (_) {}
+      r.stage = 'result'; r.rec = rec; r.fresh = true;
+      showToast(`${def.name} 설문을 남겼어요`);
+    }
+    function renderSurvey() {
+      const body = document.getElementById('surveyBody');
+      const r = surveyRun;
+      if (!body || !r) return;
+      const def = SURVEYS[r.id];
+      const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const close = `<button type="button" class="sv-close" onclick="closeSurvey(event)">닫기 ✕</button>`;
+      if (r.stage === 'q' || r.stage === 'extra') {
+        const n = def.items.length, extra = r.stage === 'extra';
+        const opts = extra ? SURVEY_EXTRA.options : def.options;
+        const cur = extra ? r.extra : r.answers[r.i];
+        let btns = opts.map((o, v) => `<button type="button" class="sv-opt${cur === v ? ' on' : ''}" onclick="surveyPick(${v}, event)">${esc(o)}</button>`).join('');
+        if (!extra && def.naItem === r.i) btns += `<button type="button" class="sv-opt${cur === null ? ' on' : ''}" onclick="surveyPick(null, event)" style="opacity:.75">해당 없음</button>`;
+        const pos = extra ? n : r.i;
+        body.innerHTML =
+          `<div class="sv-top"><span>${def.name} 설문 · ${extra ? '마지막' : `${r.i + 1} / ${n}`}</span>${close}</div>` +
+          `<div class="sv-bar"><i style="width:${Math.round((pos + 1) / (n + (def.extra ? 1 : 0)) * 100)}%"></i></div>` +
+          `<div class="sv-ask">${esc(extra ? '' : def.ask)}</div>` +
+          `<div class="sv-q">${esc(extra ? SURVEY_EXTRA.q : def.items[r.i])}</div>` + btns +
+          ((extra || r.i > 0) ? `<button type="button" class="sv-back" onclick="surveyBack(event)">‹ 앞 문항</button>` : '');
+        return;
+      }
+      // 결과
+      const rec = r.rec, max = surveyMax(def, rec), lv = surveyLevel(r.id, rec.score);
+      const past = surveyHistory(r.id).filter(x => x.time !== rec.time).slice(0, 3);
+      const scale = def.levels.map((_, i) => `<i class="${i <= lv ? 'on' : ''}"></i>`).join('');
+      const safety = def.safetyItem != null && (rec.answers[def.safetyItem] || 0) >= 1;
+      body.innerHTML =
+        `<div class="sv-top"><span>${def.name} 설문 · ${surveyDate(rec.time)}</span>${close}</div>` +
+        `<div class="sv-score"><b>${rec.score}</b><span> / ${max}점</span></div>` +
+        `<div class="sv-lvl">${def.levels[lv][1]}</div>` +
+        `<div class="sv-scale">${scale}</div><div class="sv-ends"><span>0</span><span>${max}</span></div>` +
+        (safety ? `<a class="sv-call" href="tel:1577-0199" onclick="event.stopPropagation()"><b>📞 24시간 마음건강 상담전화 1577-0199</b>힘든 생각이 들 때는 혼자 견디지 않아도 돼요. 지금 바로 이야기할 수 있어요. 다음 진료 때 선생님께도 꼭 말씀해 주세요.</a>` : '') +
+        past.map(x => `<div class="sv-hist"><span>${surveyDate(x.time)}</span><b>${x.score}점</b></div>`).join('') +
+        `<div class="sv-note">진단이 아니라 기록이에요.<br>함께 보기에 남아 선생님과 같이 봐요.</div>` +
+        `<div class="sv-btns">${r.fresh ? '' : `<button type="button" class="sub" onclick="surveyRestart(event)">다시 하기</button>`}<button type="button" class="main" onclick="closeSurvey(event)">확인</button></div>`;
+    }
+
     // ── 뒤로가기: 열려 있는 창이 있으면 그 창부터 닫는다 (안드로이드 앱·웹 공통) ──
-    const BACK_WINDOW_IDS = ['sleepModal', 'reportShare', 'chartZoom', 'dailyCheckinModal', 'finishVisitModal', 'memoModal', 'peaceModal', 'settingsModal', 'reportModal'];
+    const BACK_WINDOW_IDS = ['surveyModal', 'sleepModal', 'reportShare', 'chartZoom', 'dailyCheckinModal', 'finishVisitModal', 'memoModal', 'peaceModal', 'settingsModal', 'reportModal'];
     function isWindowOpen(id) {
       const el = document.getElementById(id);
       return !!el && !el.classList.contains('opacity-0') && !el.classList.contains('hidden') && el.style.display !== 'none';
@@ -7634,6 +7974,7 @@
     // 맨 위에 열린 창 하나를 닫는다. 닫은 것이 있으면 true.
     function closeTopWindow() {
       if (whatsNewEl) { closeWhatsNew(); return true; }
+      if (isWindowOpen('surveyModal')) { if (surveyRun && surveyRun.stage === 'q' && surveyRun.i > 0 || surveyRun && surveyRun.stage === 'extra') surveyBack(); else closeSurvey(); return true; }
       if (isWindowOpen('sleepModal')) { closeSleepModal(); return true; }
       if (isWindowOpen('reportShare')) { closeReportShare(); return true; }
       if (isWindowOpen('chartZoom')) { closeChartZoom(); return true; }
@@ -7787,8 +8128,12 @@
 
     // 기록이 바뀌면(어느 함수에서 저장하든) 몇 초 모았다가 한 번 담는다
     Storage.prototype.setItem = function(k, v) {
+      // 1.2.9: 값이 그대로면 '못 담음'으로 치지 않는다 (앱을 열 때마다 테마·글자 크기를 같은 값으로 다시 적어서,
+      //        다른 기기에서 적은 새 기록을 이 폰의 옛 것으로 덮을 뻔했다)
+      const watch = this === window.localStorage && cloudIsSynced(k);
+      const same = watch && this.getItem(k) === String(v);
       cloudOrigSet.call(this, k, v);
-      if (this === window.localStorage && cloudIsSynced(k)) cloudMarkDirty();
+      if (watch && !same) cloudMarkDirty();
     };
     Storage.prototype.removeItem = function(k) {
       cloudOrigRemove.call(this, k);
@@ -7853,7 +8198,10 @@
           cloud.ready = true;
           if (u) {
             cloudPut('lifeguard_cloud_on', 'true');
+            cloudCloseGate();
             cloudAfterLogin();
+          } else {
+            cloudShowGate();
           }
           renderCloudCard();
         });
@@ -7862,6 +8210,7 @@
         cloud.loading = null;
         cloud.status = 'offline';
         renderCloudCard();
+        cloudOfflineCheck();
         throw err;
       });
       return cloud.loading;
@@ -7893,29 +8242,104 @@
         cloud.status = 'failed';
       }
       renderCloudCard();
+      cloudOfflineCheck();
     }
 
-    // 로그인 직후 한 번: 담아 둔 기록과 이 폰 기록을 맞춘다
+    // 로그인하면(앱을 열 때마다·다시 볼 때마다) DB와 맞춘다. 1.2.9 사용자 결정: 기록의 주인은 DB, 폰은 보기용 사본.
+    // 인터넷이 없으면 새로 적지 못하므로(cloudWriteBlocked) 합칠 일이 없다 → 못 담은 것만 먼저 담고, 나머지는 늘 DB 것을 그대로.
     async function cloudAfterLogin() {
-      if (cloud.checked) return;
+      if (cloud.checked || cloud.syncing) return;
+      cloud.syncing = true;
       let remote = null;
       try {
         const snap = await cloud.fb.fsM.getDoc(cloudRef('current'));
         remote = snap.exists() ? snap.data() : null;
       } catch (_) {
+        cloud.syncing = false;
         cloud.status = 'failed';
         renderCloudCard();
-        return; // 다음에 열 때 다시
+        cloudOfflineCheck();
+        return; // 이어지면 다시 (cloudRetry)
       }
+      cloud.syncing = false;
       cloud.checked = true;
+      cloud.lastCheck = Date.now();
       cloudCountArchive();
       const local = cloudSnapshot();
-      const localAt = parseInt(cloudGet('lifeguard_cloud_local_at') || '0', 10);
-      if (remote && remote.data && cloudHasRecords(remote.data)) {
-        if (!cloudHasRecords(local)) { openCloudRestore(remote, 'empty'); return; }
-        if ((remote.savedAt || 0) > localAt + 1000 && JSON.stringify(remote.data) !== JSON.stringify(local)) { openCloudRestore(remote, 'newer'); return; }
+      const savedAt = parseInt(cloudGet('lifeguard_cloud_saved_at') || '0', 10);
+      const dirty = cloudGet('lifeguard_cloud_dirty') === 'true';
+      const rData = remote && remote.data;
+      // ① DB가 비어 있으면 이 폰 것을 담는다
+      if (!rData || !Object.keys(rData).length) { cloudSave(); return; }
+      // ② 이 폰에 못 담은 것(담다가 끊긴 기록)이 있으면 먼저 담는다
+      if (dirty) { cloudSave(); return; }
+      // ③ 이미 DB와 같은 것을 들고 있으면 그대로
+      if ((remote.savedAt || 0) <= savedAt) return;
+      // ④ 딱 한 번: 로그인 없이 쓰던 폰(안드로이드 예전 판)에 기록이 있고 DB에도 있으면 합쳐서 담는다
+      if (!savedAt && cloudHasRecords(local) && cloudHasRecords(rData)) {
+        cloudWriteLocal(cloudMergeData(rData, local, false), remote.savedAt, true);
+        await cloudSave();
+        cloudReloadWith('');
+        return;
       }
-      if (!remote || cloudGet('lifeguard_cloud_dirty') === 'true' || cloudHasRecords(local)) cloudSave();
+      // ⑤ 그 밖에는 늘 DB 것을 그대로 가져온다
+      cloudWriteLocal(rData, remote.savedAt, false);
+      cloudReloadWith('');
+    }
+    // 합치기 (④ 딱 한 번, 로그인 없이 쓰던 폰만): 기분·약은 시각으로, 설문은 종류+시각으로, 말씀은 글로, 잠은 날짜로 (같은 날은 먼저 고른 쪽).
+    // preferRemote면 설정·같은 날 잠은 DB 쪽 (이 폰이 지워져 기본값만 있을 때)
+    function cloudMergeData(remote, local, preferRemote) {
+      const out = {};
+      const arr = (d, k) => { try { const v = JSON.parse(d[k] || '[]'); return Array.isArray(v) ? v : []; } catch (_) { return []; } };
+      const obj = (d, k) => { try { const v = JSON.parse(d[k] || '{}'); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; } catch (_) { return {}; } };
+      const unionBy = (a, b, keyOf) => { const m = new Map(); a.concat(b).forEach(x => { const kk = keyOf(x); if (kk && !m.has(kk)) m.set(kk, x); }); return [...m.values()]; };
+      const timeOf = (x) => typeof x === 'string' ? x : String((x && x.time) || '');
+      const first = preferRemote ? remote : local, second = preferRemote ? local : remote;
+      new Set(Object.keys(remote).concat(Object.keys(local))).forEach(k => {
+        if (!cloudIsSynced(k)) return;
+        if (k === 'lifeguard_mood_records' || k === 'lifeguard_pill_records') {
+          out[k] = JSON.stringify(unionBy(arr(first, k), arr(second, k), timeOf).sort((a, b) => timeOf(a) < timeOf(b) ? -1 : timeOf(a) > timeOf(b) ? 1 : 0));
+        } else if (k === 'lifeguard_surveys') {
+          out[k] = JSON.stringify(unionBy(arr(first, k), arr(second, k), x => x && x.id ? x.id + '|' + x.time : '').sort((a, b) => a.time < b.time ? -1 : 1));
+        } else if (k === 'lifeguard_doctor_notes') {
+          out[k] = JSON.stringify(unionBy(arr(first, k), arr(second, k), x => String(x).trim()));
+        } else if (k === 'lifeguard_sleep_log') {
+          out[k] = JSON.stringify(Object.assign({}, obj(second, k), obj(first, k)));
+        } else if (k === 'lifeguard_last_visit_date') {
+          // 지워졌다 다시 이은 폰은 오늘이 '지난 진료일'로 새로 적혀 있어서 DB 것을 쓴다. 둘 다 쓰던 폰이면 진료 완료가 늦은 쪽
+          const a = remote[k] || '', b = local[k] || '';
+          out[k] = preferRemote ? (a || b) : (a > b ? a : b);
+        } else {
+          out[k] = (k in first) ? first[k] : second[k];
+        }
+      });
+      // 한쪽에서 진료 완료를 했으면, 그 전 주기의 기분·약은 다시 살리지 않는다 (보관함에 있음)
+      const lv = out['lifeguard_last_visit_date'];
+      if (lv && !preferRemote && remote['lifeguard_last_visit_date'] !== local['lifeguard_last_visit_date']) {
+        const [y, m, d] = lv.split('-').map(Number);
+        const start = new Date(y, (m || 1) - 1, d || 1).getTime();
+        ['lifeguard_mood_records', 'lifeguard_pill_records'].forEach(k => {
+          if (!out[k]) return;
+          out[k] = JSON.stringify(JSON.parse(out[k]).filter(x => { const t = new Date(timeOf(x)).getTime(); return isNaN(t) || t >= start; }));
+        });
+      }
+      return out;
+    }
+    function cloudWriteLocal(data, savedAt, dirty) {
+      try {
+        const old = [];
+        for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (cloudIsSynced(k)) old.push(k); }
+        old.forEach(k => { if (!(k in data)) cloudOrigRemove.call(localStorage, k); });
+        Object.keys(data || {}).forEach(k => { if (cloudIsSynced(k)) cloudOrigSet.call(localStorage, k, data[k]); });
+        cloudPut('lifeguard_cloud_saved_at', String(savedAt || Date.now()));
+        cloudPut('lifeguard_cloud_local_at', String(Date.now()));
+        cloudPut('lifeguard_cloud_dirty', dirty ? 'true' : null);
+      } catch (_) {}
+    }
+    // 불러온 기록으로 화면을 새로 연다 (알림은 새로 연 뒤에)
+    function cloudReloadWith(msg) {
+      try { if (msg) sessionStorage.setItem('lifeguard_cloud_notice', msg); } catch (_) {}
+      location.reload();
     }
     async function cloudCountArchive() {
       try {
@@ -7960,6 +8384,8 @@
       const pc = document.getElementById('settingsPatientCard');
       return !!(pc && pc.className.indexOf('#222628') >= 0);
     }
+    // 1.2.9 (사용자): 기록은 구글 계정(DB)에 담긴다. 설정에는 로그인한 이메일만 보인다 (담기·끄기·담은 때 없음)
+    const CLOUD_G = '<svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true" style="display:inline;flex-shrink:0"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.1 1.4-4.9 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>';
     function renderCloudCard() {
       const card = document.getElementById('cloudCard');
       if (!card) return;
@@ -7969,30 +8395,39 @@
       card.style.display = '';
       const dark = cloudIsDark();
       const sub = dark ? 'text-white/55' : 'text-gray-500';
-      const boxBg = dark ? 'background:rgba(255,255,255,0.06)' : 'background:#f4f7f8';
-      const G = '<svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true" style="display:inline;flex-shrink:0"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.1 1.4-4.9 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>';
-      const title = '<div class="font-bold ' + (dark ? 'text-[#9ec0c4]' : 'text-[#597075]') + ' text-[13px] flex items-center gap-1.5 shrink-0"><span>🛟</span> 기록 지키기</div>';
-      // 1.2.8: 한 칸 (제목 + 오른쪽 단추). 자세한 것은 눌러서 여는 창에서
-      const pill = (label, onclick, strong) => '<button type="button" onclick="' + onclick + '" class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-semibold active:scale-95 transition cursor-pointer ' +
-        (strong ? (dark ? 'border border-white/20 text-white/85' : 'border border-gray-300 bg-white text-gray-700') : (dark ? 'bg-white/10 text-[#9ec0c4]' : 'bg-[#597075]/10 text-[#597075]')) + '">' + label + '</button>';
-      let right;
-      if (!cloudOn()) right = pill(G + ' 로그인', 'openCloudConsent(event)', true);
-      else if (!cloud.ready) right = '<span class="text-[11px] ' + sub + '">잇는 중…</span>';
-      else if (!cloud.user) right = pill('다시 로그인', 'cloudSignIn(event)', false);
-      else if (cloud.status === 'saving') right = pill('담는 중…', 'openCloudManage(event)', false);
-      else if (cloud.status === 'failed' || cloud.status === 'offline') right = pill('잠시 못 담음 ›', 'openCloudManage(event)', false);
-      else right = pill('✓ 지키는 중 ›', 'openCloudManage(event)', false);
-      // 1.2.8: 한 줄 설명 (켜기 전: 무엇인지 / 켠 뒤: 마지막으로 담은 때)
-      let desc;
-      if (!cloudOn()) desc = window.AndroidBridge
-        ? '구글로 로그인하면 기록을 저절로 담아 두어, 폰을 바꾸거나 앱을 다시 깔아도 불러올 수 있어요.'
-        : '구글로 로그인하면 기록을 저절로 담아 두어, 아이폰이 기록을 지우거나 폰을 바꿔도 불러올 수 있어요.';
-      else if (cloud.user && cloud.status !== 'failed' && cloud.status !== 'offline') {
-        const at = parseInt(cloudGet('lifeguard_cloud_saved_at') || '0', 10);
-        desc = (at ? '마지막으로 담은 때: ' + cloudTimeText(at) : '기록이 바뀌면 저절로 담아요.') + (cloud.archiveCount ? ' · 보관함 ' + cloud.archiveCount + '개' : '');
-      } else desc = '';
-      card.innerHTML = '<div class="flex items-center justify-between gap-2">' + title + right + '</div>' +
-        (desc ? '<p class="text-[10.5px] leading-snug ' + sub + '" style="word-break:keep-all">' + desc + '</p>' : '');
+      const email = cloud.user ? escapeHtml(cloud.user.email || '구글 계정') : '';
+      let body;
+      if (email) body = '<span class="font-semibold text-[13px] truncate ' + (dark ? 'text-white/85' : 'text-gray-700') + '">' + email + '</span>';
+      else if (cloudOn() && !cloud.ready) body = '<span class="text-[12px] ' + sub + '">잇는 중…</span>';
+      else body = '<button type="button" onclick="cloudSignIn(event)" class="font-semibold text-[13px] ' + (dark ? 'text-[#9ec0c4]' : 'text-[#597075]') + '">구글로 로그인</button>';
+      const out = email ? '<button type="button" onclick="openCloudSignOut(event)" class="shrink-0 text-[11.5px] font-semibold px-2.5 py-1.5 rounded-lg ' + (dark ? 'bg-white/10 text-white/70' : 'bg-[#597075]/10 text-[#597075]') + '">로그아웃</button>' : '';
+      card.innerHTML = '<div class="flex items-center justify-between gap-2"><div class="flex items-center gap-2 min-w-0">' + CLOUD_G + body + '</div>' + out + '</div>';
+    }
+    // 로그아웃 (1.2.9): 기록은 DB에 그대로 두고, 이 폰에 있던 사본만 비운다 → 다시 '구글로 로그인' 창
+    function openCloudSignOut(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      cloudSheet(
+        '<div class="text-[15px] font-bold text-[#597075]">로그아웃할까요?</div>' +
+        cloudBtn('로그아웃', 'cloudSignOut(event)', true) +
+        cloudBtn('취소', 'closeCloudSheet(event)', false)
+      , 'signout');
+    }
+    async function cloudSignOut(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      // 아직 DB에 못 담은 것이 있으면 먼저 담는다. 못 담으면 로그아웃하지 않는다 (기록이 사라지지 않게)
+      if (cloudGet('lifeguard_cloud_dirty') === 'true') {
+        await cloudSave();
+        if (cloudGet('lifeguard_cloud_dirty') === 'true') { closeCloudSheet(); showToast('인터넷이 이어졌을 때 다시 해 주세요.'); return; }
+      }
+      clearTimeout(cloud.timer);
+      try {
+        const ks = [];
+        for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (cloudIsSynced(k) || /^lifeguard_cloud_/.test(k)) ks.push(k); }
+        ks.forEach(k => cloudOrigRemove.call(localStorage, k));
+      } catch (_) {}
+      try { if (cloud.fb) await cloud.fb.authM.signOut(cloud.fb.auth); } catch (_) {}
+      try { if (window.AndroidBridge && window.AndroidBridge.googleSignOut) window.AndroidBridge.googleSignOut(); } catch (_) {}
+      cloudReloadWith('로그아웃했어요');
     }
     // 기록 지키기 자세히: 계정 · 마지막으로 담은 때 · 보관함 · [지금 담기] [끄기]
     function openCloudManage(e) {
@@ -8025,7 +8460,7 @@
       const wrap = document.createElement('div');
       wrap.id = 'cloudSheet';
       wrap.dataset.kind = kind || '';
-      wrap.onclick = (ev) => { if (ev.target === wrap) closeCloudSheet(); };
+      wrap.onclick = (ev) => { if (ev.target === wrap && kind !== 'gate') closeCloudSheet(); };
       wrap.style.cssText = 'position:fixed;inset:0;z-index:80;background:rgba(20,28,30,0.45);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px';
       wrap.innerHTML = '<div onclick="event.stopPropagation()" class="rounded-3xl p-5 w-full space-y-3 shadow-2xl ' + (dark ? 'bg-[#222628] text-white/85 border border-[#333a3d]' : 'bg-white text-gray-700') + '" style="max-width:340px;max-height:86vh;overflow-y:auto;word-break:keep-all">' + html + '</div>';
       document.body.appendChild(wrap);
@@ -8039,6 +8474,43 @@
       const dark = cloudIsDark();
       const cls = primary ? 'bg-[#597075] text-white font-bold' : (dark ? 'text-white/60' : 'text-gray-500');
       return '<button type="button" onclick="' + onclick + '" class="w-full py-2.5 rounded-xl text-[13px] ' + cls + ' active:scale-95 transition cursor-pointer">' + label + '</button>';
+    }
+
+    // 1.2.9 (사용자): 구글로 로그인해야 쓸 수 있다. 로그인 안 되어 있으면 '구글로 로그인' 단추 하나만 있는 창 (닫을 수 없음)
+    function cloudGateNeeded() { return cloudAvailable() && !cloud.user && (!cloudOn() || cloud.ready); }
+    function cloudShowGate() {
+      if (!cloudGateNeeded()) return;
+      const cur = document.getElementById('cloudSheet');
+      if (cur && cur.dataset.kind === 'gate') return;
+      cloudLoadSdk().catch(() => {});
+      cloudSheet(
+        '<button type="button" onclick="cloudSignIn(event)" class="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-[15px] font-bold border active:scale-95 transition cursor-pointer ' +
+          (cloudIsDark() ? 'border-white/20 text-white/90' : 'border-gray-300 bg-white text-gray-700') + '">' + CLOUD_G + ' 구글로 로그인</button>'
+      , 'gate');
+    }
+    // 1.2.9 (사용자 결정): 기록의 주인은 DB. 인터넷이 없으면 보기만 되고 새로 적지 못한다 (폰에만 있는 기록이 생기지 않게).
+    function cloudOffline() { return navigator.onLine === false || cloud.status === 'offline'; }
+    function cloudWriteBlocked() {
+      if (!cloudAvailable() || !cloudOffline()) return false;
+      showToast('인터넷이 이어지면 기록할 수 있어요');
+      return true;
+    }
+    // 담다가 끊기면(드묾): 그 기록은 이 폰에 '못 담음'으로 들고 있다가 이어지면 담는다
+    function cloudOfflineCheck() {
+      if (!cloudAvailable()) return;
+      if (cloudOffline() || cloud.status === 'failed') { clearTimeout(cloud.retryTimer); cloud.retryTimer = setTimeout(cloudRetry, 8000); }
+    }
+    function cloudRetry() {
+      if (navigator.onLine === false) { cloud.retryTimer = setTimeout(cloudRetry, 8000); return; }
+      if (cloudOn() && !cloud.fb) { cloud.status = 'idle'; cloudLoadSdk().then(() => cloudOfflineCheck()).catch(() => { cloud.status = 'offline'; cloudOfflineCheck(); }); return; }
+      if (cloud.user && !cloud.checked) { cloud.status = 'idle'; cloudAfterLogin().then(() => cloudOfflineCheck()); return; }
+      if (cloud.user && cloud.checked && (cloud.status === 'failed' || cloudGet('lifeguard_cloud_dirty') === 'true')) { cloud.status = 'idle'; cloudSave().then(() => cloudOfflineCheck()); return; }
+      if (cloud.status === 'failed' || cloud.status === 'offline') cloud.status = 'idle';
+      cloudOfflineCheck();
+    }
+    function cloudCloseGate() {
+      const sh = document.getElementById('cloudSheet');
+      if (sh && sh.dataset.kind === 'gate') sh.remove();
     }
 
     function openCloudConsent(e) {
@@ -8075,9 +8547,7 @@
       provider.setCustomParameters({ prompt: 'select_account' });
       authM.signInWithPopup(auth, provider).then(() => {
         // 동의 창만 닫는다 (그 사이 '담아 둔 기록이 있어요' 창이 떴을 수 있음)
-        const sh = document.getElementById('cloudSheet');
-        if (sh && sh.dataset.kind === 'consent') sh.remove();
-        showToast('기록 지키기를 켰어요 🛟');
+        cloudCloseGate();
       }).catch((err) => {
         const code = err && err.code || '';
         if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
@@ -8098,18 +8568,17 @@
       const { authM, auth } = cloud.fb;
       if (r && r.ok && r.token) {
         authM.signInWithCredential(auth, authM.GoogleAuthProvider.credential(r.token)).then(() => {
-          const sh = document.getElementById('cloudSheet');
-          if (sh && sh.dataset.kind === 'consent') sh.remove();
-          if (!r.silent) showToast('기록 지키기를 켰어요 🛟');
+          cloudCloseGate();
         }).catch(() => {
-          cloud.ready = true; renderCloudCard();
+          cloud.ready = true; renderCloudCard(); cloudShowGate();
           if (!r.silent) showToast('로그인하지 못했어요. 잠시 뒤 다시 눌러 주세요.');
         });
         return;
       }
-      // 조용히 잇기가 안 되면 카드에 '다시 로그인'만 보여 준다 (창을 띄우지 않음)
+      // 조용히 잇기가 안 되면 '구글로 로그인' 창 (1.2.9: 로그인해야 쓸 수 있음)
       cloud.ready = true;
       renderCloudCard();
+      cloudShowGate();
       if (r && !r.silent && r.reason !== 'cancelled') showToast('로그인하지 못했어요. 잠시 뒤 다시 눌러 주세요.');
     };
 
@@ -8177,16 +8646,24 @@
     document.addEventListener('DOMContentLoaded', () => {
       renderCloudCard();
       if (cloudAvailable() && cloudOn()) cloudLoadSdk().catch(() => {});
+      try { const n = sessionStorage.getItem('lifeguard_cloud_notice'); if (n) { sessionStorage.removeItem('lifeguard_cloud_notice'); setTimeout(() => showToast(n), 600); } } catch (_) {}
+      // 1.2.9: 아이폰 등에서 저장 공간이 모자랄 때 이 앱 기록을 지우지 말아 달라고 부탁 (웹판만, 안 되면 그만)
+      try { if (!window.AndroidBridge && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (_) {}
+      setTimeout(cloudShowGate, 400);
       const pc = document.getElementById('settingsPatientCard');
       if (pc && window.MutationObserver) new MutationObserver(renderCloudCard).observe(pc, { attributes: true, attributeFilter: ['class'] });
     });
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden' && cloudGet('lifeguard_cloud_dirty') === 'true') cloudSave();
+      // 1.2.9: 다시 열면(1분 넘게 지났으면) 다른 기기에서 적은 것이 있는지 DB를 다시 본다
+      if (document.visibilityState === 'visible' && cloudOn() && cloud.user && cloud.checked && Date.now() - (cloud.lastCheck || 0) > 60000) {
+        cloud.checked = false; cloudAfterLogin();
+      }
     });
+    window.addEventListener('offline', cloudOfflineCheck);
     window.addEventListener('online', () => {
-      if (!cloudOn() || !cloud.fb) { if (cloudAvailable() && cloudOn()) cloudLoadSdk().catch(() => {}); return; }
-      if (!cloud.checked && cloud.user) cloudAfterLogin();
-      else if (cloudGet('lifeguard_cloud_dirty') === 'true') cloudSave();
+      clearTimeout(cloud.retryTimer);
+      setTimeout(cloudRetry, 300); // 다시 이어지면: 로그인 잇기 · DB 맞추기 · 못 담은 것 담기
     });
 
     // 웹판(https)에서만: 안드로이드 크롬 '앱 설치'용 도우미. 앱(APK) 안에서는 건너뛴다
