@@ -4501,6 +4501,8 @@
       hideControls();
       cloud.allowEmpty = true; // 일부러 비움: 빈 것을 DB에 담아도 됨
       performDataReset();
+      // 1.2.11: 방금 보관함으로 넘긴 주기의 설문 점수도 '지난 점수'에 바로 보이게, 보관함을 다시 읽는다
+      if (res === 'done') cloudCountArchive();
 
       // 블러 팝업 내부를 '초기화 완료' 상태로 전환
       const iconWrap = document.getElementById('finishVisitIconWrap');
