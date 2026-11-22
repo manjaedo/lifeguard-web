@@ -465,7 +465,8 @@
 
     </div>
 
-    <!-- 잠 기록 (1.2.7): 24시간 시계에서 잠든 시각·깬 시각을 끌어 맞춘다. 밤중에 깬 때·낮잠도. 시각이 어려우면 숫자로.
+    <!-- 잠 기록 (1.2.7): 24시간 시계에서 잠든 시각·깬 시각을 끌어 맞춘다. 밤중에 깬 때·낮잠도.
+         1.2.11 (사용자): 시계 아래에 '몇 시 ~ 몇 시'를 늘 글자로 보이고, 누르면 시각 고르는 창. '숫자로 적기'는 없앰(시계와 결과가 달라서)
          날짜는 '그 잠에서 깬 아침'의 날짜. 안드로이드는 자동으로 재기(오후 6시~낮 12시 화면 꺼짐)를 켤 수 있다 -->
     <div id="sleepModal" onclick="event.stopPropagation()" class="fixed inset-0 z-40 hidden" style="display: none;">
       <style>
@@ -490,6 +491,14 @@
         #sleepModal .sl-fine .lbl { font-size: calc(13px * var(--sl-fs)); color: var(--sl-muted); min-width: 64px; }
         #sleepModal .sl-fine .val { flex: 1; text-align: center; font-size: calc(17px * var(--sl-fs)); font-weight: 700; font-variant-numeric: tabular-nums; }
         #sleepModal .sl-fine button { width: 44px; height: 40px; border-radius: 20px; background: var(--sl-soft); color: var(--sl-main); font-size: 22px; font-weight: 700; line-height: 1; touch-action: manipulation; }
+        #sleepModal .sl-row { display: flex; align-items: center; gap: 6px; padding: 9px 4px; border-radius: 14px; }
+        #sleepModal .sl-row.on { background: var(--sl-soft); }
+        #sleepModal .sl-row .nm { flex: 1 0 auto; font-size: calc(14px * var(--sl-fs)); font-weight: 700; color: var(--sl-ink); white-space: nowrap; }
+        /* 시각 칸은 모두 같은 너비 (줄마다 세로로 가지런히). 아주 큰 글씨에서도 한 줄에 들어가게 시각 글씨는 조금만 키운다 */
+        #sleepModal .sl-tm { position: relative; display: inline-flex; align-items: center; justify-content: center; min-width: 5.7em; white-space: nowrap; border: 1.5px solid var(--sl-line); background: var(--sl-card); border-radius: 10px; padding: 5px 6px; font-size: calc(13.5px * min(var(--sl-fs), 1.1)); font-weight: 700; color: var(--sl-main); font-variant-numeric: tabular-nums; }
+        #sleepModal .sl-tm input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; margin: 0; cursor: pointer; font-size: 16px; }
+        #sleepModal .sl-til { color: var(--sl-muted); font-size: calc(13px * var(--sl-fs)); }
+        #sleepModal .sl-x { width: 30px; height: 30px; border-radius: 15px; color: var(--sl-muted); font-weight: 700; font-size: 18px; line-height: 1; flex-shrink: 0; }
         #sleepDial { touch-action: none; user-select: none; -webkit-user-select: none; }
       </style>
       <div class="w-full h-full overflow-y-auto" style="padding: max(14px, env(safe-area-inset-top)) 16px max(14px, env(safe-area-inset-bottom));">
@@ -517,13 +526,6 @@
               <div id="sleepPills" style="display:none"></div>
               <div id="sleepFine"></div>
               <div id="sleepTotal" style="display:none"></div>
-            </div>
-            <div id="sleepNumBox" class="mt-3" style="display: none;">
-              <div id="sleepSteps"></div>
-
-            </div>
-            <div class="flex items-center justify-center gap-4 mt-3">
-              <button type="button" id="sleepModeLink" onclick="setSleepMode(sleepEdit && sleepEdit.mode === 'num' ? 'time' : 'num', event)" class="sl-small underline">숫자로 적기</button>
             </div>
           </div>
           <!-- 안드로이드 앱에서만: 자동으로 재기 -->
@@ -7397,10 +7399,12 @@
     function sleepDateLabel(key) {
       const today = localDateKey(new Date());
       const y = new Date(); y.setDate(y.getDate() - 1);
-      if (key === today) return '오늘 아침에 깬 잠';
-      if (key === localDateKey(y)) return '어제 아침에 깬 잠';
+      // 1.2.11 (사용자): 낮에 깨는 날도 있어 '아침에 깬 잠' 대신 날짜만. 오늘·어제는 앞에 붙임
       const d = parseLocalDate(key);
-      return `${d.getMonth() + 1}.${d.getDate()} (${['일', '월', '화', '수', '목', '금', '토'][d.getDay()]}) 아침에 깬 잠`;
+      const md = `${d.getMonth() + 1}.${d.getDate()} (${['일', '월', '화', '수', '목', '금', '토'][d.getDay()]})`;
+      if (key === today) return `오늘 ${md}`;
+      if (key === localDateKey(y)) return `어제 ${md}`;
+      return md;
     }
 
     // 그날 고칠 것을 채운다: 적은 것 → 자동으로 잰 것 → 기본(오후 11시~오전 7시)
@@ -7417,12 +7421,9 @@
         fromAuto = true;
       }
       if (!segs) segs = [{ kind: 'night', start: 23 * 60, end: 7 * 60 }];
-      const sm = sleepSummary(segs);
-      let num = { night: sm.night, wakes: sm.wakes, nap: sm.nap };
-      if (saved && saved.mode === 'num') {
-        num = { night: Math.max(0, (saved.sleep_min || 0) - (saved.nap_min || 0)), wakes: saved.wake_count || 0, nap: saved.nap_min || 0 };
-      }
-      sleepEdit = { date: key, mode: saved && saved.mode === 'num' ? 'num' : 'time', segs, sel: 0, num, fromAuto, saved: !!saved, dirty: false, open: { wake: false, nap: false } };
+      // 1.2.11: '숫자로 적기'는 없앰. 예전에 숫자로 적은 날은 기록을 그대로 두고, 시각을 맞추면 그때 시계 기록으로 바뀐다
+      const legacyNum = !!(saved && saved.mode === 'num' && !(Array.isArray(saved.segs) && saved.segs.length));
+      sleepEdit = { date: key, mode: 'time', segs, sel: 0, fromAuto, legacyNum, saved: !!saved && !legacyNum, dirty: false };
     }
 
     function applySleepTheme() {
@@ -7491,16 +7492,6 @@
       loadSleepEdit(v);
       renderSleepModal();
     }
-    function setSleepMode(mode, e) {
-      if (e && e.stopPropagation) e.stopPropagation();
-      if (!sleepEdit || sleepEdit.mode === mode) return;
-      triggerHaptic();
-      if (mode === 'num') { const sm = sleepSummary(sleepEdit.segs); if (!sleepEdit.saved || sleepEdit.dirty) sleepEdit.num = { night: sm.night, wakes: sm.wakes, nap: sm.nap }; }
-      sleepEdit.mode = mode;
-      sleepEdit.dirty = true;
-      renderSleepModal();
-    }
-
     function renderSleepModal() {
       const st = sleepEdit;
       if (!st) return;
@@ -7513,23 +7504,22 @@
         while (el.scrollWidth > el.clientWidth + 1 && fs > base * 0.65) { fs -= 0.5; el.style.fontSize = fs + 'px'; }
       });
       set('sleepNextBtn', el => { const last = st.date >= localDateKey(new Date()); el.disabled = last; el.style.opacity = last ? '0.25' : '1'; }); // 1.2.8: 숨기면 날짜가 한쪽으로 쏠려 보임(사용자) → 옅게만
-      set('sleepModeLink', el => { el.textContent = st.mode === 'num' ? '시계로 적기' : '숫자로 적기'; });
-      set('sleepTimeBox', el => { el.style.display = st.mode === 'time' ? 'block' : 'none'; });
-      set('sleepNumBox', el => { el.style.display = st.mode === 'num' ? 'block' : 'none'; });
       set('sleepDeleteBtn', el => { el.style.display = st.saved ? 'inline' : 'none'; });
       set('sleepAutoNote', el => {
         // 자동으로 잰 날 / 아직 적지 않은 날(처음 그려 둔 오후 11시~오전 7시는 옅게) 안내 (1.2.7, 사용자 결정)
         const auto = st.fromAuto && !st.dirty, blank = !st.saved && !st.fromAuto && !st.dirty;
-        el.style.display = st.mode === 'time' && (auto || blank) ? 'block' : 'none';
-        el.textContent = auto ? '자동으로 잰 잠이에요. 다르면 끌어서 고치면 저절로 저장돼요.'
-          : '아직 적지 않은 날이에요. 끌어서 맞추면 저절로 저장돼요.';
+        const old = st.legacyNum && !st.dirty ? sleepLog[st.date] : null;
+        el.style.display = auto || blank ? 'block' : 'none';
+        el.textContent = old ? `예전에 숫자로 적은 날이에요 (잠 ${formatSleepMin(old.sleep_min || 0)}). 시각을 맞추면 그것으로 바뀌어요.`
+          : auto ? '자동으로 잰 잠이에요. 다르면 시각을 고치면 저절로 저장돼요.'
+          : '아직 적지 않은 날이에요. 시각을 맞추면 저절로 저장돼요.';
       });
       // 자동으로 재기 (안드로이드 앱만)
       set('sleepAutoCard', el => { el.style.display = hasSleepAutoBridge() ? 'block' : 'none'; });
       set('sleepAutoBtn', el => { el.style.background = sleepAutoOn ? 'var(--sl-main)' : '#d1d5db'; el.setAttribute('aria-checked', sleepAutoOn ? 'true' : 'false'); });
       set('sleepAutoRestricted', el => { el.style.display = sleepAutoOn ? 'none' : 'block'; });
       set('sleepAutoKnob', el => { el.style.transform = sleepAutoOn ? 'translateX(20px)' : 'translateX(0)'; });
-      if (st.mode === 'time') { drawSleepDial(); renderSleepFine(); renderSleepPills(); } else renderSleepSteps();
+      drawSleepDial(); renderSleepFine(); renderSleepPills();
     }
 
     // 24시간 시계: 위 0시, 오른쪽 6시, 아래 12시, 왼쪽 18시. 손잡이를 끌면 5분 단위로 움직인다
@@ -7679,101 +7669,73 @@
       b.addEventListener('click', (ev) => ev.stopPropagation());
       return b;
     }
-    // 1.2.8 (사용자 결정 '나. 접어 두기'): 시계 아래에는 늘 밤잠 −/+ 두 줄.
-    // 그 아래 '👁 밤중에 깸 N번 ›', '☀️ 낮잠 N번 ›' 두 줄이 접혀 있고, 누르면 펼쳐서 하나씩 고르고 −/+로 맞춘다.
+    // 1.2.11 (사용자: 몇 시부터 몇 시까지 잤는지 화면에 안 보여 맞추기 어려움, 깬 때·낮잠은 시각을 적을 곳이 없음):
+    // 시계 아래에 밤잠 · 밤중에 깸 · 낮잠을 줄마다 '[오후 11:30] ~ [오전 7:00]'으로 늘 보인다.
+    // 시각을 누르면 폰의 시각 고르는 창(알림 시각 칸과 같은 방식: 글자는 우리가 쓰고 투명한 time 칸을 덮음).
+    // 시계를 끌면 이 글자도 함께 바뀐다. 줄을 누르면 시계에서 그 띠가 진해진다.
     function renderSleepFine() {
       const box = document.getElementById('sleepFine');
       const st = sleepEdit;
       if (!box || !st) return;
-      if (!st.open) st.open = { wake: false, nap: false };
-      const wrap = (v) => ((v % 1440) + 1440) % 1440;
       const nightIdx = () => Math.max(0, st.segs.findIndex(x => x.kind === 'night'));
-      const cur = st.segs[st.sel];
-      if (cur && cur.kind !== 'night') st.open[cur.kind] = true;
-      // 1.2.8: 시각은 시계에서 끌어 맞춘다 (사용자: 시계 아래 숫자 조정은 필요 없음). 여기는 고르기·지우기·더하기만
-      const chipText = (x) => x.kind === 'wake' ? `${sleepFmt(x.start)} · ${formatSleepMin(sleepDur(x))}` : `${sleepFmt(x.start)}~${sleepFmt(x.end).replace(/^오[전후] /, '')}`;
-      box.textContent = '';
-      // 깬 때 · 낮잠: 접는 줄
-      [['wake', '👁 밤중에 깸', '+ 깸 추가'], ['nap', '☀️ 낮잠', '+ 낮잠 추가']].forEach(([kind, title, addLabel]) => {
-        const items = st.segs.map((x, i) => [x, i]).filter(([x]) => x.kind === kind);
-        const sec = document.createElement('div');
-        sec.style.borderTop = '1px solid var(--sl-line)'; sec.className = 'mt-1';
-        const head = document.createElement('button');
-        head.type = 'button';
-        head.className = 'w-full flex items-center justify-between py-2.5 px-1';
-        const open = !!st.open[kind];
-        head.innerHTML = `<span style="font-size:calc(14px * var(--sl-fs));font-weight:700;color:var(--sl-ink);">${title}</span>` +
-          `<span class="sl-small" style="font-weight:600;">${items.length ? items.length + '번' : '없음'} <span style="display:inline-block;transition:transform .2s;transform:rotate(${open ? 90 : 0}deg);">›</span></span>`;
-        head.onclick = (ev) => {
-          ev.stopPropagation(); triggerHaptic();
-          st.open[kind] = !st.open[kind];
-          if (!st.open[kind] && st.segs[st.sel] && st.segs[st.sel].kind === kind) st.sel = nightIdx();
-          renderSleepModal();
-        };
-        sec.appendChild(head);
-        if (open) {
-          const list = document.createElement('div'); list.className = 'flex flex-wrap gap-2 pb-2 px-1';
-          items.forEach(([x, i]) => {
-            const b = document.createElement('button'); b.type = 'button';
-            b.className = 'sl-pill' + (i === st.sel ? ' on' : '');
-            b.style.fontSize = 'calc(12.5px * var(--sl-fs))'; b.style.padding = '5px 11px';
-            b.appendChild(document.createTextNode(chipText(x)));
-            const del = document.createElement('span');
-            del.textContent = '×'; del.setAttribute('aria-label', '지우기');
-            del.style.cssText = 'padding-left:4px;font-weight:700;color:var(--sl-muted);';
-            del.onclick = (ev) => { ev.stopPropagation(); triggerHaptic(); st.segs.splice(i, 1); st.sel = nightIdx(); st.dirty = true; sleepAutoSave(); renderSleepModal(); };
-            b.appendChild(del);
-            b.onclick = (ev) => { ev.stopPropagation(); triggerHaptic(); st.sel = st.sel === i ? nightIdx() : i; renderSleepModal(); };
-            list.appendChild(b);
-          });
-          const add = document.createElement('button'); add.type = 'button'; add.className = 'sl-pill add';
-          add.style.fontSize = 'calc(12.5px * var(--sl-fs))'; add.style.padding = '5px 11px';
-          add.textContent = addLabel;
-          add.onclick = (ev) => {
-            ev.stopPropagation(); triggerHaptic();
-            if (kind === 'wake') {
-              const n = st.segs[nightIdx()];
-              const mid = n ? (n.start + Math.round(sleepDur(n) / 2 / 5) * 5) % 1440 : 180;
-              st.segs.push({ kind: 'wake', start: mid, end: (mid + 15) % 1440 });
-            } else st.segs.push({ kind: 'nap', start: 14 * 60, end: 15 * 60 });
-            st.sel = st.segs.length - 1; st.dirty = true; sleepAutoSave();
-            renderSleepModal();
-          };
-          list.appendChild(add);
-          sec.appendChild(list);
-        }
-        box.appendChild(sec);
-      });
-    }
-
-    // 숫자로: 밤잠(시간·분), 밤중에 깬 횟수, 낮잠
-    function renderSleepSteps() {
-      const box = document.getElementById('sleepSteps');
-      const st = sleepEdit;
-      if (!box || !st) return;
-      const n = st.num;
-      const rows = [
-        { label: '밤에 잔 시간', parts: [
-          { v: `${Math.floor(n.night / 60)}시간`, dec: () => { n.night = Math.max(0, n.night - 60); }, inc: () => { n.night = Math.min(20 * 60, n.night + 60); } },
-          { v: `${n.night % 60}분`, dec: () => { n.night = Math.max(0, n.night - 10); }, inc: () => { n.night = Math.min(20 * 60, n.night + 10); } } ] },
-        { label: '밤중에 깬 횟수', parts: [ { v: `${n.wakes}번`, dec: () => { n.wakes = Math.max(0, n.wakes - 1); }, inc: () => { n.wakes = Math.min(30, n.wakes + 1); } } ] },
-        { label: '낮잠', parts: [ { v: n.nap ? formatSleepMin(n.nap) : '없음', dec: () => { n.nap = Math.max(0, n.nap - 10); }, inc: () => { n.nap = Math.min(8 * 60, n.nap + 10); } } ] }
-      ];
-      box.textContent = '';
-      rows.forEach(r => {
-        const row = document.createElement('div'); row.className = 'sl-step';
-        const lb = document.createElement('div'); lb.className = 'lbl'; lb.textContent = r.label; row.appendChild(lb);
-        const ctls = document.createElement('div'); ctls.className = 'flex flex-col items-end gap-1.5';
-        r.parts.forEach(pt => {
-          const c = document.createElement('div'); c.className = 'ctl';
-          const mkb = (t, f, aria) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = t; b.setAttribute('aria-label', aria); b.onclick = (ev) => { ev.stopPropagation(); triggerHaptic(); f(); st.dirty = true; sleepAutoSave(); renderSleepSteps(); }; return b; };
-          const val = document.createElement('div'); val.className = 'val'; val.textContent = pt.v;
-          c.appendChild(mkb('−', pt.dec, '줄이기')); c.appendChild(val); c.appendChild(mkb('+', pt.inc, '늘리기'));
-          ctls.appendChild(c);
+      const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+      const changed = () => { st.dirty = true; sleepAutoSave(); renderSleepModal(); };
+      const timeChip = (i, k, aria) => {
+        const x = st.segs[i];
+        const c = document.createElement('span'); c.className = 'sl-tm';
+        c.appendChild(document.createTextNode(sleepFmt(x[k])));
+        const inp = document.createElement('input');
+        inp.type = 'time'; inp.value = hhmm(x[k]); inp.setAttribute('aria-label', aria);
+        inp.addEventListener('click', (ev) => { ev.stopPropagation(); st.sel = i; });
+        inp.addEventListener('change', (ev) => {
+          const mt = /^(\d{1,2}):(\d{2})/.exec(ev.target.value || '');
+          if (!mt || !st.segs[i]) return;
+          st.segs[i][k] = (Number(mt[1]) * 60 + Number(mt[2])) % 1440;
+          st.sel = i; triggerHaptic(); changed();
         });
-        row.appendChild(ctls);
-        box.appendChild(row);
+        c.appendChild(inp);
+        return c;
+      };
+      const row = (i, label, delAria) => {
+        const r = document.createElement('div');
+        r.className = 'sl-row' + (i === st.sel ? ' on' : '');
+        r.onclick = (ev) => { ev.stopPropagation(); if (st.sel !== i) { st.sel = i; triggerHaptic(); renderSleepModal(); } };
+        const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = label; r.appendChild(nm);
+        r.appendChild(timeChip(i, 'start', label + ' 시작 시각'));
+        const til = document.createElement('span'); til.className = 'sl-til'; til.textContent = '~'; r.appendChild(til);
+        r.appendChild(timeChip(i, 'end', label + ' 끝 시각'));
+        if (delAria) {
+          const del = document.createElement('button'); del.type = 'button'; del.className = 'sl-x';
+          del.textContent = '×'; del.setAttribute('aria-label', delAria);
+          del.onclick = (ev) => { ev.stopPropagation(); triggerHaptic(); st.segs.splice(i, 1); st.sel = nightIdx(); changed(); };
+          r.appendChild(del);
+        } else {
+          const sp = document.createElement('span'); sp.style.cssText = 'width:30px;flex-shrink:0;'; r.appendChild(sp); // 줄 끝을 맞춤
+        }
+        return r;
+      };
+      box.textContent = '';
+      box.className = 'mt-1';
+      box.appendChild(row(nightIdx(), '🛏️ 밤잠', null));
+      [['wake', '👁 깸', '+ 밤중에 깬 때', '이 깬 때 지우기'], ['nap', '☀️ 낮잠', '+ 낮잠', '이 낮잠 지우기']].forEach(([kind, label, addLabel, delAria]) => {
+        st.segs.forEach((x, i) => { if (x.kind === kind) box.appendChild(row(i, label, delAria)); });
       });
+      const adds = document.createElement('div'); adds.className = 'flex flex-wrap gap-2 pt-2 px-1';
+      [['wake', '+ 밤중에 깬 때'], ['nap', '+ 낮잠']].forEach(([kind, label]) => {
+        const add = document.createElement('button'); add.type = 'button'; add.className = 'sl-pill add';
+        add.textContent = label;
+        add.onclick = (ev) => {
+          ev.stopPropagation(); triggerHaptic();
+          if (kind === 'wake') {
+            const n = st.segs[nightIdx()];
+            const mid = n ? (n.start + Math.round(sleepDur(n) / 2 / 5) * 5) % 1440 : 180;
+            st.segs.push({ kind: 'wake', start: mid, end: (mid + 15) % 1440 });
+          } else st.segs.push({ kind: 'nap', start: 14 * 60, end: 15 * 60 });
+          st.sel = st.segs.length - 1; changed();
+        };
+        adds.appendChild(add);
+      });
+      box.appendChild(adds);
     }
 
     // 1.2.8 저절로 저장: 고친 뒤 0.5초 모아 한 번. 닫거나 날짜를 옮길 때는 바로
@@ -7792,13 +7754,8 @@
       sleepSaveTimer = null;
       const st = sleepEdit;
       if (!st || !st.dirty) return;
-      let rec;
-      if (st.mode === 'time') {
-        const sm = sleepSummary(st.segs);
-        rec = { mode: 'time', segs: st.segs.map(x => ({ kind: x.kind, start: x.start, end: x.end })), sleep_min: sm.night + sm.nap, nap_min: sm.nap, wake_count: sm.wakes };
-      } else {
-        rec = { mode: 'num', sleep_min: st.num.night + st.num.nap, nap_min: st.num.nap, wake_count: st.num.wakes };
-      }
+      const sm = sleepSummary(st.segs);
+      const rec = { mode: 'time', segs: st.segs.map(x => ({ kind: x.kind, start: x.start, end: x.end })), sleep_min: sm.night + sm.nap, nap_min: sm.nap, wake_count: sm.wakes };
       sleepLog[st.date] = rec;
       saveSleepLog();
       st.saved = true;
