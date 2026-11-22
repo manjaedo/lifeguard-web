@@ -60,6 +60,8 @@
     /* 1.2.9 (사용자): 글자 크기와 상관없이 매일 알림은 한 줄, 스위치는 복약 기록 스위치와 같은 자리(칸 오른쪽 끝).
        제목과 스위치는 줄지 않고, 시각 칸만 남는 자리에 맞춰 줄어든다 (넉넉하면 글자 7개 폭) */
     #settingsAlarmTitle { white-space: nowrap; flex-shrink: 0; }
+    .share-spin { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid currentColor; border-right-color: transparent; animation: shareSpin .8s linear infinite; }
+    @keyframes shareSpin { to { transform: rotate(360deg); } }
     #settingsAlarmTimeBox { min-width: 0; flex: 1 1 auto; justify-content: flex-end !important; }
     #alarmTimeChip { position: relative; display: inline-flex; align-items: center; white-space: nowrap; flex: 0 1 auto; min-width: 0; overflow: hidden; }
     #alarmTimeInput { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; margin: 0; cursor: pointer; font-size: 16px; }
@@ -619,6 +621,11 @@
       <div id="reportShareCard" class="w-full max-w-md rounded-2xl p-4 flex flex-col gap-3" style="max-height: 100%;">
         <div id="reportShareTitle" class="text-sm font-bold shrink-0">이 사진을 보내요</div>
         <div class="overflow-y-auto rounded-xl border" style="border-color: rgba(127,167,170,0.3); flex: 1 1 auto; min-height: 0;">
+          <!-- 1.2.9 (사용자: 누르고 잠시 멈춘 듯함): 창을 먼저 열고 사진을 다 만들 때까지 이 글을 보여 준다 -->
+          <div id="reportShareLoading" class="flex flex-col items-center justify-center gap-3 py-16 text-xs font-semibold" style="display:none; opacity:.75;">
+            <span class="share-spin" aria-hidden="true"></span>
+            사진을 만들고 있어요…
+          </div>
           <img id="reportShareImg" alt="함께 보는 기록 사진" class="w-full block">
         </div>
         <div class="flex gap-2 shrink-0">
@@ -6220,29 +6227,47 @@
       ctx.textAlign = 'left';
       return await new Promise(res => c.toBlob(res, 'image/png'));
     }
+    let reportShareToken = 0;
     async function openReportShare(e) {
       if (e && e.stopPropagation) e.stopPropagation();
       triggerHaptic();
       const pendingMemo = document.getElementById('reportMemoInput');
       if (pendingMemo && pendingMemo.value.trim()) addReportMemo(); // 적다 만 말도 담는다
-      let blob = null;
-      try { blob = await buildReportImage(); } catch (err) { console.warn('report image error:', err); }
-      if (!blob) { showToast && showToast('사진을 만들지 못했어요'); return; }
-      reportShareBlob = blob;
-      const img = document.getElementById('reportShareImg');
-      if (img) { if (img.dataset.url) URL.revokeObjectURL(img.dataset.url); img.dataset.url = URL.createObjectURL(blob); img.src = img.dataset.url; }
+      const token = ++reportShareToken;
+      reportShareBlob = null;
+      // 1.2.9: 창부터 연다. 사진(가로 2160px)을 만드는 동안 '만들고 있어요'와 돌아가는 표시
       const dark = getEffectiveTheme(currentTheme) === 'dark';
       const card = document.getElementById('reportShareCard');
       if (card) { card.style.backgroundColor = dark ? '#1c2123' : '#ffffff'; card.style.color = dark ? '#eff3f2' : '#597075'; }
       const cancel = document.getElementById('reportShareCancel'); if (cancel) cancel.style.color = dark ? '#eff3f2' : '#597075';
+      const img = document.getElementById('reportShareImg');
+      const loading = document.getElementById('reportShareLoading');
+      const send = document.getElementById('reportShareSend');
+      if (img) img.style.display = 'none';
+      if (loading) loading.style.display = 'flex';
+      if (send) { send.disabled = true; send.style.opacity = '0.45'; }
       const m = document.getElementById('reportShare');
       if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+      await new Promise(r => requestAnimationFrame(() => setTimeout(r, 30))); // 창이 먼저 그려지게
+      let blob = null;
+      try { blob = await buildReportImage(); } catch (err) { console.warn('report image error:', err); }
+      if (token !== reportShareToken) return; // 그 사이 닫았거나 다시 눌렀으면 버린다
+      if (!blob) { closeReportShare(); showToast && showToast('사진을 만들지 못했어요'); return; }
+      reportShareBlob = blob;
+      if (img) {
+        if (img.dataset.url) URL.revokeObjectURL(img.dataset.url);
+        img.dataset.url = URL.createObjectURL(blob);
+        img.onload = () => { if (token !== reportShareToken) return; if (loading) loading.style.display = 'none'; img.style.display = 'block'; };
+        img.src = img.dataset.url;
+      }
+      if (send) { send.disabled = false; send.style.opacity = ''; }
     }
     function closeReportShare(e) {
       if (e && e.stopPropagation) e.stopPropagation();
       const m = document.getElementById('reportShare');
       if (m) { m.classList.add('hidden'); m.style.display = 'none'; }
       reportShareBlob = null;
+      reportShareToken++; // 만드는 중이면 그 결과는 버린다
     }
     async function sendReportShare(e) {
       if (e && e.stopPropagation) e.stopPropagation();
