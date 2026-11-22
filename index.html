@@ -57,6 +57,13 @@
       font-size: 12px !important;
       white-space: nowrap !important;
     }
+    /* 1.2.9 (사용자): 글자 크기와 상관없이 매일 알림은 한 줄, 스위치는 복약 기록 스위치와 같은 자리(칸 오른쪽 끝).
+       제목과 스위치는 줄지 않고, 시각 칸만 남는 자리에 맞춰 줄어든다 (넉넉하면 글자 7개 폭) */
+    #settingsAlarmTitle { white-space: nowrap; flex-shrink: 0; }
+    #settingsAlarmTimeBox { min-width: 0; flex: 1 1 auto; justify-content: flex-end !important; }
+    #alarmTimeChip { position: relative; display: inline-flex; align-items: center; white-space: nowrap; flex: 0 1 auto; min-width: 0; overflow: hidden; }
+    #alarmTimeInput { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; margin: 0; cursor: pointer; font-size: 16px; }
+    #alarmToggleBtn { flex-shrink: 0; }
     /* 스마트폰(아이폰 사파리/PWA 및 안드로이드 APK)에서는 가짜 액자 테두리·회색 여백 없이 100% 꽉 찬 전체화면으로 구동 */
     @media (max-width: 639px), (display-mode: standalone) {
       html, body {
@@ -607,13 +614,14 @@
       <div class="sv-wrap" id="surveyBody"></div>
     </div>
 
-    <div id="reportShare" onclick="event.stopPropagation()" class="fixed inset-0 z-40 hidden flex-col items-center justify-center p-5" style="display: none; background: rgba(20,24,26,0.55);">
-      <div id="reportShareCard" class="w-full max-w-md rounded-2xl p-4 flex flex-col gap-3" style="max-height: 92vh;">
-        <div id="reportShareTitle" class="text-sm font-bold">이 사진을 보내요</div>
-        <div class="overflow-y-auto rounded-xl border" style="border-color: rgba(127,167,170,0.3);">
+    <div id="reportShare" onclick="event.stopPropagation()" class="fixed inset-0 z-40 hidden flex-col items-center justify-center p-5" style="display: none; background: rgba(20,24,26,0.55); padding-top: max(1.25rem, calc(env(safe-area-inset-top, 0px) + 0.75rem)); padding-bottom: max(1.25rem, calc(env(safe-area-inset-bottom, 0px) + 0.75rem));">
+      <!-- 1.2.9 (사용자: 하단 잘림): 창은 화면 안에만. 사진 칸만 줄어들며 넘겨 보고, 제목·단추는 늘 보인다 -->
+      <div id="reportShareCard" class="w-full max-w-md rounded-2xl p-4 flex flex-col gap-3" style="max-height: 100%;">
+        <div id="reportShareTitle" class="text-sm font-bold shrink-0">이 사진을 보내요</div>
+        <div class="overflow-y-auto rounded-xl border" style="border-color: rgba(127,167,170,0.3); flex: 1 1 auto; min-height: 0;">
           <img id="reportShareImg" alt="함께 보는 기록 사진" class="w-full block">
         </div>
-        <div class="flex gap-2">
+        <div class="flex gap-2 shrink-0">
           <button type="button" onclick="closeReportShare(event)" class="flex-1 py-2.5 rounded-xl text-sm font-semibold" style="background: rgba(127,167,170,0.16);" id="reportShareCancel">취소</button>
           <button type="button" onclick="sendReportShare(event)" class="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white" style="background: #597075;" id="reportShareSend">보내기</button>
         </div>
@@ -646,7 +654,7 @@
               <button type="button" onclick="openChartZoom(event)" aria-label="그래프 크게 보기" class="px-2 py-0.5 rounded-full transition flex items-center"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2.5h4v4M13.5 2.5 9 7M6.5 13.5h-4v-4M2.5 13.5 7 9"/></svg></button>
             </div>
           </div>
-          <svg id="reportChartSvg" class="w-full h-24 cursor-pointer" viewBox="0 0 260 90" onclick="openChartZoom(event)">
+          <svg id="reportChartSvg" class="w-full cursor-pointer" viewBox="0 0 260 120" style="height:128px" onclick="openChartZoom(event)">
             <line x1="22" y1="45" x2="256" y2="45" stroke="#7fa7aa" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.4"/>
             <g id="chartGrid"></g>
             <g id="chartTicks"></g>
@@ -672,10 +680,7 @@
           </div>
           <!-- 높이는 기분 그래프(h-24, 세로 90)와 같은 배율이 되게: 날짜 칸이 위아래로 맞는다 -->
           <svg id="sleepChartSvg" class="w-full cursor-pointer" viewBox="0 0 260 110" onclick="selectActivityDay(event, 'sleepChartSvg')" style="display:block; height: calc(6rem * 110 / 90);"></svg>
-          <div class="flex justify-between text-[10px] text-gray-400 mt-0.5 px-1">
-            <span id="sleepChartStart"></span>
-            <span>오늘</span>
-          </div>
+          <!-- 1.2.9 (사용자): 아래 날짜 줄은 없앰 (날짜는 기분 그래프에서 본다) -->
           <div id="sleepChartDetail" class="text-[10.5px] mt-1 px-1 text-gray-500 leading-relaxed" style="word-break: keep-all;"></div>
         </div>
 
@@ -707,10 +712,12 @@
 
         <!-- 설문 (1.2.9, 사용자): 우울 PHQ-9 · 불안 GAD-7 · 몸 증상 PHQ-15. 줄을 누르면 지난 결과 또는 시작. 진료 완료하면 보관함으로 -->
         <div id="reportSurveyCard" class="bg-white rounded-xl p-3 border border-gray-100 shadow-sm text-xs transition-colors mb-3">
-          <div id="reportSurveyTitle" class="text-[11px] font-bold text-[#597075] flex items-center gap-1 mb-1">
+          <!-- 1.2.9 (사용자): 평소엔 접어 두고, 제목 줄을 누르면 세 설문이 펼쳐진다 -->
+          <button type="button" id="reportSurveyTitle" onclick="toggleSurveyRows(event)" aria-expanded="false" class="w-full text-[11px] font-bold text-[#597075] flex items-center gap-1">
             <span>📝</span> 설문
-          </div>
-          <div id="surveyRows"></div>
+            <span id="surveyFoldHint" class="ml-auto font-semibold text-[11px]" style="opacity:.6">우울 · 불안 · 몸 증상 ▾</span>
+          </button>
+          <div id="surveyRows" style="display:none; margin-top:4px;"></div>
         </div>
 
         <!-- 의사 선생님께 전할 한 줄 메모 (좌로 밀어서 삭제) -->
@@ -796,7 +803,7 @@
         <div id="settingsMedCard" class="bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2 transition-colors">
           <div class="flex items-center justify-between">
             <div id="settingsMedTitle" class="font-bold text-[#597075] text-[13px] flex items-center gap-1.5">
-              <span>💊</span> 복약 기록
+              <span>💊</span> 복약
             </div>
             <button id="medToggleBtn" onclick="toggleMedicationSetting()" type="button" class="switch-hit relative inline-flex h-6 w-11 p-0.5 items-center rounded-full transition-colors focus:outline-none bg-[#d1d5db] cursor-pointer" title="복약 기록 관리 토글">
               <span id="medToggleCircle" class="inline-block h-5 w-5 rounded-full bg-white shadow-md transform transition-transform duration-200 translate-x-0"></span>
@@ -812,11 +819,14 @@
         <div id="settingsAlarmCard" class="bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2.5 transition-colors">
           <div class="flex items-center justify-between gap-2">
             <div id="settingsAlarmTitle" class="font-bold text-[#597075] text-[13px] flex items-center gap-1.5">
-              <span>🔔</span> 매일 알림
+              <span>🔔</span> 알림
             </div>
             <div id="settingsAlarmTimeBox" class="flex items-center justify-between gap-3 bg-[#f4f7f8] rounded-xl px-3 py-2 border border-transparent transition-colors">
-              <input id="alarmTimeInput" type="time" value="18:00" onchange="updateAlarmTimeSetting(this.value)" aria-label="알림 시각"
-                     class="text-xs font-bold px-2 py-1 rounded-lg bg-white text-[#597075] border border-gray-200 outline-none cursor-pointer shrink-0">
+              <!-- 1.2.9 (사용자: 시각 숫자가 잘림): 폰이 그리는 시각 칸 대신 글자는 우리가 쓰고, 진짜 시각 칸은 투명하게 위에 덮어 누르면 고르는 창이 뜬다 -->
+              <span id="alarmTimeChip" class="text-[13px] font-bold px-3 py-1.5 rounded-lg bg-white text-[#597075] border border-gray-200 cursor-pointer">
+                <span id="alarmTimeText">오후 6:00</span>
+                <input id="alarmTimeInput" type="time" value="18:00" onchange="updateAlarmTimeSetting(this.value)" aria-label="알림 시각">
+              </span>
               <button id="alarmToggleBtn" onclick="toggleAlarmSetting()" type="button" role="switch" aria-label="매일 기분 기록 알림" class="switch-hit relative inline-flex h-6 w-11 p-0.5 items-center rounded-full transition-colors focus:outline-none bg-[#597075] cursor-pointer shrink-0" title="매일 기분 기록 알림 토글">
                 <span id="alarmToggleCircle" class="inline-block h-5 w-5 rounded-full bg-white shadow-md transform transition-transform duration-200 translate-x-[20px]"></span>
               </button>
@@ -925,6 +935,14 @@
             <div class="min-w-0"><span id="settingsStepsTitle" class="text-xs font-bold text-[#597075]">걸음 기록</span><p class="sdesc text-[10.5px] leading-snug mt-0.5" style="word-break:keep-all">Health Connect에서 하루 걸음 수를 읽어 와 함께 보기에 보여 줘요.</p></div>
             <button id="stepsEnabledBtn" onclick="event.stopPropagation(); toggleActivitySetting()" type="button" role="switch" aria-label="걸음 기록" class="shrink-0 switch-hit relative inline-flex h-6 w-11 p-0.5 items-center rounded-full transition-colors focus:outline-none cursor-pointer">
               <span id="stepsEnabledKnob" class="inline-block h-5 w-5 rounded-full bg-white shadow-md transform transition-transform duration-200"></span>
+            </button>
+          </div>
+
+          <!-- 설문 (1.2.9, 사용자): 켜면 함께 보기에 설문 칸이 보인다. 끄면 숨김 (지난 결과는 남음) -->
+          <div class="flex items-center justify-between gap-2 py-3">
+            <div class="min-w-0"><span id="settingsSurveyTitle" class="text-xs font-bold text-[#597075]">설문</span><p class="sdesc text-[10.5px] leading-snug mt-0.5" style="word-break:keep-all">함께 보기에서 우울·불안·몸 증상 설문을 할 수 있어요.</p></div>
+            <button id="surveyEnabledBtn" onclick="toggleSurveyEnabled(event)" type="button" role="switch" aria-label="설문" class="shrink-0 switch-hit relative inline-flex h-6 w-11 p-0.5 items-center rounded-full transition-colors focus:outline-none cursor-pointer">
+              <span id="surveyEnabledKnob" class="inline-block h-5 w-5 rounded-full bg-white shadow-md transform transition-transform duration-200"></span>
             </button>
           </div>
 
@@ -2930,6 +2948,7 @@
     // Modal Handlers
     function openReportModal() {
       hideControls();
+      surveyRowsOpen = false;
       const m = document.getElementById('reportModal');
       if (m) {
         m.classList.remove('hidden');
@@ -3582,11 +3601,14 @@
       if (timeInput) {
         if (timeInput.value !== alarmTime) timeInput.value = alarmTime;
         timeInput.disabled = !isAlarmEnabled;
-        timeInput.className = isDark
-          ? `text-xs font-bold px-2 py-1 rounded-lg bg-[#222628] text-[#9ec0c4] border border-[#333a3d] outline-none cursor-pointer shrink-0 ${isAlarmEnabled ? '' : 'opacity-40'}`
+        const chip = document.getElementById('alarmTimeChip');
+        const txt = document.getElementById('alarmTimeText');
+        if (txt) txt.textContent = formatAlarmTimeKorean(alarmTime);
+        if (chip) chip.className = isDark
+          ? `text-[13px] font-bold px-3 py-1.5 rounded-lg bg-[#222628] text-[#9ec0c4] border border-[#333a3d] ${isAlarmEnabled ? '' : 'opacity-40'}`
           : (isNeutral
-            ? `text-xs font-bold px-2 py-1 rounded-lg bg-[#f4f7f2] text-[#455a5c] border border-[#dce2dc] outline-none cursor-pointer shrink-0 ${isAlarmEnabled ? '' : 'opacity-40'}`
-            : `text-xs font-bold px-2 py-1 rounded-lg bg-white text-[#597075] border border-gray-200 outline-none cursor-pointer shrink-0 ${isAlarmEnabled ? '' : 'opacity-40'}`);
+            ? `text-[13px] font-bold px-3 py-1.5 rounded-lg bg-[#f4f7f2] text-[#455a5c] border border-[#dce2dc] ${isAlarmEnabled ? '' : 'opacity-40'}`
+            : `text-[13px] font-bold px-3 py-1.5 rounded-lg bg-white text-[#597075] border border-gray-200 ${isAlarmEnabled ? '' : 'opacity-40'}`);
       }
       if (statusText) {
         if (isAlarmEnabled) {
@@ -4026,23 +4048,33 @@
         const idx = swipeArea.dataset.idx;
         const front = document.getElementById(`memo-front-${idx}`);
         const delBtn = document.getElementById(`memo-del-btn-${idx}`);
-        let startX = 0;
+        let startX = 0, startY = 0;
         let currentX = 0;
         let isDragging = false;
         let isOpen = false;
+        let lock = null; // 1.2.9 (사용자: 스크롤하다 삭제가 보임): 'h' 옆으로 민 것만 / 'v' 위아래면 스크롤로 두고 무시
+        let buzzed = false;
 
-        const onStart = (clientX) => {
-          startX = clientX;
-          isDragging = true;
-          front.style.transition = 'none';
+        const onStart = (clientX, clientY) => {
+          startX = clientX; startY = clientY || 0;
+          isDragging = true; lock = null; buzzed = false;
+          currentX = isOpen ? -56 : 0;
         };
 
-        const onMove = (clientX) => {
+        const onMove = (clientX, clientY) => {
           if (!isDragging) return;
+          if (!lock) {
+            const dx = Math.abs(clientX - startX), dy = Math.abs((clientY || 0) - startY);
+            if (dy > 8 && dy >= dx) { lock = 'v'; return; }
+            if (dx > 14 && dx > dy * 1.8) { lock = 'h'; front.style.transition = 'none'; }
+            else return;
+          }
+          if (lock !== 'h') return;
           const diff = clientX - startX;
           const offset = isOpen ? Math.min(0, Math.max(-56, -56 + diff)) : Math.min(0, Math.max(-56, diff));
           front.style.transform = `translateX(${offset}px)`;
           currentX = offset;
+          if (!isOpen && !buzzed && offset < -24) { buzzed = true; triggerHaptic(); } // 삭제가 보일 때 살짝
           if (delBtn) {
             delBtn.style.opacity = Math.abs(offset) > 4 ? Math.min(1, Math.abs(offset) / 50) : 0;
             delBtn.style.pointerEvents = offset < -24 ? 'auto' : 'none';
@@ -4052,6 +4084,7 @@
         const onEnd = () => {
           if (!isDragging) return;
           isDragging = false;
+          if (lock !== 'h') return;
           front.style.transition = 'transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1)';
           if (currentX < -24) {
             front.style.transform = 'translateX(-56px)';
@@ -4070,13 +4103,13 @@
           }
         };
 
-        swipeArea.addEventListener('touchstart', (e) => onStart(e.touches[0].clientX), { passive: true });
-        swipeArea.addEventListener('touchmove', (e) => onMove(e.touches[0].clientX), { passive: true });
+        swipeArea.addEventListener('touchstart', (e) => onStart(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+        swipeArea.addEventListener('touchmove', (e) => onMove(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
         swipeArea.addEventListener('touchend', onEnd);
 
         swipeArea.addEventListener('mousedown', (e) => {
-          onStart(e.clientX);
-          const mouseMove = (ev) => onMove(ev.clientX);
+          onStart(e.clientX, e.clientY);
+          const mouseMove = (ev) => onMove(ev.clientX, ev.clientY);
           const mouseUp = () => {
             onEnd();
             window.removeEventListener('mousemove', mouseMove);
@@ -4104,10 +4137,12 @@
 
         const onDragStart = (clientY) => {
           if (isReordering) return;
+          if (cloudWriteBlocked()) return; // 1.2.9: 순서 바꾸기도 막는다
           isReordering = true;
           activeDragIdx = fromIdx;
           currentSlot = fromIdx;
           startY = clientY;
+          triggerHaptic(); // 1.2.9: 잡았을 때 살짝
 
           wrappers = Array.from(container.querySelectorAll('.memo-wrapper'));
           itemRects = wrappers.map(w => w.getBoundingClientRect());
@@ -4147,6 +4182,7 @@
             }
           }
 
+          if (newSlot !== currentSlot) triggerHaptic(); // 자리가 바뀔 때마다 살짝
           currentSlot = newSlot;
 
           // 아래/위 항목들이 딸려 올라오거나 밀려내려가는 부드러운 위치 변경
@@ -4206,21 +4242,38 @@
           }, 240);
         };
 
+        // 1.2.9 (사용자: 스크롤하다 순서가 너무 쉽게 바뀜): 손잡이를 0.35초 꾹 누르고 있어야 잡힌다.
+        // 그 전에 손가락이 움직이면 그냥 스크롤
         handle.addEventListener('touchstart', (e) => {
-          e.preventDefault();
-          onDragStart(e.touches[0].clientY);
+          const t0 = e.touches[0];
+          const sx = t0.clientX, sy = t0.clientY;
+          let held = false;
+          const timer = setTimeout(() => { held = true; onDragStart(sy); }, 350);
           const touchMove = (ev) => {
+            const t = ev.touches[0];
+            if (!held) {
+              if (Math.abs(t.clientX - sx) > 8 || Math.abs(t.clientY - sy) > 8) cleanup();
+              return;
+            }
             ev.preventDefault();
-            onDragMove(ev.touches[0].clientY);
+            onDragMove(t.clientY);
           };
           const touchEnd = () => {
-            onDragEnd();
+            const wasHeld = held;
+            cleanup();
+            if (wasHeld) onDragEnd();
+          };
+          const cleanup = () => {
+            clearTimeout(timer);
             window.removeEventListener('touchmove', touchMove);
             window.removeEventListener('touchend', touchEnd);
+            window.removeEventListener('touchcancel', touchEnd);
           };
           window.addEventListener('touchmove', touchMove, { passive: false });
           window.addEventListener('touchend', touchEnd);
-        }, { passive: false });
+          window.addEventListener('touchcancel', touchEnd);
+        }, { passive: true });
+        handle.addEventListener('contextmenu', (e) => e.preventDefault());
 
         handle.addEventListener('mousedown', (e) => {
           e.preventDefault();
@@ -4239,10 +4292,12 @@
 
     // 스무스 슬라이드 아웃 & 리스트 매꿈 애니메이션 삭제 (손맛 나는 2단계 애니메이션)
     function confirmDeleteMemoItem(idx) {
+      if (cloudWriteBlocked()) return; // 1.2.9: 인터넷이 없으면 지우기도 막는다 (보기만)
       const wrapper = document.getElementById(`memo-wrapper-${idx}`);
       const front = document.getElementById(`memo-front-${idx}`);
       const delBtn = document.getElementById(`memo-del-btn-${idx}`);
       if (!wrapper || !front) return;
+      triggerHaptic(); // 1.2.9: 지울 때 살짝
 
       if (delBtn) delBtn.style.opacity = '0';
 
@@ -4306,6 +4361,7 @@
       }
       const input = document.getElementById('memoInput');
       const val = (input?.value || '').trim();
+      if (val && cloudWriteBlocked()) return; // 1.2.9: 적은 글은 칸에 그대로 두고 막는다
       if (val) {
         doctorNotes.push(val);
         try { localStorage.setItem('lifeguard_doctor_notes', JSON.stringify(doctorNotes)); } catch(err) {}
@@ -4731,7 +4787,7 @@
         const { d1, diffDays } = getReportRange();
         const X0 = 22, X1 = 254;
         const dayW = (X1 - X0) / diffDays;
-        const barW = Math.min(6, Math.max(1, dayW * 0.55));
+        const barW = Math.min(9, Math.max(1.6, dayW * 0.62)); // 1.2.9 (사용자): 걸음 막대 두께를 잠 막대(drawSleepStrip)와 같게
         const byDate = new Map(days.map(d => [d.date, d]));
         const dayKey = (i) => { const d = new Date(d1); d.setDate(d1.getDate() + i); return localDateKey(d); };
         ['activitySleep', 'activitySteps'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = ''; });
@@ -4875,14 +4931,12 @@
         else {
           const dt = parseLocalDate(key);
           const wd = ['일', '월', '화', '수', '목', '금', '토'][dt.getDay()];
-          const parts = [`${dt.getMonth() + 1}.${dt.getDate()} (${wd}) 아침에 깸`];
-          let t = `잠 ${formatSleepMin(rec.sleep_min)}`;
-          if (rec.nap_min) t += ` (낮잠 ${formatSleepMin(rec.nap_min)} 포함)`;
-          parts.push(t);
-          const night = (rec.segs || []).find(x => x.kind === 'night');
-          if (night) parts.push(`${sleepFmt(night.start)}~${sleepFmt(night.end)}`);
-          parts.push((rec.wake_count === null || rec.wake_count === undefined) ? '깬 횟수 기록 없음' : `깸 ${rec.wake_count}번`);
-          if (rec.src === 'auto') parts.push('자동');
+          // 1.2.9 (사용자): 간략히 — 날짜 · 잠 · 깸 · 낮잠. 잠은 낮잠을 뺀 밤잠
+          const parts = [`${dt.getMonth() + 1}.${dt.getDate()} (${wd})`];
+          const nap = rec.nap_min || 0;
+          parts.push(`잠 ${formatSleepMin(Math.max(0, rec.sleep_min - nap))}`);
+          if (rec.wake_count !== null && rec.wake_count !== undefined) parts.push(`깸 ${rec.wake_count}번`);
+          if (nap) parts.push(`낮잠 ${formatSleepMin(nap)}`);
           detail.textContent = parts.join(' · ');
         }
       }
@@ -4943,6 +4997,14 @@
           b.style.color = on ? (dark ? '#141718' : '#fff') : (dark ? 'rgba(255,255,255,0.6)' : '#597075');
         });
       });
+      const vb = document.getElementById('surveyEnabledBtn');
+      const vk = document.getElementById('surveyEnabledKnob');
+      if (vb && vk) {
+        const on = surveyEnabled();
+        vb.style.backgroundColor = on ? getThemeColor() : 'rgba(128,128,128,0.4)';
+        vk.style.transform = on ? 'translateX(1.25rem)' : 'translateX(0)';
+        vb.setAttribute('aria-checked', on ? 'true' : 'false');
+      }
       const sb = document.getElementById('sleepEnabledBtn');
       const sk = document.getElementById('sleepEnabledKnob');
       if (sb && sk) {
@@ -4959,7 +5021,7 @@
       });
       document.querySelectorAll('#settingsModal .dhead').forEach(h => { h.style.color = dark ? 'rgba(255,255,255,0.45)' : '#9ca3af'; });
       document.querySelectorAll('#settingsModal .sdesc').forEach(d => { d.style.color = dark ? 'rgba(255,255,255,0.5)' : '#6b7280'; });
-      ['settingsSleepTitle', 'settingsStepsTitle', 'settingsHapticTitle', 'settingsChartColorTitle', 'settingsThemeRowTitle', 'settingsTouchRowTitle'].forEach(id => {
+      ['settingsSleepTitle', 'settingsStepsTitle', 'settingsSurveyTitle', 'settingsHapticTitle', 'settingsChartColorTitle', 'settingsThemeRowTitle', 'settingsTouchRowTitle'].forEach(id => {
         const t = document.getElementById(id);
         if (t) t.style.color = dark ? '#9ec0c4' : '';
       });
@@ -4999,8 +5061,8 @@
       triggerHaptic();
       const app = !!window.AndroidBridge;
       const items = [
-        ['💊 복약 기록', '복약 치료를 받지 않으면 꺼 두세요. 첫 화면과 함께 보기에서 약이 숨고 기분만 보여요.'],
-        app ? ['🔔 매일 알림', '정한 시각에 오늘 기분을 묻는 알림이 와요.'] : null,
+        ['💊 복약', '복약 치료를 받지 않으면 꺼 두세요. 첫 화면과 함께 보기에서 약이 숨고 기분만 보여요.'],
+        app ? ['🔔 알림', '매일 정한 시각에 오늘 기분을 묻는 알림이 와요.'] : null,
         ['🛟 기록 지키기', '구글로 로그인하면 기록을 저절로 담아 두어, 폰을 바꾸거나 기록이 지워져도 다시 불러올 수 있어요. 이름은 담지 않아요.'],
         ['글자 크기', '앱 전체 글자를 보통 · 크게 · 아주 크게로 바꿔요.'],
         ['테마', '흰 · 미(한지 미색) · 검(어두운 화면) · 시스템(폰 설정을 따라 밝게/어둡게).'],
@@ -5008,7 +5070,8 @@
         ['터치', '화면을 누를 때 퍼지는 모양이에요. 파문 · 숨결 · 별빛.'],
         ['기분 모양', '첫 화면 기분 단추의 모양을 글자·이모지·그림으로 바꿀 수 있어요. 그림은 이 기기에만 두고, 기록과 그래프는 그대로예요.'],
         ['잠 기록', '켜면 첫 화면 위 가운데에 침대가 생겨 잠을 적을 수 있고, 함께 보기에 잠 줄이 보여요. 꺼도 적어 둔 잠은 지워지지 않아요.'],
-        app ? ['걸음 기록', 'Health Connect에서 하루 걸음 수를 읽어 함께 보기에 보여 줘요. 읽기만 하고, 하루 합계만 이 기기에 둬요.'] : null
+        app ? ['걸음 기록', 'Health Connect에서 하루 걸음 수를 읽어 함께 보기에 보여 줘요. 읽기만 하고, 하루 합계를 다른 기록처럼 담아 둬요.'] : null,
+        ['설문', '켜면 함께 보기에 설문 칸이 생겨 우울·불안·몸 증상 설문을 할 수 있어요. 꺼도 지난 결과는 지워지지 않아요.']
       ].filter(Boolean);
       const dark = getEffectiveTheme(currentTheme) === 'dark';
       const sub = dark ? 'text-white/60' : 'text-gray-500';
@@ -5043,6 +5106,23 @@
       updateSettingsTabUI();
       try { renderReportData(); } catch (_) {}
       try { renderActivityData(); } catch (_) {}
+    }
+
+    // 설문 (1.2.9, 사용자): 상세 설정 스위치로 함께 보기의 설문 칸을 보이거나 숨긴다.
+    // 정한 적 없으면: 설문을 한 번이라도 했으면 켬, 아니면 끔. (DB에서 기록을 불러오면 값도 같이 온다)
+    function surveyEnabled() {
+      try {
+        const v = localStorage.getItem('lifeguard_survey_enabled');
+        if (v === 'true' || v === 'false') return v === 'true';
+        return safeJsonParse('lifeguard_surveys', []).length > 0;
+      } catch (_) { return false; }
+    }
+    function toggleSurveyEnabled(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      try { localStorage.setItem('lifeguard_survey_enabled', surveyEnabled() ? 'false' : 'true'); } catch (_) {}
+      triggerHaptic();
+      updateSettingsTabUI();
+      try { renderSurveyCard(); } catch (_) {}
     }
 
     // 보고서 그래프 보기 방식: 'bar'(기본, 기록 그대로) / 'curve'(흐름). 이 기기에만 기억한다.
@@ -5326,7 +5406,8 @@
           const SVG_NS = 'http://www.w3.org/2000/svg';
           const color = chartPathEl.getAttribute('stroke') || '#597075';
           const X0 = 22, X1 = 254;
-          const LEVEL = 12; // ○~△ 한 칸의 높이. △~▲는 1.5배 (moodLift). ○ 기준선 y=45, △ y=33, ▲ y=15, ▼ y=75
+          // 1.2.9 (사용자: 기분 그래프가 제일 작다): 한 칸 12→18로 키움. ○ 기준선 B=60, △ y=42, ▲ y=15, ▼ y=105
+          const LEVEL = 18, B = 60, MH = 120; // ○~△ 한 칸의 높이. △~▲는 1.5배 (moodLift)
           // 가로축: 지난 진료일 0시 ~ 오늘 자정. 하루가 같은 폭을 가진다.
           const dayW = (X1 - X0) / diffDays;
           const dayStartX = (i) => X0 + i * dayW;
@@ -5338,13 +5419,13 @@
             // △ ~ ▽ 사이(○ 위아래 한 칸)를 옅게 칠한다: 평시 기분으로 봐도 되는 구간 (1.2.5, 사용자 결정)
             const band = document.createElementNS(SVG_NS, 'rect');
             band.setAttribute('x', String(X0)); band.setAttribute('width', String(X1 - X0));
-            band.setAttribute('y', String(45 - LEVEL)); band.setAttribute('height', String(LEVEL * 2));
+            band.setAttribute('y', String(B - LEVEL)); band.setAttribute('height', String(LEVEL * 2));
             // 칼라: 이 기간 기분 평균의 색으로 옅게 (기간 중 대체로 어땠는지, 1.2.7 사용자 요청)
             const avg = chartColorOn ? moodAverageInRange(d1, diffDays) : null;
             band.setAttribute('fill', avg === null ? color : moodColorAt(avg)); band.setAttribute('opacity', avg === null ? '0.08' : '0.2');
             gridEl.appendChild(band);
             [[2, '▲'], [1, '△'], [0, '○'], [-1, '▽'], [-2, '▼']].forEach(([score, sym]) => {
-              const y = 45 - moodLift(score, LEVEL);
+              const y = B - moodLift(score, LEVEL);
               if (score !== 0) {
                 const ln = document.createElementNS(SVG_NS, 'line');
                 ln.setAttribute('x1', String(X0)); ln.setAttribute('x2', String(X1));
@@ -5364,16 +5445,16 @@
           const tickShift = showPills ? 9 : 0;
           const chartSvgEl = document.getElementById('reportChartSvg');
           if (chartSvgEl) {
-            chartSvgEl.setAttribute('viewBox', showPills ? '0 0 260 99' : '0 0 260 90');
-            chartSvgEl.style.height = showPills ? (96 * 99 / 90).toFixed(1) + 'px' : '';
+            chartSvgEl.setAttribute('viewBox', '0 0 260 ' + (MH + tickShift));
+            chartSvgEl.style.height = (96 * (MH + tickShift) / 90).toFixed(1) + 'px';
           }
           if (ticksEl) {
             ticksEl.textContent = '';
             if (showPills) {
               const taken = pillDayIndexes(d1, diffDays);
-              drawPillMark(ticksEl, 9, 82, 7, 3.4, true, color, 0.55); // 왼쪽: 이 줄이 약이라는 표시
+              drawPillMark(ticksEl, 9, MH - 8, 7, 3.4, true, color, 0.55); // 왼쪽: 이 줄이 약이라는 표시
               for (let i = 0; i < diffDays; i++) {
-                drawPillMark(ticksEl, dayStartX(i) + dayW / 2, 82, Math.min(7, dayW * 0.6), 3.4, taken.has(i), color);
+                drawPillMark(ticksEl, dayStartX(i) + dayW / 2, MH - 8, Math.min(7, dayW * 0.6), 3.4, taken.has(i), color);
               }
             }
             const step = Math.max(1, Math.ceil(diffDays / 31));
@@ -5384,7 +5465,7 @@
               const x = dayStartX(i);
               const ln = document.createElementNS(SVG_NS, 'line');
               ln.setAttribute('x1', x.toFixed(1)); ln.setAttribute('x2', x.toFixed(1));
-              ln.setAttribute('y1', String((major ? 82.5 : 84) + tickShift)); ln.setAttribute('y2', String(88 + tickShift));
+              ln.setAttribute('y1', String((major ? MH - 7.5 : MH - 6) + tickShift)); ln.setAttribute('y2', String(MH - 2 + tickShift));
               ln.setAttribute('stroke', color); ln.setAttribute('stroke-width', major ? '1.5' : '1');
               ln.setAttribute('opacity', major ? '0.8' : '0.35');
               ticksEl.appendChild(ln);
@@ -5411,7 +5492,7 @@
             const sub = dayW / recs.length;
             const xs = placeRecordsByTime(recs, dayStartX(day), dayW, Math.min(5, Math.max(1, sub * 0.55)));
             recs.forEach((r, i) => {
-              pts.push({ t: r.t, score: r.score, x: xs[i], y: 45 - moodLift(r.score, LEVEL), sub });
+              pts.push({ t: r.t, score: r.score, x: xs[i], y: B - moodLift(r.score, LEVEL), sub });
             });
           });
           pts.sort((p, q) => p.t - q.t);
@@ -5423,7 +5504,7 @@
 
           if (dotsEl && chartMode === 'curve') {
             // 곡선: 흐름을 보기 좋게 잇는다. 기록 사이의 선은 실제 기록이 아니다.
-            const grad = chartColorOn ? moodGradient(document.getElementById('reportChartSvg'), 'moodGradSmall', 45, LEVEL) : null;
+            const grad = chartColorOn ? moodGradient(document.getElementById('reportChartSvg'), 'moodGradSmall', B, LEVEL) : null;
             let area = null;
             if (grad && pts.length > 1) { area = document.createElementNS(SVG_NS, 'path'); area.setAttribute('fill', grad); area.setAttribute('opacity', '0.35'); dotsEl.appendChild(area); }
             pts.forEach(p => {
@@ -5440,9 +5521,9 @@
                 const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
                 // 간격이 고르지 않아도 곡선이 뒤로 말리거나 ▲·▼ 밖으로 넘치지 않게 제한
                 const cp1x = clamp(p1.x + (p2.x - p0.x) / 6, p1.x, p2.x);
-                const cp1y = clamp(p1.y + (p2.y - p0.y) / 6, 15, 75);
+                const cp1y = clamp(p1.y + (p2.y - p0.y) / 6, 15, B + 45);
                 const cp2x = clamp(p2.x - (p3.x - p1.x) / 6, p1.x, p2.x);
-                const cp2y = clamp(p2.y - (p3.y - p1.y) / 6, 15, 75);
+                const cp2y = clamp(p2.y - (p3.y - p1.y) / 6, 15, B + 45);
                 d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
               }
               if (!grad) { chartPathEl.setAttribute('d', d); } else {
@@ -5452,7 +5533,7 @@
               line.setAttribute('stroke-width', '2'); line.setAttribute('stroke-linecap', 'round'); line.setAttribute('stroke-linejoin', 'round');
               dotsEl.insertBefore(line, dotsEl.firstChild ? dotsEl.firstChild.nextSibling : null);
               // 곡선과 ○ 기준선 사이를 같은 색 그라데이션으로 옅게 채운다
-              if (area) area.setAttribute('d', d + ` L ${pts[pts.length - 1].x.toFixed(1)} 45 L ${pts[0].x.toFixed(1)} 45 Z`);
+              if (area) area.setAttribute('d', d + ` L ${pts[pts.length - 1].x.toFixed(1)} ${B} L ${pts[0].x.toFixed(1)} ${B} Z`);
               }
             }
           } else if (dotsEl) {
@@ -5462,7 +5543,7 @@
               if (p.score === 0) {
                 // ○ 평시: 높이가 0이므로 기준선 위에 점으로 표시
                 const c = document.createElementNS(SVG_NS, 'circle');
-                c.setAttribute('cx', p.x.toFixed(2)); c.setAttribute('cy', '45');
+                c.setAttribute('cx', p.x.toFixed(2)); c.setAttribute('cy', String(B));
                 c.setAttribute('r', Math.max(1.2, Math.min(2.4, barW * 0.6)).toFixed(2));
                 c.setAttribute('fill', moodFill(0, color));
                 dotsEl.appendChild(c);
@@ -5470,7 +5551,7 @@
                 const h = Math.abs(moodLift(p.score, LEVEL));
                 const rect = document.createElementNS(SVG_NS, 'rect');
                 rect.setAttribute('x', (p.x - barW / 2).toFixed(2));
-                rect.setAttribute('y', (p.score > 0 ? 45 - h : 45).toFixed(2));
+                rect.setAttribute('y', (p.score > 0 ? B - h : B).toFixed(2));
                 rect.setAttribute('width', barW.toFixed(2));
                 rect.setAttribute('height', h.toFixed(2));
                 rect.setAttribute('rx', Math.min(1.2, barW / 2).toFixed(2));
@@ -5826,7 +5907,7 @@
           pp.mk('line', { x1: o.X0, x2: o.X1, y1: yy, y2: yy, stroke: o.color, 'stroke-width': v ? 0.5 : 0.8, opacity: v ? 0.14 : 0.25, 'stroke-dasharray': v ? '2,2' : '' });
           const t = pp.mk('text', { x: 22, y: yy + 4, 'text-anchor': 'middle', 'font-size': 11, fill: o.color, opacity: 0.6 }); t.textContent = v ? (v / 1000) + 'k' : '0';
         });
-        const bw = Math.min(22, Math.max(2, o.dayW * 0.55));
+        const bw = Math.min(22, Math.max(2, o.dayW * 0.62)); // 잠 막대와 같은 두께
         days.forEach((d, i) => {
           const v = d.steps; if (v === null || v === undefined) return;
           const bh = Math.max(1, Math.min(1, v / SMAX) * h);
@@ -5969,6 +6050,7 @@
     }
     async function buildReportImage() {
       const W = 1080, PAD = 64, INNER = W - PAD * 2;
+      const SHARE_S = 2; // 1.2.9 (컴퓨터에서 보면 흐림): 가로 2160px로 그린다. 좌표 계산은 1080 기준 그대로
       const ACCENT = '#597075', TEXT = '#2d3748', SUB = '#8a9aa0', BG = '#fbfcfc', CARD = '#ffffff', LINE = '#e6ecee';
       const FONT = getComputedStyle(document.body).fontFamily || 'sans-serif';
       const { now, d1, diffDays } = getReportRange();
@@ -5981,7 +6063,8 @@
       const newSvg = (h) => {
         const s = document.createElementNS(SVG_NS, 'svg');
         s.setAttribute('xmlns', SVG_NS);
-        s.setAttribute('width', String(GW * 2)); s.setAttribute('height', String(h * 2));
+        // 1.2.9: 사진을 2배 해상도로 그리므로 그래프도 2배 픽셀로 (viewBox는 그대로라 좌표는 같다)
+        s.setAttribute('width', String(GW * 2 * SHARE_S)); s.setAttribute('height', String(h * 2 * SHARE_S));
         s.setAttribute('font-family', FONT);
         return s;
       };
@@ -6028,7 +6111,7 @@
           p.mk('line', { x1: PX0, x2: PX1, y1: yy, y2: yy, stroke: ACCENT, 'stroke-width': v ? 0.5 : 0.8, opacity: v ? 0.18 : 0.3, 'stroke-dasharray': v ? '2,2' : '' });
           const t = p.mk('text', { x: 20, y: yy + 3.5, 'text-anchor': 'middle', 'font-size': 10, fill: ACCENT, opacity: 0.6 }); t.textContent = v ? (v / 1000) + 'k' : '0';
         });
-        const bw = Math.min(14, Math.max(1.6, pDayW * 0.55));
+        const bw = Math.min(14, Math.max(1.6, pDayW * 0.62)); // 잠 막대와 같은 두께
         actDays.forEach((d, i) => {
           const v = d.steps;
           if (v === null || v === undefined) { p.mk('line', { x1: pcx(i) - bw / 2, x2: pcx(i) + bw / 2, y1: B - 1.5, y2: B - 1.5, stroke: ACCENT, 'stroke-width': 0.8, opacity: 0.25 }); return; }
@@ -6067,7 +6150,8 @@
       const notesCardH = 40 + 36 + 28 + noteLines.reduce((a, l) => a + l.length * 46 + 22, 0) - 22 + 44;
       if (notes.length) H += 28 + notesCardH;
       H += 40 + 34 + PAD;
-      c.width = W; c.height = H;
+      c.width = W * SHARE_S; c.height = H * SHARE_S;
+      ctx.scale(SHARE_S, SHARE_S); // 크기를 바꾸면 그리기 상태가 초기화되므로 그 뒤에
       const rr = (x, y, w, h, r, fill, stroke) => {
         ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h);
         ctx.fillStyle = fill; ctx.fill();
@@ -6248,6 +6332,7 @@
     }
 
     function clearAllData() {
+      if (cloudWriteBlocked()) return; // 1.2.9
       cloud.allowEmpty = true; // 일부러 비움
       performDataReset();
       showToast('모든 데이터가 비워졌습니다. 새로운 백지(0)에서 시작합니다. 🌿');
@@ -7675,6 +7760,7 @@
       if (e && e.stopPropagation) e.stopPropagation();
       const st = sleepEdit;
       if (!st) return;
+      if (cloudWriteBlocked()) return; // 1.2.9
       clearTimeout(sleepSaveTimer); sleepSaveTimer = null; sleepSavedSinceOpen = false;
       if (!sleepLog[st.date]) return;
       triggerHaptic();
@@ -7804,12 +7890,14 @@
     // ── 설문 (1.2.9, 사용자: "설문하는 폼을 만들어 보자") ──
     // 우울 PHQ-9 · 불안 GAD-7 · 몸 증상 PHQ-15. 문항·답·점수 기준은 docs/questionnaires의 표준 설문지 그대로 (글을 바꾸지 않는다).
     // 저장: lifeguard_surveys = [{ id, time, answers[], score, extra }] — DB에 담기고, 진료 완료하면 그 주기 보관함으로 넘어가며 폰에서는 비운다.
+    // 1.2.9 (사용자): 답 문구는 국립정신건강센터 자가진단과 똑같이 (PHQ-9·GAD-7은 셋째 칸만 다르다)
     const SURVEY_FREQ = ['전혀 방해받지 않았다', '며칠 동안 방해받았다', '7일 이상 방해받았다', '거의 매일 방해받았다'];
+    const SURVEY_FREQ_GAD = ['전혀 방해받지 않았다', '며칠 동안 방해받았다', '2주 중 절반 이상 방해받았다', '거의 매일 방해받았다'];
     const SURVEY_EXTRA = { q: '위에서 고른 문제들이 있다면, 이로 인해 직장 일, 집안일, 또는 다른 사람들과 어울리는 것이 얼마나 어려웠습니까?',
-      options: ['전혀 어렵지 않았다', '다소 어려웠다', '매우 어려웠다', '극도로 어려웠다'] };
+      options: ['전혀 어렵지 않았다', '약간 어려웠다', '많이 어려웠다', '매우 많이 어려웠다'] };
     const SURVEYS = {
       phq9: { name: '우울', period: '지난 2주', max: 27, extra: true,
-        ask: '지난 2주일 동안, 당신은 다음의 문제들로 인해서 얼마나 자주 방해를 받았습니까?',
+        ask: '지난 2주일 동안 당신은 다음의 문제들로 인해서 얼마나 자주 방해를 받았습니까?',
         options: SURVEY_FREQ,
         items: ['일 또는 여가 활동을 하는 데 흥미나 즐거움을 느끼지 못함', '기분이 가라앉거나, 우울하거나, 희망이 없음',
           '잠이 들거나 계속 잠을 자는 것이 어려움, 또는 잠을 너무 많이 잠', '피곤하다고 느끼거나 기운이 거의 없음', '입맛이 없거나 과식을 함',
@@ -7819,14 +7907,14 @@
         levels: [[4, '거의 없음'], [9, '가벼운 정도'], [14, '중간 정도'], [19, '약간 심한 정도'], [27, '심한 정도']],
         safetyItem: 8 },
       gad7: { name: '불안', period: '지난 2주', max: 21, extra: true,
-        ask: '지난 2주일 동안, 당신은 다음의 문제들로 인해서 얼마나 자주 방해를 받았습니까?',
-        options: SURVEY_FREQ,
+        ask: '지난 2주일 동안 당신은 다음의 문제들로 인해서 얼마나 자주 방해를 받았습니까?',
+        options: SURVEY_FREQ_GAD,
         items: ['초조하거나 불안하거나 조마조마하게 느낀다', '걱정하는 것을 멈추거나 조절할 수가 없다', '여러 가지 것들에 대해 걱정을 너무 많이 한다',
           '편하게 있기가 어렵다', '너무 안절부절못해서 가만히 있기가 힘들다', '쉽게 짜증이 나거나 쉽게 성을 내게 된다', '마치 끔찍한 일이 생길 것처럼 두렵게 느껴진다'],
         levels: [[4, '거의 없음'], [9, '가벼운 정도'], [14, '중간 정도'], [21, '심한 정도']] },
       phq15: { name: '몸 증상', period: '지난 4주', max: 30, extra: false,
-        ask: '지난 4주 동안, 다음의 문제들로 인해 얼마나 시달렸습니까?',
-        options: ['전혀 시달리지 않았다', '조금 시달렸다', '많이 시달렸다'],
+        ask: '지난 4주 동안, 다음 나열되는 증상들에 얼마나 자주 시달렸습니까?',
+        options: ['전혀 시달리지 않음', '약간 시달림', '대단히 시달림'],
         items: ['복통 (위통)', '등·허리 통증', '팔, 다리 또는 관절(무릎, 고관절 등) 통증', '월경통 또는 월경 관련 문제 (여성 해당 시)',
           '성관계 중 통증이나 그 밖의 문제', '두통', '가슴 통증 (흉통)', '어지럼증', '정신을 잃고 쓰러짐 (실신)', '심장이 세게 두근거리거나 빨리 뜀',
           '숨이 참 (호흡곤란)', '변비, 묽은 변 또는 설사', '메스꺼움, 배에 가스가 참 또는 소화불량', '잠들기 어렵거나 자주 깨거나 너무 많이 잠', '피곤하거나 기운이 없음'],
@@ -7850,10 +7938,18 @@
     function surveyMax(def, rec) { return def.naItem != null && rec && rec.answers && rec.answers[def.naItem] === null ? def.max - 2 : def.max; }
     const surveyDate = (iso) => { const d = new Date(iso); return `${d.getMonth() + 1}.${d.getDate()}`; };
 
-    // 함께 보기의 '설문' 칸
+    // 함께 보기의 '설문' 칸 (1.2.9: 접어 둠. 제목 줄을 누르면 펼침)
+    var surveyRowsOpen = false; // 함께 보기를 열 때마다 접힌 채로 시작
+    function toggleSurveyRows(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      surveyRowsOpen = !surveyRowsOpen;
+      renderSurveyCard();
+    }
     function renderSurveyCard() {
       const box = document.getElementById('surveyRows');
       if (!box) return;
+      const card = document.getElementById('reportSurveyCard');
+      if (card) card.style.display = surveyEnabled() ? '' : 'none';
       const dark = getEffectiveTheme(currentTheme) === 'dark';
       const main = (document.getElementById('chartPath') || {}).getAttribute?.('stroke') || (dark ? '#9ec0c4' : '#597075');
       const muted = dark ? 'rgba(230,238,238,0.5)' : '#9aa7aa';
@@ -7866,7 +7962,9 @@
         return `<button type="button" onclick="openSurvey('${id}', event)" style="display:flex;width:100%;align-items:center;justify-content:space-between;text-align:left;padding:9px 2px;${n ? `border-top:1px solid ${line};` : ''}">` +
           `<div><div style="color:${main};font-weight:700;font-size:13px">${def.name}</div><div style="font-size:10.5px;color:${muted};margin-top:1px">${def.items.length}문항 · ${def.period}</div></div>${right}</button>`;
       }).join('');
-      const t = document.getElementById('reportSurveyTitle'); if (t) t.style.color = main;
+      const t = document.getElementById('reportSurveyTitle'); if (t) { t.style.color = main; t.setAttribute('aria-expanded', surveyRowsOpen ? 'true' : 'false'); }
+      box.style.display = surveyRowsOpen ? '' : 'none';
+      const hint = document.getElementById('surveyFoldHint'); if (hint) hint.textContent = surveyRowsOpen ? '접기 ▴' : '우울 · 불안 · 몸 증상 ▾';
     }
 
     let surveyRun = null; // { id, i, answers[], extra, stage: 'q' | 'extra' | 'result', rec, fresh }
