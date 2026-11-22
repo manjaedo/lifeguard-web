@@ -357,9 +357,16 @@
       </button>
 
       <!-- Top Center: 잠 기록 (1.2.7). 평소엔 보이지 않고, 한 번 누르면 침대가 피어나고 침대를 누르면 잠 기록 창 -->
-      <button id="sleepEntryBtn" type="button" onclick="tapSleepEntry(event)" aria-label="잠 기록" class="flex-1 h-9 mx-3 flex items-center justify-center text-current">
+      <!-- 시험판: 꾹 누르기(1초) — 저녁엔 바로 '잘게요', 자는 중엔 깼어요/일어났어요 고르기, 낮엔 창 -->
+      <button id="sleepEntryBtn" type="button" onclick="tapSleepEntry(event)" oncontextmenu="return false" aria-label="잠 기록" class="flex-1 h-9 mx-3 flex items-center justify-center text-current" style="-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;touch-action:manipulation;">
+        <span class="relative inline-flex items-center justify-center">
+        <svg id="sleepHoldRing" width="44" height="44" viewBox="0 0 44 44" aria-hidden="true" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-90deg);pointer-events:none;opacity:0;transition:opacity .2s;">
+          <circle cx="22" cy="22" r="19" fill="none" stroke="currentColor" stroke-opacity="0.15" stroke-width="2.5"/>
+          <circle id="sleepHoldArc" cx="22" cy="22" r="19" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="119.4" stroke-dashoffset="119.4"/>
+        </svg>
         <span id="sleepEntryIcon" style="opacity: 0; transition: opacity 0.35s ease;" aria-hidden="true">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12M3 15h18v4M21 15v-3a3 3 0 0 0-3-3h-7v6"/><circle cx="7" cy="12" r="1.8"/><path d="M15.5 3.2a2.6 2.6 0 1 0 3.3 3.3 3 3 0 1 1-3.3-3.3z"/></svg>
+        </span>
         </span>
       </button>
 
@@ -7407,6 +7414,8 @@
     // 첫 화면 위 가운데: 한 번 누르면 침대가 보이고(3.5초 뒤 사라짐), 침대가 보일 때 누르면 창을 연다
     function tapSleepEntry(e) {
       if (e && e.stopPropagation) e.stopPropagation();
+      if (sleepHoldFired) { sleepHoldFired = false; return; } // 꾹 누르기를 마친 손을 뗀 것
+
       const icon = document.getElementById('sleepEntryIcon');
       if (!icon) return;
       triggerHaptic();
@@ -8016,6 +8025,43 @@
         tag.textContent = t; tag.style.display = t ? 'inline-block' : 'none';
       }
     }
+    // 첫 화면 위 가운데 꾹 누르기 (시험판, 사용자 결정 ①): 1초 동안 원이 차오르고, 다 차면 진동과 함께
+    //   저녁(오후 6시~새벽 4시)·안 자는 중 → 바로 '잘게요' / 자는 중 → 어두운 창(잠깐 깼어요·일어났어요) / 낮 → 잠 기록 창
+    //   중간에 떼거나 손가락이 움직이면 없던 일 (그냥 누른 것으로)
+    let sleepHoldFired = false;
+    (function bindSleepHold() {
+      const btn = document.getElementById('sleepEntryBtn'), ring = document.getElementById('sleepHoldRing'), arc = document.getElementById('sleepHoldArc');
+      if (!btn || !ring || !arc) return;
+      const FULL = 119.4, HOLD_MS = 1000;
+      let timer = null, x0 = 0, y0 = 0;
+      const reset = () => {
+        clearTimeout(timer); timer = null;
+        arc.style.transition = 'none'; arc.style.strokeDashoffset = String(FULL);
+        ring.style.opacity = '0';
+      };
+      btn.addEventListener('pointerdown', (ev) => {
+        if (ev.button > 0) return;
+        x0 = ev.clientX; y0 = ev.clientY;
+        reset();
+        timer = setTimeout(() => { // 0.2초 뒤부터 원을 보인다 (그냥 톡 누를 때는 안 보이게)
+          ring.style.opacity = '1';
+          const icon = document.getElementById('sleepEntryIcon'); if (icon) icon.style.opacity = '0.6';
+          void arc.getBoundingClientRect();
+          arc.style.transition = `stroke-dashoffset ${HOLD_MS - 200}ms linear`; arc.style.strokeDashoffset = '0';
+          timer = setTimeout(() => { timer = null; sleepHoldFired = true; finishSleepHold(); setTimeout(reset, 250); }, HOLD_MS - 200);
+        }, 200);
+      });
+      btn.addEventListener('pointermove', (ev) => { if (timer && Math.hypot(ev.clientX - x0, ev.clientY - y0) > 12) reset(); });
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach(n => btn.addEventListener(n, () => { if (timer) reset(); }));
+    })();
+    function finishSleepHold() {
+      try { if (navigator.vibrate) navigator.vibrate([18, 60, 18]); } catch (_) {}
+      triggerHaptic();
+      hideSleepEntry();
+      if (!sleepLive && sleepIsEvening()) { sleepGoToBed(); return; }
+      openSleepModal(); // 자는 중이면 어두운 창(깼어요·일어났어요), 낮이면 시계
+    }
+
     // 첫 화면 위 가운데: 자는 중이면 달 그림이 옅게 남아 '재는 중'임을 알린다
     function updateSleepEntryLive() {
       const icon = document.getElementById('sleepEntryIcon');
