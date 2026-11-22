@@ -7909,7 +7909,7 @@
     // ── 시험판: '지금 잘게요' (잘 때·깰 때 한 번씩 누르기) ──
     // 하루 잠 기록은 하나. 누른 것도 결국 시계 위에 그려지고, 시계에서 고친다.
     // 적히는 순서: ① 직접(눌렀거나 시계로 고친 것) ② 자동으로 잰 것(안드로이드) ③ 빈칸
-    // lifeguard_sleep_live: { start: ms, wakes: [[ms, ms]], wakeOpen: ms|null } — 자는 중일 때만 있음
+    // lifeguard_sleep_live: { start: ms } — 자는 중일 때만 있음
     let sleepLive = (function() { const o = safeJsonParse('lifeguard_sleep_live', null); return o && o.start ? o : null; })();
     // 시험판만: '지금 몇 시인 척' (지난 24시간 안의 그 시각으로). 진짜 기록에 적힌다
     let sleepTestOffset = (function() { try { return Number(sessionStorage.getItem('lg_sleep_test_offset')) || 0; } catch (_) { return 0; } })();
@@ -7941,42 +7941,58 @@
       if (e && e.stopPropagation) e.stopPropagation();
       if (cloudWriteBlocked()) return;
       triggerHaptic();
-      sleepLive = { start: sleepNow().getTime(), wakes: [], wakeOpen: null };
+      sleepLive = { start: sleepNow().getTime() };
       saveSleepLive();
       showToast('잘 자요 🌙');
       renderSleepNow();
     }
-    function sleepWakeBrief(e) { // 잠깐 깼어요 / 다시 잘게요
+    // 1.2.11 시험판 (사용자: 낮이고 밤이고 누르면 자기, 한 번 더 누르면 깨기 — 그럼 모두 커버):
+    // 잠 한 덩어리(잔 때~깬 때)가 생길 때마다 깬 날 칸에 이렇게 넣는다
+    //   · 그날 밤잠이 끝난 뒤 3시간 안에 다시 잤으면 → 밤잠을 이어 늘리고, 그 사이는 '밤중에 깬 때'
+    //   · 그날 밤잠이 이미 있으면 → 낮잠
+    //   · 그날 첫 잠: 3시간 넘게 잤거나 저녁·새벽(오후 8시~오전 9시)에 잠들었으면 → 밤잠, 아니면 낮잠
+    function sleepWakeUp(e) {
       if (e && e.stopPropagation) e.stopPropagation();
       if (!sleepLive || cloudWriteBlocked()) return;
       triggerHaptic();
-      const now = sleepNow().getTime();
-      if (sleepLive.wakeOpen) { if (now - sleepLive.wakeOpen >= 60000) sleepLive.wakes.push([sleepLive.wakeOpen, now]); sleepLive.wakeOpen = null; showToast('다시 잘 자요 🌙'); }
-      else sleepLive.wakeOpen = now;
-      saveSleepLive();
-      renderSleepNow();
+      const a = sleepLive.start, b = sleepNow().getTime();
+      sleepLive = null; saveSleepLive();
+      if (b - a < 10 * 60000) { showToast('10분이 안 돼서 적지 않았어요'); renderSleepNow(); return; }
+      if (b - a > 16 * 3600000) { // 깨기를 잊은 것
+        showToast('잠든 때부터 16시간이 넘었어요. 시계로 맞춰 주세요');
+        if (!sleepEdit) openSleepModal(localDateKey(new Date(b))); else { loadSleepEdit(localDateKey(new Date(b))); renderSleepModal(); }
+        return;
+      }
+      const res = sleepAddChunk(a, b);
+      try { renderActivityData(); } catch (_) {}
+      showToast(res.kind === 'nap' ? `깼어요 ☀ · 낮잠 ${formatSleepMin(res.min)}` : `깼어요 ☀ · 잠 ${formatSleepMin(res.total)}`);
+      if (sleepEdit) { loadSleepEdit(res.key); renderSleepModal(); }
     }
-    function sleepGetUp(e) {
-      if (e && e.stopPropagation) e.stopPropagation();
-      if (!sleepLive || cloudWriteBlocked()) return;
-      triggerHaptic();
-      let end = sleepNow().getTime();
-      if (sleepLive.wakeOpen) end = sleepLive.wakeOpen; // 깬 채로 일어났으면 깬 때가 일어난 때
-      if (end - sleepLive.start < 10 * 60000) { sleepLive = null; saveSleepLive(); showToast('10분이 안 돼서 적지 않았어요'); renderSleepNow(); return; }
-      const key = localDateKey(new Date(end));
-      const segs = [{ kind: 'night', start: sleepMinOf(sleepLive.start), end: sleepMinOf(end) }];
-      sleepLive.wakes.forEach(([a, b]) => { if (b > a && a >= sleepLive.start && b <= end) segs.push({ kind: 'wake', start: sleepMinOf(a), end: sleepMinOf(b) }); });
-      // 그날 이미 적은 낮잠은 남긴다
-      const old = sleepLog[key];
-      if (old && Array.isArray(old.segs)) old.segs.filter(x => x.kind === 'nap').forEach(x => segs.push({ kind: 'nap', start: x.start, end: x.end }));
+    function sleepAddChunk(a, b) {
+      const key = localDateKey(new Date(b));
+      const rec = sleepLog[key];
+      const segs = rec && Array.isArray(rec.segs) ? rec.segs.map(x => ({ kind: x.kind, start: x.start, end: x.end })) : [];
+      const sMin = sleepMinOf(a), eMin = sleepMinOf(b);
+      const night = segs.find(x => x.kind === 'night');
+      let kind;
+      if (night) {
+        const endAbs = parseLocalDate(key).getTime() + night.end * 60000; // 밤잠 끝은 그날 몇 시
+        const gap = a - endAbs;
+        if (gap >= 0 && gap <= 3 * 3600000) {
+          if (gap >= 60000) segs.push({ kind: 'wake', start: night.end, end: sMin });
+          night.end = eMin; kind = 'night';
+        } else { segs.push({ kind: 'nap', start: sMin, end: eMin }); kind = 'nap'; }
+      } else {
+        const h = new Date(a).getHours();
+        kind = (b - a >= 3 * 3600000 || h >= 20 || h < 9) ? 'night' : 'nap';
+        segs.push({ kind, start: sMin, end: eMin });
+      }
       const sm = sleepSummary(segs);
       sleepLog[key] = { mode: 'time', src: 'live', segs, sleep_min: sm.night + sm.nap, nap_min: sm.nap, wake_count: sm.wakes };
-      sleepLive = null;
-      saveSleepLive(); saveSleepLog();
-      try { renderActivityData(); } catch (_) {}
-      showToast('좋은 아침이에요 ☀');
-      if (sleepEdit) { loadSleepEdit(key); renderSleepModal(); }
+      saveSleepLog();
+      return { key, kind, min: Math.round((b - a) / 60000), total: sm.night + sm.nap };
     }
+    function sleepToggleLive() { if (sleepLive) sleepWakeUp(); else sleepGoToBed(); }
     function sleepCancelLive(e) {
       if (e && e.stopPropagation) e.stopPropagation();
       if (!sleepLive) return;
@@ -7993,22 +8009,18 @@
       const nowText = sleepClock(now.getTime());
       const btn = (cls, text, fn) => `<button type="button" class="sl-now-btn ${cls}" onclick="${fn}(event)">${text}</button>`;
       let html = '';
-      if (sleepLive && sleepLive.wakeOpen) {
-        html = `<div class="sl-now dark"><div class="t">${sleepClock(sleepLive.wakeOpen)}부터 깨어 있어요 · 지금 ${nowText}</div><div class="q">다시 자나요?</div>
-          <div class="row">${btn('moon', '🌙 다시 잘게요', 'sleepWakeBrief')}${btn('sun', '☀ 일어났어요', 'sleepGetUp')}</div></div>`;
-      } else if (sleepLive) {
+      if (sleepLive) {
         html = `<div class="sl-now dark"><div class="t">${sleepClock(sleepLive.start)}부터 자는 중 · 지금 ${nowText}</div><div class="q">깼나요?</div>
-          <div class="row">${btn('wake', '👁 잠깐 깼어요', 'sleepWakeBrief')}${btn('sun', '☀ 일어났어요', 'sleepGetUp')}</div>
-          <div class="t" style="margin-top:12px;">일어나면 시계에 그려져요</div>
+          <div class="row">${btn('sun', '☀ 깼어요', 'sleepWakeUp')}</div>
+          <div class="t" style="margin-top:12px;">깼다가 다시 잘 때도 '잘게요'</div>
           <button type="button" class="sl-now-undo" onclick="sleepCancelLive(event)">잘못 눌렀어요</button></div>`;
-      } else if (sleepIsEvening()) {
-        html = `<div class="sl-now dark"><div class="t">지금 ${nowText}</div><div class="q">이제 자러 가나요?</div>
-          <div class="row">${btn('moon', '🌙 지금 잘게요', 'sleepGoToBed')}</div></div>`;
       } else {
+        const ev = sleepIsEvening();
         const rec = sleepLog[localDateKey(now)];
-        if (rec && rec.src === 'live' && sleepEdit && sleepEdit.date === localDateKey(now)) {
-          html = `<div class="sl-now"><div class="q" style="margin:0 0 2px;">☀ 좋은 아침이에요</div><div class="t">눌러서 적은 잠이에요. 다르면 시계에서 고쳐요.</div></div>`;
-        }
+        const morning = !ev && rec && rec.src === 'live' && sleepEdit && sleepEdit.date === localDateKey(now) && !sleepEdit.dirty;
+        html = `<div class="sl-now ${ev ? 'dark' : ''}"><div class="t">${morning ? '눌러서 적은 잠이에요. 다르면 시계에서 고쳐요.' : '지금 ' + nowText}</div><div class="q">${ev ? '이제 자러 가나요?' : (morning ? '☀ 좋은 하루예요' : '잠들 때 눌러요')}</div>
+          <div class="row">${btn('moon', '🌙 지금 잘게요', 'sleepGoToBed')}</div>
+          <div class="t" style="margin-top:10px;">첫 화면 위 가운데를 꾹 눌러도 돼요</div></div>`;
       }
       box.innerHTML = html;
       // 자는 중에는 시계를 숨긴다 (밤에 눈부시지 않게, 아직 그릴 것도 없음)
@@ -8026,7 +8038,7 @@
       }
     }
     // 첫 화면 위 가운데 꾹 누르기 (시험판, 사용자 결정 ①): 1초 동안 원이 차오르고, 다 차면 진동과 함께
-    //   저녁(오후 6시~새벽 4시)·안 자는 중 → 바로 '잘게요' / 자는 중 → 어두운 창(잠깐 깼어요·일어났어요) / 낮 → 잠 기록 창
+    //   안 자면 '잘게요', 자는 중이면 '깼어요' (낮이고 밤이고 같음, 사용자 결정)
     //   중간에 떼거나 손가락이 움직이면 없던 일 (그냥 누른 것으로)
     let sleepHoldFired = false;
     (function bindSleepHold() {
@@ -8058,8 +8070,7 @@
       try { if (navigator.vibrate) navigator.vibrate([18, 60, 18]); } catch (_) {}
       triggerHaptic();
       hideSleepEntry();
-      if (!sleepLive && sleepIsEvening()) { sleepGoToBed(); return; }
-      openSleepModal(); // 자는 중이면 어두운 창(깼어요·일어났어요), 낮이면 시계
+      sleepToggleLive(); // 낮이고 밤이고: 안 자면 잘게요, 자는 중이면 깼어요 (사용자 결정)
     }
 
     // 첫 화면 위 가운데: 자는 중이면 달 그림이 옅게 남아 '재는 중'임을 알린다
