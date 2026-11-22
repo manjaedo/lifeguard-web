@@ -316,11 +316,20 @@
       opacity: 0 !important;
     }
     /* 1.2.8 가볍게/꼼꼼히: 가볍게에서는 꼼꼼히 전용을 숨긴다 (기록은 그대로, 보이는 것만) */
-    body[data-ui="simple"] .detail-only { display: none !important; }
-    /* 테마가 className을 다시 쓰는 칸은 id로도 숨긴다 */
-    body[data-ui="simple"] :is(#settingsPhilosophyCard, #settingsMedDesc, #medSettingStatusText, #fontStepLiveBadge, #settingsActivityCard, #settingsGlyphCard) { display: none !important; }
-    body:not([data-ui="simple"]) .simple-only { display: none !important; }
-    body[data-ui="simple"] #sleepEntryBtn { visibility: hidden; pointer-events: none; }
+    /* 1.2.8 설정 [기본 | 상세] 두 칸: 기본 = 이름·복약·알림·기록 지키기, 상세 = 나머지 설정 (사용자 결정) */
+    #settingsModal[data-tab="basic"] .stab-detail, #settingsModal[data-tab="detail"] .stab-basic { display: none !important; }
+    /* 테마가 className을 다시 쓰는 칸은 id로도 */
+    #settingsModal[data-tab="basic"] #settingsGlyphCard, #settingsModal[data-tab="detail"] :is(#settingsPhilosophyCard, #settingsFontCard) { display: none !important; }
+    #settingsLegacy { display: none !important; }
+    /* 상세 칸 묶음 카드 (1.2.8): 줄 사이 옅은 선 */
+    #settingsModal .dcard > * + * { border-top: 1px solid var(--dline, rgba(0,0,0,0.06)); }
+    #settingsPatientNameInput { min-width: 0; flex: 1; }
+    #settingsAlarmTimeBox { background: transparent !important; border: 0 !important; padding: 0 !important; gap: 10px !important; }
+    /* 활동 정보 칸은 1.2.8부터 상세 칸의 '걸음 기록' 한 줄로 (스위치·동작은 같음) */
+    #settingsActivityCard { display: none !important; }
+    #settingsModal[data-tab="detail"] :is(#settingsPatientCard, #cloudCard, #settingsMedCard, #settingsAlarmCard) { display: none !important; }
+    /* 잠 기록을 끄면 첫 화면 침대를 숨긴다 (자리는 남김) */
+    body[data-sleep="off"] #sleepEntryBtn { visibility: hidden; pointer-events: none; }
   </style>
 </head>
 <body class="bg-[#e9ecef] text-gray-800 flex flex-col items-center justify-center min-h-[720px] p-4 select-none font-sans">
@@ -510,12 +519,10 @@
               <button type="button" id="sleepDeleteBtn" onclick="deleteSleepEdit(event)" class="sl-small underline" style="display: none;">이 날 기록 지우기</button>
             </div>
           </div>
-          <!-- 저장은 자동으로 재기 칸보다 위에 (1.2.7, 사용자 결정) -->
+          <!-- 1.2.8: 고치면 저절로 저장 (사용자 결정). 저장 단추 대신 닫기만 -->
           <div class="flex justify-center pt-1">
             <div class="sl-bar">
-              <button type="button" onclick="closeSleepModal(event)">취소</button>
-              <span class="sep"></span>
-              <button type="button" onclick="saveSleepEdit(event)">저장</button>
+              <button type="button" onclick="closeSleepModal(event)">닫기</button>
             </div>
           </div>
           <!-- 안드로이드 앱에서만: 자동으로 재기 -->
@@ -543,8 +550,8 @@
           <div id="chartZoomReadout" class="text-sm font-semibold tabular-nums min-w-0 truncate"></div>
           <!-- 작은 그래프와 같은 스위치. ⤡는 작은 그래프로 돌아가기 (닫기 대신, 사용자 결정) -->
           <div id="chartZoomModeSwitch" class="flex items-center rounded-full p-0.5 text-[13px] font-semibold shrink-0" style="background: rgba(127,167,170,0.14);">
-            <button type="button" data-mode="bar" onclick="setChartMode('bar', event)" class="chart-mode-btn detail-only px-3 py-1 rounded-full transition">막대</button>
-            <button type="button" data-mode="curve" onclick="setChartMode('curve', event)" class="chart-mode-btn detail-only px-3 py-1 rounded-full transition">곡선</button>
+            <button type="button" data-mode="bar" onclick="setChartMode('bar', event)" class="chart-mode-btn px-3 py-1 rounded-full transition">막대</button>
+            <button type="button" data-mode="curve" onclick="setChartMode('curve', event)" class="chart-mode-btn px-3 py-1 rounded-full transition">곡선</button>
             <button type="button" onclick="closeChartZoom(event)" aria-label="작은 그래프로 돌아가기" class="zoom-out-btn px-3 py-1 rounded-full transition flex items-center"><svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 6.5h-4v-4M9.5 6.5 14 2M2.5 9.5h4v4M6.5 9.5 2 14"/></svg></button>
           </div>
         </div>
@@ -587,8 +594,8 @@
           <div class="flex justify-between items-center text-[10px] text-[#597075] font-semibold mb-2">
             <span id="chartLabel">기분 기록</span>
             <div id="chartModeSwitch" class="flex items-center rounded-full p-0.5 text-[10px] font-semibold" style="background: rgba(127,167,170,0.14);">
-              <button type="button" data-mode="bar" onclick="setChartMode('bar', event)" class="chart-mode-btn detail-only px-2 py-0.5 rounded-full transition">막대</button>
-              <button type="button" data-mode="curve" onclick="setChartMode('curve', event)" class="chart-mode-btn detail-only px-2 py-0.5 rounded-full transition">곡선</button>
+              <button type="button" data-mode="bar" onclick="setChartMode('bar', event)" class="chart-mode-btn px-2 py-0.5 rounded-full transition">막대</button>
+              <button type="button" data-mode="curve" onclick="setChartMode('curve', event)" class="chart-mode-btn px-2 py-0.5 rounded-full transition">곡선</button>
               <button type="button" onclick="openChartZoom(event)" aria-label="그래프 크게 보기" class="px-2 py-0.5 rounded-full transition flex items-center"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2.5h4v4M13.5 2.5 9 7M6.5 13.5h-4v-4M2.5 13.5 7 9"/></svg></button>
             </div>
           </div>
@@ -674,15 +681,15 @@
     </div>
 
     <!-- Modal 2: Settings Screen (우측 상단 설정 - 상세 철학 & 4가지 연출 & 3가지 배경) -->
-    <div id="settingsModal" onclick="event.stopPropagation()" class="absolute inset-0 bg-[#fbfcfc] z-30 p-5 flex flex-col justify-between opacity-0 pointer-events-none transition-all duration-300 overflow-y-auto hidden" style="display: none;">
+    <div id="settingsModal" data-tab="basic" onclick="event.stopPropagation()" class="absolute inset-0 bg-[#fbfcfc] z-30 p-5 flex flex-col justify-between opacity-0 pointer-events-none transition-all duration-300 overflow-y-auto hidden" style="display: none;">
       <div>
         <div class="flex justify-between items-center mb-4">
           <div class="flex items-center gap-2.5 min-w-0">
-            <h2 id="settingsTitle" class="text-sm font-bold text-[#597075] shrink-0">설정<span class="detail-only"> 및 안내</span></h2>
-            <!-- 1.2.8 보기 방식: 기본(꼭 필요한 것만) / 상세(모든 기능). 기록은 같고 보이는 것만 다르다 -->
+            <h2 id="settingsTitle" class="text-sm font-bold text-[#597075] shrink-0">설정 및 안내</h2>
+            <!-- 1.2.8 설정 두 칸: 기본(이름·복약·알림·기록 지키기) / 상세(나머지 설정) -->
             <div id="uiModeSwitch" class="flex rounded-full p-0.5 text-[11.5px] font-semibold shrink-0" style="background: rgba(127,167,170,0.14);">
-              <button type="button" data-v="simple" onclick="setUiMode('simple', event)" class="px-3 py-1 rounded-full transition">기본</button>
-              <button type="button" data-v="detail" onclick="setUiMode('detail', event)" class="px-3 py-1 rounded-full transition">상세</button>
+              <button type="button" data-v="basic" onclick="setSettingsTab('basic', event)" class="px-3 py-1 rounded-full transition">기본</button>
+              <button type="button" data-v="detail" onclick="setSettingsTab('detail', event)" class="px-3 py-1 rounded-full transition">상세</button>
             </div>
           </div>
           <button id="settingsCloseBtn" onclick="closeSettingsModal(event)" class="close-btn text-sm text-gray-600">닫기 ✕</button>
@@ -690,7 +697,7 @@
 
 
         <!-- 철학 안내 카드 -->
-        <div id="settingsPhilosophyCard" class="detail-only bg-[#597075]/10 rounded-2xl p-3.5 mb-4 text-xs text-gray-700 space-y-2 transition-colors">
+        <div id="settingsPhilosophyCard" class="stab-basic bg-[#597075]/10 rounded-2xl p-3.5 mb-4 text-xs text-gray-700 space-y-2 transition-colors">
           <div id="settingsPhilosophyTitle" class="font-bold text-[#597075] text-[13px] flex items-center gap-1.5">
             <span>🌿</span> Life Guard 안내
           </div>
@@ -699,42 +706,175 @@
           </p>
         </div>
 
-        <!-- 이름 / 닉네임 설정 (선택사항) -->
+        <!-- 이름 (1.2.8: 한 칸에 제목과 입력) -->
         <div id="settingsPatientCard" class="bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2 transition-colors">
-          <div id="settingsPatientTitle" class="font-bold text-[#597075] text-[13px] flex items-center gap-1.5">
-            <span>👤</span> <span>이름<span class="detail-only"> 또는 닉네임 (선택)</span></span>
-          </div>
-          <p class="detail-only leading-relaxed text-[11px] text-gray-500">
-            외부 서버로 전송되지 않고 오직 이 기기에만 안전하게 보관됩니다.
-          </p>
-          <div class="pt-1">
-            <input id="settingsPatientNameInput" type="text" value="" placeholder="이름 또는 닉네임 입력 (미입력 시 비움)"
+          <div class="flex items-center gap-3">
+            <div id="settingsPatientTitle" class="font-bold text-[#597075] text-[13px] flex items-center gap-1.5 shrink-0"><span>👤</span> 이름</div>
+            <input id="settingsPatientNameInput" type="text" value="" placeholder="이름 또는 닉네임"
                    oninput="updatePatientNameSim(this.value)"
                    class="w-full text-xs p-2.5 bg-[#f4f7f8] rounded-xl outline-none border border-transparent focus:border-[#597075]/40 text-gray-700">
           </div>
         </div>
 
-        <!-- 기록 지키기 (1.2.8): 켠 사람만 Firebase에 저절로 담는다. 설정값(CLOUD_CONFIG)이 있을 때만 보인다 (앱은 googleSignInReady도 있어야) -->
-        <div id="cloudCard" class="bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2 transition-colors" style="display: none;"></div>
-
         <!-- 복약 관리 설정 (복약 안 할 시 끄기) -->
         <div id="settingsMedCard" class="bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2 transition-colors">
           <div class="flex items-center justify-between">
             <div id="settingsMedTitle" class="font-bold text-[#597075] text-[13px] flex items-center gap-1.5">
-              <span>💊</span> <span>복약 기록<span class="detail-only"> 관리</span></span>
+              <span>💊</span> 복약 기록
             </div>
             <button id="medToggleBtn" onclick="toggleMedicationSetting()" type="button" class="switch-hit relative inline-flex h-6 w-11 p-0.5 items-center rounded-full transition-colors focus:outline-none bg-[#d1d5db] cursor-pointer" title="복약 기록 관리 토글">
               <span id="medToggleCircle" class="inline-block h-5 w-5 rounded-full bg-white shadow-md transform transition-transform duration-200 translate-x-0"></span>
             </button>
           </div>
-          <div id="medSettingStatusText" class="detail-only text-xs font-semibold text-gray-500">현재: 복약 기록 끔 (기분만 기록)</div>
-          <p id="settingsMedDesc" class="detail-only leading-relaxed text-[11px] text-gray-500">
+          <div id="medSettingStatusText" style="display:none" class="text-xs font-semibold text-gray-500">현재: 복약 기록 끔 (기분만 기록)</div>
+          <p id="settingsMedDesc" style="display:none" class="leading-relaxed text-[11px] text-gray-500">
             복약 치료를 받지 않으시거나 복약 체크가 필요 없으신 경우 기능을 끄면, 첫 화면과 함께보기에서 복약 정보가 숨겨지고 <strong>기분 기록만 단독으로 표시</strong>됩니다.
           </p>
         </div>
 
+        <!-- 매일 알림 (안드로이드 앱만). 1.2.8: 한 칸에 제목·시각·스위치 -->
+        <div id="settingsAlarmCard" class="bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2.5 transition-colors">
+          <div class="flex items-center justify-between gap-2">
+            <div id="settingsAlarmTitle" class="font-bold text-[#597075] text-[13px] flex items-center gap-1.5">
+              <span>🔔</span> 매일 알림
+            </div>
+            <div id="settingsAlarmTimeBox" class="flex items-center justify-between gap-3 bg-[#f4f7f8] rounded-xl px-3 py-2 border border-transparent transition-colors">
+              <input id="alarmTimeInput" type="time" value="18:00" onchange="updateAlarmTimeSetting(this.value)" aria-label="알림 시각"
+                     class="text-xs font-bold px-2 py-1 rounded-lg bg-white text-[#597075] border border-gray-200 outline-none cursor-pointer shrink-0">
+              <button id="alarmToggleBtn" onclick="toggleAlarmSetting()" type="button" role="switch" aria-label="매일 기분 기록 알림" class="switch-hit relative inline-flex h-6 w-11 p-0.5 items-center rounded-full transition-colors focus:outline-none bg-[#597075] cursor-pointer shrink-0" title="매일 기분 기록 알림 토글">
+                <span id="alarmToggleCircle" class="inline-block h-5 w-5 rounded-full bg-white shadow-md transform transition-transform duration-200 translate-x-[20px]"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 기록 지키기 (1.2.8): 켠 사람만 Firebase에 저절로 담는다. 한 칸 (renderCloudCard) -->
+        <div id="cloudCard" class="bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2 transition-colors" style="display: none;"></div>
+
+        <div class="stab-detail dgroup mb-4">
+          <div class="dhead text-[11px] font-semibold mb-1.5 px-1">화면</div>
+          <div class="dcard rounded-2xl px-3.5 py-0.5 border shadow-sm">
+          <!-- 테마 (1.2.8: 동그라미 넷 — 흰 · 미 · 검 · 시스템) -->
+          <div class="flex items-center justify-between gap-2 py-3">
+            <span id="settingsThemeRowTitle" class="text-xs font-bold text-[#597075]">테마</span>
+            <div id="themeDots" class="flex items-start gap-3">
+              <button type="button" data-v="white" onclick="setPreviewTheme('white')" class="flex flex-col items-center gap-1 cursor-pointer" aria-label="흰색"><span class="dot block rounded-full" style="width:30px;height:30px;background:#fbfcfc;"></span><span class="lbl text-[10px]">흰</span></button>
+              <button type="button" data-v="neutral" onclick="setPreviewTheme('neutral')" class="flex flex-col items-center gap-1 cursor-pointer" aria-label="한지 미색"><span class="dot block rounded-full" style="width:30px;height:30px;background:#ecefea;"></span><span class="lbl text-[10px]">미</span></button>
+              <button type="button" data-v="dark" onclick="setPreviewTheme('dark')" class="flex flex-col items-center gap-1 cursor-pointer" aria-label="검정"><span class="dot block rounded-full" style="width:30px;height:30px;background:#141718;"></span><span class="lbl text-[10px]">검</span></button>
+              <button type="button" data-v="system" onclick="setPreviewTheme('system')" class="flex flex-col items-center gap-1 cursor-pointer" aria-label="시스템 따라"><span class="dot block rounded-full" style="width:30px;height:30px;background:linear-gradient(135deg,#fbfcfc 50%,#141718 50%);"></span><span class="lbl text-[10px]">시스템</span></button>
+            </div>
+          </div>
+
+          <!-- 글자 크기 (1.2.8: 상세 칸, 가 · 가 · 가) -->
+          <div class="flex items-center justify-between gap-2 py-3">
+            <span id="settingsFontTitle" class="text-xs font-bold text-[#597075]">글자 크기</span>
+            <span id="fontStepLiveBadge" style="display:none"></span>
+            <div class="flex items-center gap-1.5">
+              <button id="fontBtn-1" type="button" onclick="setFontStep(1)" aria-label="글자 보통" class="rounded-xl py-2 transition flex items-center justify-center cursor-pointer active:scale-95" style="width:40px;height:36px;font-size:13px;">가</button>
+              <button id="fontBtn-3" type="button" onclick="setFontStep(3)" aria-label="글자 크게" class="rounded-xl py-2 transition flex items-center justify-center cursor-pointer active:scale-95" style="width:40px;height:36px;font-size:16px;">가</button>
+              <button id="fontBtn-5" type="button" onclick="setFontStep(5)" aria-label="글자 아주 크게" class="rounded-xl py-2 transition flex items-center justify-center cursor-pointer active:scale-95" style="width:40px;height:36px;font-size:19px;">가</button>
+            </div>
+          </div>
+          <!-- 그래프 색 (1.2.7): 흑백(기본, 예전처럼) / 칼라(기분·잠·걸음을 색으로). 1.2.8: 칼라를 고르면 제목 글자가 기분 색으로 -->
+          <div class="flex items-center justify-between gap-2 py-3">
+            <span id="settingsChartColorTitle" class="text-xs font-bold text-[#597075]">그래프 색</span>
+            <div id="chartColorSwitch" class="flex rounded-full p-0.5 text-[11px] font-semibold" style="background: rgba(127,167,170,0.14);">
+              <button type="button" data-v="mono" onclick="setChartColor(false, event)" class="px-3 py-1 rounded-full transition">흑백</button>
+              <button type="button" data-v="color" onclick="setChartColor(true, event)" class="px-3 py-1 rounded-full transition">칼라</button>
+            </div>
+          </div>
+
+          </div>
+        </div>
+
+        <div class="stab-detail dgroup mb-4">
+          <div class="dhead text-[11px] font-semibold mb-1.5 px-1">누를 때</div>
+          <div class="dcard rounded-2xl px-3.5 py-0.5 border shadow-sm">
+          <!-- 터치 효과 (1.2.8: 파문 · 숨결 · 별빛 한 줄. 진동 스위치는 뺌 — 진동은 켠 그대로) -->
+          <div class="flex items-center justify-between gap-2 py-3">
+            <span id="settingsTouchRowTitle" class="text-xs font-bold text-[#597075]">터치</span>
+            <div id="touchSeg" class="flex rounded-full p-0.5 text-[11px] font-semibold" style="background: rgba(127,167,170,0.14);">
+              <button type="button" data-v="ripple" onclick="setTouchStyle('ripple')" class="px-3 py-1 rounded-full transition">파문</button>
+              <button type="button" data-v="breath" onclick="setTouchStyle('breath')" class="px-3 py-1 rounded-full transition">숨결</button>
+              <button type="button" data-v="star" onclick="setTouchStyle('star')" class="px-3 py-1 rounded-full transition">별빛</button>
+            </div>
+          </div>
+
+          <!-- 진동 (1.2.8: 터치 아래 한 줄, 사용자 결정으로 남김) -->
+          <div class="flex items-center justify-between gap-2 py-3">
+            <span id="settingsHapticTitle" class="text-xs font-bold text-[#597075]">진동</span>
+            <button id="hapticToggleBtn" onclick="event.stopPropagation(); toggleHapticSetting()" type="button" role="switch" aria-label="진동" class="switch-hit relative inline-flex h-6 w-11 p-0.5 items-center rounded-full transition-colors focus:outline-none cursor-pointer">
+              <span id="hapticToggleCircle" class="inline-block h-5 w-5 rounded-full bg-white shadow-md transform transition-transform duration-200"></span>
+            </button>
+          </div>
+          </div>
+        </div>
+
+        <div class="stab-detail dgroup mb-4">
+          <div class="dhead text-[11px] font-semibold mb-1.5 px-1">첫 화면</div>
+          <div class="dcard rounded-2xl px-3.5 py-0.5 border shadow-sm">
+          <!-- 1.2.5 시험: 첫 화면 기분 모양 바꾸기. 기록은 늘 ▲ △ ○ ▽ ▼로 저장하고, 첫 화면에 보이는 모양만 바꾼다 -->
+          <div id="settingsGlyphCard" class="py-2">
+            <!-- 평소에는 접혀 있고, 제목 줄을 누르면 펼친다 -->
+            <button id="glyphCardHeader" type="button" onclick="toggleGlyphCard(event)" aria-expanded="false" aria-controls="glyphCardBody" class="w-full text-xs font-bold flex items-center justify-between py-1 cursor-pointer">
+              <span id="settingsGlyphTitle" class="text-[#597075]">기분 모양</span>
+              <span class="flex items-center gap-1.5 font-semibold">
+                <span id="glyphCardSummary" class="opacity-60"></span>
+                <span id="glyphCardChevron" style="display:inline-block;transition:transform 0.3s ease;opacity:0.6;">▾</span>
+              </span>
+            </button>
+            <div id="glyphCardBody" style="overflow:hidden;max-height:0;opacity:0;transition:max-height 0.35s ease, opacity 0.3s ease, margin 0.35s ease;">
+            <div id="glyphPresetContainer" class="grid grid-cols-4 gap-1.5 mb-2 mt-2"></div>
+            <div id="glyphSlots" class="grid grid-cols-5 gap-1.5"></div>
+            <input id="glyphImageInput" type="file" accept="image/*" class="hidden" onchange="onGlyphImagePicked(this)">
+            <p id="settingsGlyphDesc" style="display:none" class="text-[10.5px] text-gray-500 mt-1.5 leading-relaxed" style="word-break: keep-all;">칸을 눌러 글자나 이모지로, 🖼을 눌러 그림으로 바꿀 수 있어요. 그림은 이 기기에만 둬요. 기록과 그래프는 그대로예요.</p>
+            </div>
+          </div>
+
+          </div>
+        </div>
+
+        <div class="stab-detail dgroup mb-4">
+          <div class="dhead text-[11px] font-semibold mb-1.5 px-1">기록</div>
+          <div class="dcard rounded-2xl px-3.5 py-0.5 border shadow-sm">
+          <!-- 잠 기록 (1.2.8): 켜면 첫 화면 위 가운데 침대와 함께 보기의 잠 줄이 보인다. 새로 설치하면 꺼짐 -->
+          <div class="flex items-center justify-between gap-2 py-3">
+            <div class="min-w-0"><span id="settingsSleepTitle" class="text-xs font-bold text-[#597075]">잠 기록</span><p class="sdesc text-[10.5px] leading-snug mt-0.5" style="word-break:keep-all">첫 화면 위 가운데 침대를 눌러 잠을 적고, 함께 보기에서 기분과 같이 봐요.</p></div>
+            <button id="sleepEnabledBtn" onclick="toggleSleepEnabled(event)" type="button" role="switch" aria-label="잠 기록" class="shrink-0 switch-hit relative inline-flex h-6 w-11 p-0.5 items-center rounded-full transition-colors focus:outline-none cursor-pointer">
+              <span id="sleepEnabledKnob" class="inline-block h-5 w-5 rounded-full bg-white shadow-md transform transition-transform duration-200"></span>
+            </button>
+          </div>
+
+          <!-- 걸음 기록 (1.2.8, 안드로이드 앱만): Health Connect에서 걸음 수를 읽어 함께 보기에. 예전 '활동 정보' 스위치와 같다 -->
+          <div id="settingsStepsRow" class="flex items-center justify-between gap-2 py-3" style="display: none;">
+            <div class="min-w-0"><span id="settingsStepsTitle" class="text-xs font-bold text-[#597075]">걸음 기록</span><p class="sdesc text-[10.5px] leading-snug mt-0.5" style="word-break:keep-all">Health Connect에서 하루 걸음 수를 읽어 와 함께 보기에 보여 줘요.</p></div>
+            <button id="stepsEnabledBtn" onclick="event.stopPropagation(); toggleActivitySetting()" type="button" role="switch" aria-label="걸음 기록" class="shrink-0 switch-hit relative inline-flex h-6 w-11 p-0.5 items-center rounded-full transition-colors focus:outline-none cursor-pointer">
+              <span id="stepsEnabledKnob" class="inline-block h-5 w-5 rounded-full bg-white shadow-md transform transition-transform duration-200"></span>
+            </button>
+          </div>
+
+          </div>
+        </div>
+
+        <!-- 테스트용 샘플 데이터 도구 (스마트폰 전체화면에서도 즉시 테스트 가능) -->
+        <div class="stab-detail grid grid-cols-2 gap-2 mb-3 pt-2">
+          <button id="settingsFillSampleBtn" type="button" onclick="fillSampleData()" class="py-2 px-2.5 rounded-xl bg-[#597075]/10 hover:bg-[#597075]/20 text-[#597075] text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95">
+            <span>📊</span> 14일 샘플 채우기
+          </button>
+          <button id="settingsClearDataBtn" type="button" onclick="clearAllData()" class="py-2 px-2.5 rounded-xl border border-gray-200 bg-white/60 hover:bg-gray-100 text-gray-600 text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95">
+            <span>🗑️</span> 데이터 비우기
+          </button>
+        </div>
+
+        <!-- 상세 칸 아래: 설명은 따로 (1.2.8 사용자 결정) -->
+        <div class="stab-detail text-center pb-1">
+          <button type="button" onclick="openSettingsHelp(event)" class="text-[11px] opacity-60 hover:opacity-100 underline underline-offset-4 transition cursor-pointer" style="color: inherit;">설정 설명 보기</button>
+        </div>
+
+        <!-- 예전 칸들(테마·터치·진동·활동 정보): 화면에는 안 보이고, 테마 코드가 찾는 자리로만 남긴다 (1.2.8) -->
+        <div id="settingsLegacy" style="display:none !important;" aria-hidden="true">
         <!-- 활동 정보 (안드로이드 앱 전용, 기본 꺼짐): Health Connect에서 잠·걸음 하루 합계를 읽기만 한다 -->
-        <div id="settingsActivityCard" class="detail-only bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2 transition-colors" style="display: none;">
+        <div id="settingsActivityCard" class="bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2 transition-colors" style="display: none;">
           <div class="flex items-center justify-between">
             <div id="settingsActivityTitle" class="font-bold text-[#597075] text-[13px] flex items-center gap-1.5">
               <span>🌙</span> 활동 정보
@@ -749,29 +889,40 @@
           </p>
         </div>
 
-        <!-- 매일 기분 기록 알림 설정 (기본: 저녁 6시 18:00 / 시간 변경 가능 / 데일리요 스타일 기분 선택창 연동) -->
-        <div id="settingsAlarmCard" class="bg-white rounded-2xl p-3.5 mb-4 border border-gray-100 shadow-sm text-xs text-gray-700 space-y-2.5 transition-colors">
-          <!-- 1.2.5: 제목 한 줄, 그 아래 시각과 스위치 한 줄. 상태 글·설명은 뺐다 (큰 글자에서 세로로 늘어지던 문제) -->
-          <div id="settingsAlarmTitle" class="font-bold text-[#597075] text-[13px] flex items-center gap-1.5">
-            <span>🔔</span> <span>매일 <span class="detail-only">기분 기록 </span>알림</span>
+        <!-- 배경 및 화면 테마 선택 (시스템 연동 / 순백 / 중간톤 / 다크) -->
+        <div class="stab-detail mb-4">
+          <div id="settingsThemeTitle" class="text-xs font-bold text-[#597075] mb-2 flex items-center justify-between gap-2">
+            <span>테마 선택</span>
+            <span id="themeSystemLiveBadge" class="text-[10px] text-[#597075] bg-[#597075]/10 px-2 py-0.5 rounded-full font-semibold shrink-0">시스템 연동 중</span>
           </div>
-          <div id="settingsAlarmTimeBox" class="flex items-center justify-between gap-3 bg-[#f4f7f8] rounded-xl px-3 py-2 border border-transparent transition-colors">
-            <input id="alarmTimeInput" type="time" value="18:00" onchange="updateAlarmTimeSetting(this.value)" aria-label="알림 시각"
-                   class="text-xs font-bold px-2 py-1 rounded-lg bg-white text-[#597075] border border-gray-200 outline-none cursor-pointer shrink-0">
-            <button id="alarmToggleBtn" onclick="toggleAlarmSetting()" type="button" role="switch" aria-label="매일 기분 기록 알림" class="switch-hit relative inline-flex h-6 w-11 p-0.5 items-center rounded-full transition-colors focus:outline-none bg-[#597075] cursor-pointer shrink-0" title="매일 기분 기록 알림 토글">
-              <span id="alarmToggleCircle" class="inline-block h-5 w-5 rounded-full bg-white shadow-md transform transition-transform duration-200 translate-x-[20px]"></span>
+          <div class="space-y-1.5">
+            <!-- 1. 시스템 설정 연동 (기본 권장) -->
+            <button id="themeBtn-system" onclick="setPreviewTheme('system')" class="w-full border-2 border-[#597075] bg-[#597075]/10 text-[#597075] rounded-xl p-2.5 text-left flex items-center justify-between transition">
+              <div class="flex items-center gap-2">
+                <span class="text-sm">🌓</span>
+                <div>
+                  <div class="font-bold text-xs">시스템 설정 연동 <span class="bg-[#597075] text-white text-[9px] px-1.5 py-0.2 rounded font-bold ml-1">기본 권장</span></div>
+                  <div class="text-[10px] opacity-70" id="themeSystemDesc">스마트폰 다크/라이트 모드 설정에 자동 연동</div>
+                </div>
+              </div>
+              <span id="check-theme-system" class="text-xs font-bold">✓</span>
             </button>
+            <div class="grid grid-cols-3 gap-2 text-center text-xs pt-1">
+              <button id="themeBtn-white" onclick="setPreviewTheme('white')" class="border border-gray-200 bg-[#fbfcfc] text-gray-700 rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center">순백</button>
+              <button id="themeBtn-neutral" onclick="setPreviewTheme('neutral')" class="border border-gray-200 bg-[#ecefea] text-gray-700 rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center">한지 미색</button>
+              <button id="themeBtn-dark" onclick="setPreviewTheme('dark')" class="border border-gray-200 bg-[#141718] text-white rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center">다크</button>
+            </div>
           </div>
         </div>
 
         <!-- 터치 효과 선택 영역 (가로 3칸) -->
-        <div class="detail-only mb-4">
+        <div class="stab-detail mb-4">
           <div class="text-xs font-bold mb-2 flex items-center justify-between">
             <span id="settingsTouchTitle" class="text-[#597075]">터치 효과</span>
             <span class="flex items-center gap-1.5 font-semibold opacity-90">
               <span>진동</span>
-              <button id="hapticToggleBtn" onclick="event.stopPropagation(); toggleHapticSetting()" type="button" role="switch" aria-label="진동" class="switch-hit relative inline-flex h-6 w-11 p-0.5 items-center rounded-full transition-colors focus:outline-none cursor-pointer">
-                <span id="hapticToggleCircle" class="inline-block h-5 w-5 rounded-full bg-white shadow-md transform transition-transform duration-200"></span>
+              <button id="hapticToggleBtnOld" type="button" class="hidden">
+                <span id="hapticToggleCircleOld" class="inline-block h-5 w-5 rounded-full bg-white shadow-md transform transition-transform duration-200"></span>
               </button>
             </span>
           </div>
@@ -809,80 +960,6 @@
           </div>
         </div>
 
-        <!-- 1.2.5 시험: 첫 화면 기분 모양 바꾸기. 기록은 늘 ▲ △ ○ ▽ ▼로 저장하고, 첫 화면에 보이는 모양만 바꾼다 -->
-        <div id="settingsGlyphCard" class="detail-only mb-4">
-          <!-- 평소에는 접혀 있고, 제목 줄을 누르면 펼친다 -->
-          <button id="glyphCardHeader" type="button" onclick="toggleGlyphCard(event)" aria-expanded="false" aria-controls="glyphCardBody" class="w-full text-xs font-bold flex items-center justify-between py-1 cursor-pointer">
-            <span id="settingsGlyphTitle" class="text-[#597075]">첫 화면 기분 모양</span>
-            <span class="flex items-center gap-1.5 font-semibold">
-              <span id="glyphCardSummary" class="opacity-60"></span>
-              <span id="glyphCardChevron" style="display:inline-block;transition:transform 0.3s ease;opacity:0.6;">▾</span>
-            </span>
-          </button>
-          <div id="glyphCardBody" style="overflow:hidden;max-height:0;opacity:0;transition:max-height 0.35s ease, opacity 0.3s ease, margin 0.35s ease;">
-          <div id="glyphPresetContainer" class="grid grid-cols-4 gap-1.5 mb-2 mt-2"></div>
-          <div id="glyphSlots" class="grid grid-cols-5 gap-1.5"></div>
-          <input id="glyphImageInput" type="file" accept="image/*" class="hidden" onchange="onGlyphImagePicked(this)">
-          <p id="settingsGlyphDesc" class="text-[10.5px] text-gray-500 mt-1.5 leading-relaxed" style="word-break: keep-all;">칸을 눌러 글자나 이모지로, 🖼을 눌러 그림으로 바꿀 수 있어요. 그림은 이 기기에만 둬요. 기록과 그래프는 그대로예요.</p>
-          </div>
-        </div>
-
-        <!-- 그래프 색 (1.2.7): 흑백(기본, 예전처럼) / 칼라(기분·잠·걸음을 색으로) -->
-        <div class="detail-only mb-4 flex items-center justify-between gap-2">
-          <span id="settingsChartColorTitle" class="text-xs font-bold text-[#597075]">그래프 색</span>
-          <div id="chartColorSwitch" class="flex rounded-full p-0.5 text-[11px] font-semibold" style="background: rgba(127,167,170,0.14);">
-            <button type="button" data-v="mono" onclick="setChartColor(false, event)" class="px-3 py-1 rounded-full transition">흑백</button>
-            <button type="button" data-v="color" onclick="setChartColor(true, event)" class="px-3 py-1 rounded-full transition">칼라</button>
-          </div>
-        </div>
-
-        <!-- 배경 및 화면 테마 선택 (시스템 연동 / 순백 / 중간톤 / 다크) -->
-        <div class="detail-only mb-4">
-          <div id="settingsThemeTitle" class="text-xs font-bold text-[#597075] mb-2 flex items-center justify-between gap-2">
-            <span>테마 선택</span>
-            <span id="themeSystemLiveBadge" class="text-[10px] text-[#597075] bg-[#597075]/10 px-2 py-0.5 rounded-full font-semibold shrink-0">시스템 연동 중</span>
-          </div>
-          <div class="space-y-1.5">
-            <!-- 1. 시스템 설정 연동 (기본 권장) -->
-            <button id="themeBtn-system" onclick="setPreviewTheme('system')" class="w-full border-2 border-[#597075] bg-[#597075]/10 text-[#597075] rounded-xl p-2.5 text-left flex items-center justify-between transition">
-              <div class="flex items-center gap-2">
-                <span class="text-sm">🌓</span>
-                <div>
-                  <div class="font-bold text-xs">시스템 설정 연동 <span class="bg-[#597075] text-white text-[9px] px-1.5 py-0.2 rounded font-bold ml-1">기본 권장</span></div>
-                  <div class="text-[10px] opacity-70" id="themeSystemDesc">스마트폰 다크/라이트 모드 설정에 자동 연동</div>
-                </div>
-              </div>
-              <span id="check-theme-system" class="text-xs font-bold">✓</span>
-            </button>
-            <div class="grid grid-cols-3 gap-2 text-center text-xs pt-1">
-              <button id="themeBtn-white" onclick="setPreviewTheme('white')" class="border border-gray-200 bg-[#fbfcfc] text-gray-700 rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center">순백</button>
-              <button id="themeBtn-neutral" onclick="setPreviewTheme('neutral')" class="border border-gray-200 bg-[#ecefea] text-gray-700 rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center">한지 미색</button>
-              <button id="themeBtn-dark" onclick="setPreviewTheme('dark')" class="border border-gray-200 bg-[#141718] text-white rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center">다크</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 글자 크기 조절 (1단계 기본 / 3단계 크게 / 5단계 아주 크게) -->
-        <div class="mb-4">
-          <div class="text-xs font-bold mb-2 flex items-center justify-between gap-2">
-            <span id="settingsFontTitle" class="text-[#597075]">글자 크기<span class="detail-only"> 조절</span></span>
-            <span id="fontStepLiveBadge" class="detail-only text-[10px] text-[#597075] bg-[#597075]/10 px-2 py-0.5 rounded-full font-semibold shrink-0">1단계 (기본)</span>
-          </div>
-          <div class="grid grid-cols-3 gap-2 text-center text-xs">
-            <button id="fontBtn-1" type="button" onclick="setFontStep(1)" class="border border-transparent bg-[#597075]/15 text-[#597075] font-bold rounded-xl py-2 shadow-sm transition flex items-center justify-center cursor-pointer active:scale-95"><span class="detail-only">기본</span><span class="simple-only">보통</span></button>
-            <button id="fontBtn-3" type="button" onclick="setFontStep(3)" class="border border-gray-200 bg-white text-gray-700 rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center cursor-pointer active:scale-95"><span class="detail-only">크게</span><span class="simple-only">크게</span></button>
-            <button id="fontBtn-5" type="button" onclick="setFontStep(5)" class="border border-gray-200 bg-white text-gray-700 rounded-xl py-2 font-medium hover:border-[#597075] transition flex items-center justify-center cursor-pointer active:scale-95"><span class="detail-only">아주 크게</span><span class="simple-only">아주 크게</span></button>
-          </div>
-        </div>
-
-        <!-- 테스트용 샘플 데이터 도구 (스마트폰 전체화면에서도 즉시 테스트 가능) -->
-        <div class="detail-only grid grid-cols-2 gap-2 mb-3 pt-1">
-          <button id="settingsFillSampleBtn" type="button" onclick="fillSampleData()" class="py-2 px-2.5 rounded-xl bg-[#597075]/10 hover:bg-[#597075]/20 text-[#597075] text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95">
-            <span>📊</span> 14일 샘플 채우기
-          </button>
-          <button id="settingsClearDataBtn" type="button" onclick="clearAllData()" class="py-2 px-2.5 rounded-xl border border-gray-200 bg-white/60 hover:bg-gray-100 text-gray-600 text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95">
-            <span>🗑️</span> 데이터 비우기
-          </button>
         </div>
 
         <!-- 개인정보처리방침 웹페이지 링크 -->
@@ -904,7 +981,7 @@
         </p>
       </div>
 
-      <div class="detail-only text-center pb-1">
+      <div class="stab-detail text-center pb-1">
         <button type="button" onclick="event.stopPropagation(); triggerHaptic(); showWhatsNew(true)" class="text-[11px] opacity-60 hover:opacity-100 underline underline-offset-4 transition cursor-pointer" style="color: inherit;">새로워진 점 보기</button>
       </div>
       <div id="settingsVersion" class="text-center text-[10px] text-gray-400">Life Guard v1.2.7-alpha (알파판)</div>
@@ -2324,6 +2401,7 @@
 
     function setTouchStyle(style) {
       currentTouchStyle = style;
+      setTimeout(() => { try { updateSettingsTabUI(); } catch (_) {} }, 0);
       const styles = ['ripple', 'breath', 'star'];
       const effective = getEffectiveTheme(currentTheme);
       const isDark = effective === 'dark';
@@ -2823,6 +2901,8 @@
 
     function openSettingsModal() {
       hideControls();
+      settingsTab = 'basic'; // 설정은 늘 기본 칸부터
+      try { updateSettingsTabUI(); } catch (_) {}
       const m = document.getElementById('settingsModal');
       if (m) {
         m.classList.remove('hidden');
@@ -4478,6 +4558,8 @@
     function updateActivitySettingUI() {
       const card = document.getElementById('settingsActivityCard');
       if (card) card.style.display = hasActivityBridge() ? '' : 'none';
+      const stepsRow = document.getElementById('settingsStepsRow');
+      if (stepsRow) stepsRow.style.display = hasActivityBridge() ? '' : 'none';
       const toggleBtn = document.getElementById('activityToggleBtn');
       const toggleCircle = document.getElementById('activityToggleCircle');
       const statusText = document.getElementById('activitySettingStatusText');
@@ -4490,6 +4572,14 @@
         toggleCircle.style.transform = isActivityEnabled ? 'translateX(20px)' : 'translateX(0px)';
         toggleBtn.setAttribute('aria-checked', isActivityEnabled ? 'true' : 'false');
       }
+      const sBtn = document.getElementById('stepsEnabledBtn'), sKnob = document.getElementById('stepsEnabledKnob');
+      if (sBtn && sKnob) {
+        sBtn.style.backgroundColor = isActivityEnabled ? activeColor : 'rgba(128,128,128,0.4)';
+        sKnob.style.transform = isActivityEnabled ? 'translateX(1.25rem)' : 'translateX(0)';
+        sBtn.setAttribute('aria-checked', isActivityEnabled ? 'true' : 'false');
+      }
+      const sTitle = document.getElementById('settingsStepsTitle');
+      if (sTitle) sTitle.style.color = isDark ? '#9ec0c4' : '';
       if (statusText) {
         if (!isActivityEnabled) {
           statusText.textContent = '현재: 끔';
@@ -4693,67 +4783,137 @@
       saveActivity();
     }
 
-    // 1.2.8 보기 방식 (사용자 결정): 'simple'(가볍게) / 'detail'(꼼꼼히). 스위치는 설정 맨 위 하나.
-    // 새로 설치하면 가볍게, 이미 쓰던 사람은 꼼꼼히(지금 그대로)에서 시작. 가볍게에서는
-    // 잠·걸음·곡선·테마·그래프 색·터치 효과·기분 모양·샘플/비우기·안내를 숨기고, 테마는 시스템 색·그래프는 흑백.
-    // 숨긴 설정값은 지우지 않는다 → 꼼꼼히로 돌아가면 예전 그대로.
-    let uiSimple = (function() {
-      try {
-        let v = localStorage.getItem('lifeguard_ui_mode');
-        if (v !== 'simple' && v !== 'detail') {
-          const used = ['lifeguard_mood_records', 'lifeguard_pill_records', 'lifeguard_theme', 'lifeguard_doctor_notes', 'lifeguard_med_enabled']
-            .some(k => localStorage.getItem(k) !== null);
-          v = used ? 'detail' : 'simple';
-          localStorage.setItem('lifeguard_ui_mode', v);
-        }
-        return v === 'simple';
-      } catch (_) { return false; }
-    })();
-    document.body.dataset.ui = uiSimple ? 'simple' : 'detail';
-    function storedChartMode() { try { return localStorage.getItem('lifeguard_chart_mode') === 'curve' ? 'curve' : 'bar'; } catch (_) { return 'bar'; } }
-    function storedChartColor() { try { return localStorage.getItem('lifeguard_chart_color') === 'color'; } catch (_) { return false; } }
-    function storedTheme() {
-      try { const t = localStorage.getItem('lifeguard_theme'); if (['system', 'white', 'neutral', 'dark'].includes(t)) return t; } catch (_) {}
-      return 'system';
-    }
-    function updateUiModeUI() {
-      document.body.dataset.ui = uiSimple ? 'simple' : 'detail';
+    // 1.2.8 설정 두 칸 (사용자 결정): [기본] 이름·복약·매일 알림·기록 지키기 / [상세] 나머지 설정.
+    // 설정을 열면 늘 기본 칸부터. 앱 기능(잠 기록·곡선·테마 등)은 상세 칸 안의 스위치로 하나씩.
+    let settingsTab = 'basic';
+    function updateSettingsTabUI() {
+      const m = document.getElementById('settingsModal');
+      if (m) m.dataset.tab = settingsTab;
       const sw = document.getElementById('uiModeSwitch');
-      if (!sw) return;
       const dark = getEffectiveTheme(currentTheme) === 'dark';
-      const lt = document.getElementById('settingsUiTitle');
-      if (lt) lt.style.color = dark ? '#9ec0c4' : '';
-      sw.querySelectorAll('button').forEach(b => {
-        const on = (b.dataset.v === 'simple') === uiSimple;
+      [sw].forEach(box => {
+        if (!box) return;
+        box.querySelectorAll('button').forEach(b => {
+          const on = b.dataset.v === settingsTab;
+          b.style.background = on ? (dark ? '#9ec0c4' : '#597075') : 'transparent';
+          b.style.color = on ? (dark ? '#141718' : '#fff') : (dark ? 'rgba(255,255,255,0.6)' : '#597075');
+        });
+      });
+      const sb = document.getElementById('sleepEnabledBtn');
+      const sk = document.getElementById('sleepEnabledKnob');
+      if (sb && sk) {
+        sb.style.backgroundColor = sleepEnabled ? getThemeColor() : 'rgba(128,128,128,0.4)';
+        sk.style.transform = sleepEnabled ? 'translateX(1.25rem)' : 'translateX(0)';
+        sb.setAttribute('aria-checked', sleepEnabled ? 'true' : 'false');
+      }
+      // 상세 칸 묶음 카드 색 (테마 따라)
+      const eff = getEffectiveTheme(currentTheme);
+      document.querySelectorAll('#settingsModal .dcard').forEach(c => {
+        c.style.background = dark ? '#222628' : (eff === 'neutral' ? 'rgba(255,255,255,0.7)' : '#ffffff');
+        c.style.borderColor = dark ? '#333a3d' : (eff === 'neutral' ? '#dce2dc' : '#f3f4f6');
+        c.style.setProperty('--dline', dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)');
+      });
+      document.querySelectorAll('#settingsModal .dhead').forEach(h => { h.style.color = dark ? 'rgba(255,255,255,0.45)' : '#9ca3af'; });
+      document.querySelectorAll('#settingsModal .sdesc').forEach(d => { d.style.color = dark ? 'rgba(255,255,255,0.5)' : '#6b7280'; });
+      ['settingsSleepTitle', 'settingsStepsTitle', 'settingsHapticTitle', 'settingsChartColorTitle', 'settingsThemeRowTitle', 'settingsTouchRowTitle'].forEach(id => {
+        const t = document.getElementById(id);
+        if (t) t.style.color = dark ? '#9ec0c4' : '';
+      });
+      const accent = dark ? '#9ec0c4' : (getEffectiveTheme(currentTheme) === 'neutral' ? '#455a5c' : '#597075');
+      // 테마 동그라미: 고른 것에 고리
+      document.querySelectorAll('#themeDots button').forEach(b => {
+        const on = b.dataset.v === currentTheme;
+        const dot = b.querySelector('.dot'), lbl = b.querySelector('.lbl');
+        if (dot) dot.style.boxShadow = on ? `0 0 0 2px ${dark ? '#141718' : '#fbfcfc'}, 0 0 0 4px ${accent}` : `inset 0 0 0 1px ${dark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)'}`;
+        if (lbl) { lbl.style.color = on ? accent : (dark ? 'rgba(255,255,255,0.55)' : '#6b7280'); lbl.style.fontWeight = on ? '700' : '500'; }
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      // 터치: 파문 · 숨결 · 별빛
+      document.querySelectorAll('#touchSeg button').forEach(b => {
+        const on = b.dataset.v === currentTouchStyle;
         b.style.background = on ? (dark ? '#9ec0c4' : '#597075') : 'transparent';
         b.style.color = on ? (dark ? '#141718' : '#fff') : (dark ? 'rgba(255,255,255,0.6)' : '#597075');
       });
+      // 글자 크기 칸은 이름 칸과 같은 모양
+      const fc = document.getElementById('settingsFontCard'), pcard = document.getElementById('settingsPatientCard');
+      if (fc && pcard) fc.className = 'stab-basic ' + pcard.className.replace('space-y-2', '');
     }
-    function setUiMode(mode, e) {
+    function setSettingsTab(tab, e) {
       if (e && e.stopPropagation) e.stopPropagation();
-      const simple = mode === 'simple';
-      if (simple === uiSimple) return;
-      uiSimple = simple;
-      try { localStorage.setItem('lifeguard_ui_mode', simple ? 'simple' : 'detail'); } catch (_) {}
+      tab = tab === 'detail' ? 'detail' : 'basic';
+      if (tab === settingsTab) return;
+      settingsTab = tab;
       triggerHaptic();
-      chartMode = simple ? 'bar' : storedChartMode();
-      chartColorOn = simple ? false : storedChartColor();
-      setPreviewTheme(simple ? 'system' : storedTheme());
-      updateUiModeUI();
-      try { updateChartColorUI(); } catch (_) {}
+      updateSettingsTabUI();
+      const m = document.getElementById('settingsModal');
+      if (m) m.scrollTop = 0;
+    }
+
+    // 설정 설명 (1.2.8 사용자 결정: 설정 화면에는 설명을 빼고, 설명은 따로 모아 본다)
+    function openSettingsHelp(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      triggerHaptic();
+      const app = !!window.AndroidBridge;
+      const items = [
+        ['💊 복약 기록', '복약 치료를 받지 않으면 꺼 두세요. 첫 화면과 함께 보기에서 약이 숨고 기분만 보여요.'],
+        app ? ['🔔 매일 알림', '정한 시각에 오늘 기분을 묻는 알림이 와요.'] : null,
+        ['🛟 기록 지키기', '구글로 로그인하면 기록을 저절로 담아 두어, 폰을 바꾸거나 기록이 지워져도 다시 불러올 수 있어요. 이름은 담지 않아요.'],
+        ['글자 크기', '앱 전체 글자를 보통 · 크게 · 아주 크게로 바꿔요.'],
+        ['테마', '흰 · 미(한지 미색) · 검(어두운 화면) · 시스템(폰 설정을 따라 밝게/어둡게).'],
+        ['그래프 색', '흑백은 한 가지 색, 칼라는 기분·잠·걸음을 색으로 나눠 보여 줘요.'],
+        ['터치', '화면을 누를 때 퍼지는 모양이에요. 파문 · 숨결 · 별빛.'],
+        ['기분 모양', '첫 화면 기분 단추의 모양을 글자·이모지·그림으로 바꿀 수 있어요. 그림은 이 기기에만 두고, 기록과 그래프는 그대로예요.'],
+        ['잠 기록', '켜면 첫 화면 위 가운데에 침대가 생겨 잠을 적을 수 있고, 함께 보기에 잠 줄이 보여요. 꺼도 적어 둔 잠은 지워지지 않아요.'],
+        app ? ['걸음 기록', 'Health Connect에서 하루 걸음 수를 읽어 함께 보기에 보여 줘요. 읽기만 하고, 하루 합계만 이 기기에 둬요.'] : null,
+        ['샘플 채우기 · 데이터 비우기', '써 보기용으로 14일치 기록을 채우거나, 이 기기의 기록을 모두 지워요.']
+      ].filter(Boolean);
+      const dark = getEffectiveTheme(currentTheme) === 'dark';
+      const sub = dark ? 'text-white/60' : 'text-gray-500';
+      const head = dark ? 'text-[#9ec0c4]' : 'text-[#597075]';
+      cloudSheet(
+        '<div class="font-bold text-[15px] ' + head + '">설정 설명</div>' +
+        items.map(([t, d]) => '<div><div class="font-bold text-[12.5px] ' + head + '">' + t + '</div><p class="text-[12px] leading-relaxed ' + sub + '">' + d + '</p></div>').join('') +
+        cloudBtn('닫기', 'closeCloudSheet(event)', false)
+      , 'help');
+    }
+
+    // 잠 기록 (1.2.8): 새로 설치하면 꺼짐, 이미 쓰던 사람은 켜진 그대로. 끄면 첫 화면 침대와 함께 보기·보내기의 잠이 숨는다 (기록은 남음)
+    let sleepEnabled = (function() {
+      try {
+        let v = localStorage.getItem('lifeguard_sleep_enabled');
+        if (v !== 'true' && v !== 'false') {
+          const used = ['lifeguard_mood_records', 'lifeguard_pill_records', 'lifeguard_theme', 'lifeguard_doctor_notes', 'lifeguard_med_enabled', 'lifeguard_sleep_log']
+            .some(k => localStorage.getItem(k) !== null);
+          v = used ? 'true' : 'false';
+          localStorage.setItem('lifeguard_sleep_enabled', v);
+        }
+        return v === 'true';
+      } catch (_) { return true; }
+    })();
+    document.body.dataset.sleep = sleepEnabled ? 'on' : 'off';
+    function toggleSleepEnabled(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      sleepEnabled = !sleepEnabled;
+      try { localStorage.setItem('lifeguard_sleep_enabled', sleepEnabled ? 'true' : 'false'); } catch (_) {}
+      document.body.dataset.sleep = sleepEnabled ? 'on' : 'off';
+      triggerHaptic();
+      updateSettingsTabUI();
       try { renderReportData(); } catch (_) {}
       try { renderActivityData(); } catch (_) {}
-      try { renderCloudCard(); } catch (_) {}
     }
 
     // 보고서 그래프 보기 방식: 'bar'(기본, 기록 그대로) / 'curve'(흐름). 이 기기에만 기억한다.
-    let chartMode = uiSimple ? 'bar' : storedChartMode();
+    let chartMode = (function() {
+      try { return localStorage.getItem('lifeguard_chart_mode') === 'curve' ? 'curve' : 'bar'; }
+      catch (_) { return 'bar'; }
+    })();
 
     function setChartMode(mode, e) {
       if (e && e.stopPropagation) e.stopPropagation();
       chartMode = mode === 'curve' ? 'curve' : 'bar';
       try { localStorage.setItem('lifeguard_chart_mode', chartMode); } catch (_) {}
       triggerHaptic();
+      try { updateSettingsTabUI(); } catch (_) {}
       renderReportData();
       if (chartZoomState) drawChartZoom(); // 크게 보기에서 바꿨으면 큰 그래프도 다시
     }
@@ -4847,7 +5007,7 @@
     // 기분 색 (1.2.7, 사용자 요청: 흐리고 작아 한눈에 알아보기 어렵다)
     // ▲ 매우 좋음 연두 · △ 좋음 초록 · ○ 보통 파랑 · ▽ 나쁨 주황 · ▼ 매우 나쁨 빨강. 어두운 화면은 조금 밝게
     // 설정 > 그래프 색: 'mono'(흑백, 기본) / 'color'(칼라). 흑백이면 예전처럼 테마 한 색 (1.2.7, 사용자 결정)
-    let chartColorOn = uiSimple ? false : storedChartColor();
+    let chartColorOn = (function() { try { return localStorage.getItem('lifeguard_chart_color') === 'color'; } catch (_) { return false; } })();
     function setChartColor(on, e) {
       if (e && e.stopPropagation) e.stopPropagation();
       chartColorOn = !!on;
@@ -4858,6 +5018,14 @@
       if (chartZoomState) drawChartZoom();
     }
     function updateChartColorUI() {
+      // 1.2.8 (사용자 결정): 칼라를 고르면 '그래프 색' 글자가 한 자씩 우리 기분 색으로 (연두 · 초록 · 주황 · 빨강)
+      const ct = document.getElementById('settingsChartColorTitle');
+      if (ct) {
+        if (chartColorOn) {
+          const cols = [moodColor(2), moodColor(1), moodColor(-1), moodColor(-2)];
+          ct.innerHTML = ['그', '래', '프', '색'].map((ch, i) => (i === 3 ? ' ' : '') + '<span style="color:' + cols[i] + '">' + ch + '</span>').join('');
+        } else ct.textContent = '그래프 색';
+      }
       document.querySelectorAll('#chartColorSwitch button').forEach(b => {
         const on = (b.dataset.v === 'color') === chartColorOn;
         const dark = getEffectiveTheme(currentTheme) === 'dark';
@@ -5766,8 +5934,8 @@
 
       if (fontTitle) {
         fontTitle.className = effectiveTheme === 'dark'
-          ? 'text-[#9ec0c4]'
-          : (effectiveTheme === 'neutral' ? 'text-[#455a5c]' : 'text-[#597075]');
+          ? 'text-xs font-bold text-[#9ec0c4]'
+          : (effectiveTheme === 'neutral' ? 'text-xs font-bold text-[#455a5c]' : 'text-xs font-bold text-[#597075]');
       }
       if (liveBadge) {
         liveBadge.textContent = labelMap[normalized] || '1단계 (기본)';
@@ -5801,8 +5969,8 @@
     // 4귀퉁이 화면 전체 색상 동적 적응 (시스템 연동, 순백, 한지 미색, 다크)
     function setPreviewTheme(theme) {
       currentTheme = theme;
-      if (!uiSimple) { try { localStorage.setItem('lifeguard_theme', theme); } catch (_) {} } // 가볍게는 시스템 색만 쓰고 고른 테마는 남겨 둔다
-      try { updateUiModeUI(); } catch (_) {}
+      try { localStorage.setItem('lifeguard_theme', theme); } catch (_) {}
+      try { updateSettingsTabUI(); } catch (_) {}
       const effectiveTheme = getEffectiveTheme(theme);
 
       const settingsFillSampleBtn = document.getElementById('settingsFillSampleBtn');
@@ -6629,7 +6797,6 @@
       manual = manual === true;
       if (whatsNewEl) return;
       if (!manual) {
-        if (uiSimple) return; // 가볍게: 새로워진 점은 띄우지 않는다 (1.2.8)
         if (whatsNewSeen()) return;
         // 다른 창(알림으로 연 기분 선택창, 메모 등)이 열려 있으면 이번에는 띄우지 않고 다음에 띄운다
         if (isAnyWindowOpen()) return;
@@ -6786,6 +6953,8 @@
     }
     function closeSleepModal(e) {
       if (e && e.stopPropagation) e.stopPropagation();
+      const wrote = flushSleepSave();
+      if (wrote) showToast('잠 기록을 저장했어요');
       const m = document.getElementById('sleepModal');
       if (m) { m.classList.add('hidden'); m.style.display = 'none'; }
       sleepEdit = null;
@@ -6798,6 +6967,7 @@
       const oldest = new Date(today); oldest.setDate(today.getDate() - SLEEP_BACK_DAYS);
       if (d > today || d < oldest) return;
       triggerHaptic();
+      flushSleepSave();
       loadSleepEdit(localDateKey(d));
       renderSleepModal();
     }
@@ -6819,6 +6989,7 @@
       const today = localDateKey(new Date());
       const oldest = new Date(); oldest.setDate(oldest.getDate() - SLEEP_BACK_DAYS);
       if (v > today || v < localDateKey(oldest)) return;
+      flushSleepSave();
       loadSleepEdit(v);
       renderSleepModal();
     }
@@ -6846,8 +7017,8 @@
         // 자동으로 잰 날 / 아직 적지 않은 날(처음 그려 둔 오후 11시~오전 7시는 옅게) 안내 (1.2.7, 사용자 결정)
         const auto = st.fromAuto && !st.dirty, blank = !st.saved && !st.fromAuto && !st.dirty;
         el.style.display = st.mode === 'time' && (auto || blank) ? 'block' : 'none';
-        el.textContent = auto ? '자동으로 잰 잠이에요. 다르면 끌어서 고친 뒤 저장해 주세요.'
-          : '아직 적지 않은 날이에요. 끌어서 맞춘 뒤 저장해 주세요.';
+        el.textContent = auto ? '자동으로 잰 잠이에요. 다르면 끌어서 고치면 저절로 저장돼요.'
+          : '아직 적지 않은 날이에요. 끌어서 맞추면 저절로 저장돼요.';
       });
       // 자동으로 재기 (안드로이드 앱만)
       set('sleepAutoCard', el => { el.style.display = hasSleepAutoBridge() ? 'block' : 'none'; });
@@ -6890,12 +7061,13 @@
       });
       const colOf = (k) => k === 'night' ? 'var(--sl-main)' : k === 'wake' ? 'var(--sl-wake)' : 'var(--sl-nap)';
       const rank = (x) => x.kind === 'wake' ? 1 : 0;
-      const order = st.segs.map((x, i) => i).filter(i => i !== st.sel).sort((a, b) => rank(st.segs[a]) - rank(st.segs[b])).concat([st.sel]);
+      // 깬 때는 늘 밤잠 위에 (밤잠 시각을 고치면 밤잠이 맨 위로 와서 주황 띠를 덮던 것, 1.2.8 사용자 제보)
+      const order = st.segs.map((x, i) => i).sort((a, b) => (rank(st.segs[a]) - rank(st.segs[b])) || ((a === st.sel) - (b === st.sel)));
       order.forEach(i => {
         const x = st.segs[i];
         if (!x) return;
         const pale = !st.saved && !st.fromAuto && !st.dirty; // 아직 적지 않은 날: 처음 그려 둔 구간은 옅게
-        const g = mk('g', { opacity: (i === st.sel ? 1 : 0.55) * (pale ? 0.4 : 1) });
+        const g = mk('g', { opacity: (i === st.sel ? 1 : (x.kind === 'wake' ? 0.9 : 0.55)) * (pale ? 0.4 : 1) });
         mk('path', { d: arc(x.start, x.end, R), fill: 'none', stroke: colOf(x.kind), 'stroke-width': x.kind === 'wake' ? W - 12 : W, 'stroke-linecap': 'round' }, g);
         ['start', 'end'].forEach(k => {
           const [hx, hy] = sleepPt(x[k], R);
@@ -6945,12 +7117,12 @@
           del.textContent = '×'; del.setAttribute('aria-label', '지우기');
           del.style.cssText = 'padding-left:4px;font-weight:700;color:var(--sl-muted);';
           b.appendChild(del);
-          del.onclick = (ev) => { ev.stopPropagation(); triggerHaptic(); st.segs.splice(i, 1); st.sel = 0; st.dirty = true; renderSleepModal(); };
+          del.onclick = (ev) => { ev.stopPropagation(); triggerHaptic(); st.segs.splice(i, 1); st.sel = 0; st.dirty = true; sleepAutoSave(); renderSleepModal(); };
         }
         b.onclick = (ev) => { ev.stopPropagation(); st.sel = i; renderSleepModal(); };
         box.appendChild(b);
       });
-      const add = (label, f) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'sl-pill add'; b.textContent = label; b.onclick = (ev) => { ev.stopPropagation(); triggerHaptic(); f(); st.dirty = true; renderSleepModal(); }; box.appendChild(b); };
+      const add = (label, f) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'sl-pill add'; b.textContent = label; b.onclick = (ev) => { ev.stopPropagation(); triggerHaptic(); f(); st.dirty = true; sleepAutoSave(); renderSleepModal(); }; box.appendChild(b); };
       add('+ 밤중에 깬 때', () => {
         const n = st.segs.find(x => x.kind === 'night');
         const mid = n ? (n.start + Math.round(sleepDur(n) / 2 / 5) * 5) % 1440 : 180;
@@ -7009,7 +7181,7 @@
           x[drag.k] = snap(m);
         }
         triggerHaptic();
-        st.dirty = true;
+        st.dirty = true; sleepAutoSave();
         drawSleepDial(); renderSleepFine(); renderSleepPills();
         const n = document.getElementById('sleepAutoNote'); if (n) n.style.display = 'none';
       });
@@ -7041,7 +7213,7 @@
       if (!box || !st) return;
       const x = st.segs[st.sel] || st.segs[0];
       const wrap = (v) => ((v % 1440) + 1440) % 1440;
-      const after = () => { st.dirty = true; drawSleepDial(); renderSleepPills(); updateVals(); const n = document.getElementById('sleepAutoNote'); if (n) n.style.display = 'none'; };
+      const after = () => { st.dirty = true; sleepAutoSave(); drawSleepDial(); renderSleepPills(); updateVals(); const n = document.getElementById('sleepAutoNote'); if (n) n.style.display = 'none'; };
       const rows = x.kind === 'wake'
         ? [ { label: '깬 시각', val: () => sleepFmt(x.start), step: (d) => { const len = sleepDur(x); x.start = wrap(x.start + d); x.end = wrap(x.start + len); } },
             { label: '깬 동안', val: () => formatSleepMin(sleepDur(x)), step: (d) => { const len = Math.min(240, Math.max(5, sleepDur(x) + d)); x.end = wrap(x.start + len); } } ]
@@ -7065,7 +7237,7 @@
         del.type = 'button';
         del.className = 'sl-small underline block mx-auto mt-1';
         del.textContent = x.kind === 'wake' ? '이 깬 때 지우기' : '이 낮잠 지우기';
-        del.onclick = (ev) => { ev.stopPropagation(); triggerHaptic(); st.segs.splice(st.sel, 1); st.sel = 0; st.dirty = true; renderSleepModal(); };
+        del.onclick = (ev) => { ev.stopPropagation(); triggerHaptic(); st.segs.splice(st.sel, 1); st.sel = 0; st.dirty = true; sleepAutoSave(); renderSleepModal(); };
         box.appendChild(del);
       }
       function updateVals() { vals.forEach(([v, r]) => { v.textContent = r.val(); }); }
@@ -7091,7 +7263,7 @@
         const ctls = document.createElement('div'); ctls.className = 'flex flex-col items-end gap-1.5';
         r.parts.forEach(pt => {
           const c = document.createElement('div'); c.className = 'ctl';
-          const mkb = (t, f, aria) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = t; b.setAttribute('aria-label', aria); b.onclick = (ev) => { ev.stopPropagation(); triggerHaptic(); f(); st.dirty = true; renderSleepSteps(); }; return b; };
+          const mkb = (t, f, aria) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = t; b.setAttribute('aria-label', aria); b.onclick = (ev) => { ev.stopPropagation(); triggerHaptic(); f(); st.dirty = true; sleepAutoSave(); renderSleepSteps(); }; return b; };
           const val = document.createElement('div'); val.className = 'val'; val.textContent = pt.v;
           c.appendChild(mkb('−', pt.dec, '줄이기')); c.appendChild(val); c.appendChild(mkb('+', pt.inc, '늘리기'));
           ctls.appendChild(c);
@@ -7101,11 +7273,22 @@
       });
     }
 
-    function saveSleepEdit(e) {
-      if (e && e.stopPropagation) e.stopPropagation();
+    // 1.2.8 저절로 저장: 고친 뒤 0.5초 모아 한 번. 닫거나 날짜를 옮길 때는 바로
+    let sleepSaveTimer = null, sleepSavedSinceOpen = false;
+    function sleepAutoSave() {
+      clearTimeout(sleepSaveTimer);
+      sleepSaveTimer = setTimeout(commitSleepEdit, 500);
+    }
+    function flushSleepSave() {
+      if (sleepSaveTimer) { clearTimeout(sleepSaveTimer); sleepSaveTimer = null; commitSleepEdit(); }
+      const wrote = sleepSavedSinceOpen;
+      sleepSavedSinceOpen = false;
+      return wrote;
+    }
+    function commitSleepEdit() {
+      sleepSaveTimer = null;
       const st = sleepEdit;
-      if (!st) return;
-      triggerHaptic();
+      if (!st || !st.dirty) return;
       let rec;
       if (st.mode === 'time') {
         const sm = sleepSummary(st.segs);
@@ -7115,14 +7298,17 @@
       }
       sleepLog[st.date] = rec;
       saveSleepLog();
-      closeSleepModal();
-      showToast('잠 기록을 저장했어요');
-      renderActivityData();
+      st.saved = true;
+      sleepSavedSinceOpen = true;
+      const del = document.getElementById('sleepDeleteBtn'); if (del) del.style.display = 'inline';
+      try { renderActivityData(); } catch (_) {}
     }
     function deleteSleepEdit(e) {
       if (e && e.stopPropagation) e.stopPropagation();
       const st = sleepEdit;
-      if (!st || !sleepLog[st.date]) return;
+      if (!st) return;
+      clearTimeout(sleepSaveTimer); sleepSaveTimer = null; sleepSavedSinceOpen = false;
+      if (!sleepLog[st.date]) return;
       triggerHaptic();
       delete sleepLog[st.date];
       saveSleepLog();
@@ -7223,7 +7409,6 @@
     }
     // 기간 안 날마다 { date, sleep_min, nap_min, wake_count, steps, src }
     function reportActivityDays() {
-      if (uiSimple) return []; // 가볍게: 잠·걸음은 꼼꼼히에서만 (1.2.8)
       const { d1, diffDays } = getReportRange();
       const hcBy = new Map(activityDaily.map(d => [d.date, d]));
       const useHc = isActivityEnabled && hasActivityBridge();
@@ -7232,7 +7417,7 @@
         const d = new Date(d1); d.setDate(d1.getDate() + i);
         const key = localDateKey(d);
         const hc = useHc ? hcBy.get(key) : null;
-        const sl = sleepForDate(key, hc && activityGranted.sleep ? hc : null);
+        const sl = sleepEnabled ? sleepForDate(key, hc && activityGranted.sleep ? hc : null) : null; // 잠 기록을 끄면 잠은 빼고 걸음만
         out.push({ date: key, sleep_min: sl ? sl.sleep_min : null, nap_min: sl ? sl.nap_min : null, wake_count: sl ? sl.wake_count : null,
           src: sl ? sl.src : null, start: sl ? sl.start : null, end: sl ? sl.end : null, steps: hc && activityGranted.steps ? hc.steps : null });
       }
@@ -7328,8 +7513,8 @@
         const t = localStorage.getItem('lifeguard_theme');
         if (t && ['system', 'white', 'neutral', 'dark'].includes(t)) savedTheme = t;
       } catch (_) {}
-      setPreviewTheme(uiSimple ? 'system' : savedTheme);
-      updateUiModeUI();
+      setPreviewTheme(savedTheme);
+      updateSettingsTabUI();
       bindCornerPress();
       try {
         if (new URLSearchParams(window.location.search).get('checkin') !== '1') {
@@ -7588,35 +7773,47 @@
       const sub = dark ? 'text-white/55' : 'text-gray-500';
       const boxBg = dark ? 'background:rgba(255,255,255,0.06)' : 'background:#f4f7f8';
       const G = '<svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true" style="display:inline;flex-shrink:0"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.1 1.4-4.9 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>';
-      const title = '<div class="font-bold ' + (dark ? 'text-[#9ec0c4]' : 'text-[#597075]') + ' text-[13px] flex items-center gap-1.5"><span>🛟</span> 기록 지키기</div>';
-      if (!cloudOn()) {
-        card.innerHTML = title +
-          '<p class="detail-only leading-relaxed text-[11px] ' + sub + '" style="word-break:keep-all">' + (window.AndroidBridge ? '켜 두면 기록을 저절로 담아 두어, 폰을 바꾸거나 앱을 다시 깔아도 불러올 수 있어요.' : '아이폰 사파리는 기록을 스스로 지울 때가 있어요. 켜 두면 기록을 저절로 담아 두어, 사라져도 다시 불러올 수 있어요.') + ' 진료 완료 뒤 지난 기록도 보관함에 남아요.</p>' +
-          '<button type="button" onclick="openCloudConsent(event)" class="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border ' + (dark ? 'border-white/20 text-white/85' : 'border-gray-300 bg-white text-gray-700') + ' font-semibold text-[12.5px] active:scale-95 transition cursor-pointer">' + G + ' 구글로 로그인해 지키기</button>';
-        return;
-      }
-      let line;
-      if (!cloud.ready) line = '이어 붙이는 중…';
-      else if (!cloud.user) line = '로그인이 풀렸어요. 다시 로그인해 주세요.';
-      else if (cloud.status === 'saving') line = '담는 중…';
-      else if (cloud.status === 'failed' || cloud.status === 'offline') line = '지금은 담지 못했어요. 인터넷이 이어지면 다시 담아요.';
-      else {
+      const title = '<div class="font-bold ' + (dark ? 'text-[#9ec0c4]' : 'text-[#597075]') + ' text-[13px] flex items-center gap-1.5 shrink-0"><span>🛟</span> 기록 지키기</div>';
+      // 1.2.8: 한 칸 (제목 + 오른쪽 단추). 자세한 것은 눌러서 여는 창에서
+      const pill = (label, onclick, strong) => '<button type="button" onclick="' + onclick + '" class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-semibold active:scale-95 transition cursor-pointer ' +
+        (strong ? (dark ? 'border border-white/20 text-white/85' : 'border border-gray-300 bg-white text-gray-700') : (dark ? 'bg-white/10 text-[#9ec0c4]' : 'bg-[#597075]/10 text-[#597075]')) + '">' + label + '</button>';
+      let right;
+      if (!cloudOn()) right = pill(G + ' 로그인', 'openCloudConsent(event)', true);
+      else if (!cloud.ready) right = '<span class="text-[11px] ' + sub + '">잇는 중…</span>';
+      else if (!cloud.user) right = pill('다시 로그인', 'cloudSignIn(event)', false);
+      else if (cloud.status === 'saving') right = pill('담는 중…', 'openCloudManage(event)', false);
+      else if (cloud.status === 'failed' || cloud.status === 'offline') right = pill('잠시 못 담음 ›', 'openCloudManage(event)', false);
+      else right = pill('✓ 지키는 중 ›', 'openCloudManage(event)', false);
+      // 1.2.8: 한 줄 설명 (켜기 전: 무엇인지 / 켠 뒤: 마지막으로 담은 때)
+      let desc;
+      if (!cloudOn()) desc = window.AndroidBridge
+        ? '구글로 로그인하면 기록을 저절로 담아 두어, 폰을 바꾸거나 앱을 다시 깔아도 불러올 수 있어요.'
+        : '구글로 로그인하면 기록을 저절로 담아 두어, 아이폰이 기록을 지우거나 폰을 바꿔도 불러올 수 있어요.';
+      else if (cloud.user && cloud.status !== 'failed' && cloud.status !== 'offline') {
         const at = parseInt(cloudGet('lifeguard_cloud_saved_at') || '0', 10);
-        line = at ? '마지막으로 담은 때: ' + cloudTimeText(at) : '아직 담은 기록이 없어요.';
-      }
-      const arch = (cloud.user && cloud.archiveCount) ? '<br>보관함: 지난 주기 ' + cloud.archiveCount + '개' : '';
+        desc = (at ? '마지막으로 담은 때: ' + cloudTimeText(at) : '기록이 바뀌면 저절로 담아요.') + (cloud.archiveCount ? ' · 보관함 ' + cloud.archiveCount + '개' : '');
+      } else desc = '';
+      card.innerHTML = '<div class="flex items-center justify-between gap-2">' + title + right + '</div>' +
+        (desc ? '<p class="text-[10.5px] leading-snug ' + sub + '" style="word-break:keep-all">' + desc + '</p>' : '');
+    }
+    // 기록 지키기 자세히: 계정 · 마지막으로 담은 때 · 보관함 · [지금 담기] [끄기]
+    function openCloudManage(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      const dark = cloudIsDark();
+      const sub = dark ? 'text-white/55' : 'text-gray-500';
+      const at = parseInt(cloudGet('lifeguard_cloud_saved_at') || '0', 10);
+      let line = at ? '마지막으로 담은 때: ' + cloudTimeText(at) : '아직 담은 기록이 없어요.';
+      if (cloud.status === 'failed' || cloud.status === 'offline') line = '지금은 담지 못했어요. 인터넷이 이어지면 다시 담아요.';
+      const arch = cloud.archiveCount ? '<br>보관함: 지난 주기 ' + cloud.archiveCount + '개' : '';
       const who = cloud.user ? escapeHtml(cloud.user.email || '구글 계정') : '';
-      card.innerHTML = title +
-        (cloud.user
-          ? '<div class="flex items-center justify-between gap-2 rounded-xl px-3 py-2" style="' + boxBg + '"><span class="flex items-center gap-1.5 min-w-0">' + G + '<span class="font-semibold truncate">' + who + '</span></span><span class="text-[10.5px] text-[#597075] font-semibold shrink-0">✓ 지키는 중</span></div>'
-          : '') +
-        '<p class="text-[11px] ' + sub + ' leading-relaxed" style="word-break:keep-all">' + line + arch + '</p>' +
-        '<div class="grid grid-cols-2 gap-1.5">' +
-          (cloud.user
-            ? '<button type="button" onclick="cloudSaveNow(event)" class="py-2 rounded-xl ' + (dark ? 'bg-white/10 text-[#9ec0c4]' : 'bg-[#597075]/10 text-[#597075]') + ' text-[11px] font-semibold active:scale-95 transition cursor-pointer">지금 담기</button>'
-            : '<button type="button" onclick="cloudSignIn(event)" class="py-2 rounded-xl bg-[#597075]/10 text-[#597075] text-[11px] font-semibold active:scale-95 transition cursor-pointer">다시 로그인</button>') +
-          '<button type="button" onclick="openCloudOff(event)" class="py-2 rounded-xl border ' + (dark ? 'border-white/20 text-white/70' : 'border-gray-200 text-gray-600') + ' text-[11px] font-semibold active:scale-95 transition cursor-pointer">끄기</button>' +
-        '</div>';
+      cloudSheet(
+        '<div class="font-bold text-[15px] ' + (dark ? 'text-[#9ec0c4]' : 'text-[#597075]') + '">🛟 기록 지키기</div>' +
+        (who ? '<div class="text-[12.5px] font-semibold">' + who + '</div>' : '') +
+        '<p class="text-[12px] ' + sub + ' leading-relaxed">' + line + arch + '</p>' +
+        cloudBtn('지금 담기', 'closeCloudSheet(event); cloudSaveNow(event)', true) +
+        cloudBtn('끄기', 'closeCloudSheet(event); openCloudOff(event)', false) +
+        cloudBtn('닫기', 'closeCloudSheet(event)', false)
+      , 'manage');
     }
     function cloudSaveNow(e) {
       if (e && e.stopPropagation) e.stopPropagation();
