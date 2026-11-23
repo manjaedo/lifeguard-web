@@ -9035,7 +9035,7 @@
       </div>
       <div class="spec-card"><div class="spec-head"><span>A · 기분 띠와 잠·걸음</span><button type="button" onclick="specZoom('A', event)" class="spec-chip spec-zbtn">확대 ⤢</button></div><svg id="specA" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegA"></div></div>
       <div class="spec-card"><div class="spec-head"><span>C · 하루 한 줄 (가로: 0시 → 24시)</span><button type="button" onclick="specZoom('C', event)" class="spec-chip spec-zbtn">확대 ⤢</button></div><svg id="specC" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegC"></div></div>
-      <div class="spec-card"><div class="spec-head"><span>C 세로 · 아래가 날짜, 왼쪽이 시각</span><button type="button" onclick="specZoom('V', event)" class="spec-chip spec-zbtn">확대 ⤢</button></div><svg id="specV" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegV"></div></div>
+      <div class="spec-card"><div class="spec-head"><span>C 세로 · 아래 날짜, 왼쪽 시각</span><button type="button" onclick="specZoom('V', event)" class="spec-chip spec-zbtn">확대 ⤢</button></div><svg id="specV" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegV"></div></div>
     </div>
   </div>
   <div id="specZoomModal" onclick="event.stopPropagation()" style="display:none;position:fixed;inset:0;z-index:61;flex-direction:column;">
@@ -9170,9 +9170,9 @@
         const colW = Math.max(big ? 22 : 4, ((W - L - 4) - (n - 1) * colGap) / n);
         if (big) W = L + n * (colW + colGap) + 30;
         H = B + (big ? 70 : 40);
-        cell = (i, a, b) => ({ x: L + i * (colW + colGap), y: T + (B - T) * a / 24, w: colW, h: (B - T) * (b - a) / 24 });
-        [0, 6, 12, 18, 24].forEach(h => { const e = mk('text', { x: L - 4, y: T + (B - T) * h / 24 + 3, 'text-anchor': 'end', 'font-size': fs, fill: t.muted }); e.textContent = h + '시';
-          if (big) { const r = mk('text', { x: W - 2, y: T + (B - T) * h / 24 + 3, 'text-anchor': 'end', 'font-size': fs, fill: t.muted }); r.textContent = h + '시'; } }); // 확대하면 옆으로 밀려도 오른쪽에서 시각을 읽게
+        cell = (i, a, b) => ({ x: L + i * (colW + colGap), y: T + (B - T) * (24 - b) / 24, w: colW, h: (B - T) * (b - a) / 24 }); // 사용자: 0시가 아래, 24시가 꼭대기
+        [0, 6, 12, 18, 24].forEach(h => { const e = mk('text', { x: L - 4, y: T + (B - T) * (24 - h) / 24 + 3, 'text-anchor': 'end', 'font-size': fs, fill: t.muted }); e.textContent = h + '시';
+          if (big) { const r = mk('text', { x: W - 2, y: T + (B - T) * (24 - h) / 24 + 3, 'text-anchor': 'end', 'font-size': fs, fill: t.muted }); r.textContent = h + '시'; } }); // 확대하면 옆으로 밀려도 오른쪽에서 시각을 읽게
         const every = big ? 1 : Math.max(1, Math.ceil(n / 7));
         for (let i = 0; i < n; i += every) { const c = cell(i, 0, 0); const e = mk('text', { x: c.x + colW / 2, y: B + 13, 'text-anchor': 'middle', 'font-size': fs, fill: t.muted }); e.textContent = specMD(D.d1, i); }
         specStepsSide(D, mk, t, i => cell(i, 24, 24), colW, B + 18, H, fs, true);
