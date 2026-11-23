@@ -7340,6 +7340,8 @@
       manual = manual === true;
       if (whatsNewEl) return;
       if (!manual) {
+        // 1.2.11 (사용자): 웹판에서는 저절로 띄우지 않는다. 설정 '새로워진 점'으로만 (앱(APK)은 그대로 한 번 뜸)
+        if (!window.AndroidBridge) return;
         if (whatsNewSeen()) return;
         // 다른 창(알림으로 연 기분 선택창, 메모 등)이 열려 있으면 이번에는 띄우지 않고 다음에 띄운다
         if (isAnyWindowOpen()) return;
