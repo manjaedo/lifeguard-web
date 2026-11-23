@@ -884,14 +884,14 @@
         <div class="stab-detail dgroup mb-4">
           <div class="dhead text-[11px] font-semibold mb-1.5 px-1">화면</div>
           <div class="dcard rounded-2xl px-3.5 py-0.5 border shadow-sm">
-          <!-- 테마 (1.2.8: 동그라미 넷 — 흰 · 미 · 검 · 시스템) -->
+          <!-- 테마 (1.2.8: 동그라미 넷 — 흰 · 미 · 검 · 시스템. 1.2.11: 30 → 24) -->
           <div class="flex items-center justify-between gap-2 py-3">
             <span id="settingsThemeRowTitle" class="text-xs font-bold text-[#597075]">테마</span>
-            <div id="themeDots" class="flex items-start gap-3">
-              <button type="button" data-v="white" onclick="setPreviewTheme('white')" class="flex flex-col items-center gap-1 cursor-pointer" aria-label="흰색"><span class="dot block rounded-full" style="width:30px;height:30px;background:#fbfcfc;"></span><span class="lbl text-[10px]">흰</span></button>
-              <button type="button" data-v="neutral" onclick="setPreviewTheme('neutral')" class="flex flex-col items-center gap-1 cursor-pointer" aria-label="한지 미색"><span class="dot block rounded-full" style="width:30px;height:30px;background:#ecefea;"></span><span class="lbl text-[10px]">미</span></button>
-              <button type="button" data-v="dark" onclick="setPreviewTheme('dark')" class="flex flex-col items-center gap-1 cursor-pointer" aria-label="검정"><span class="dot block rounded-full" style="width:30px;height:30px;background:#141718;"></span><span class="lbl text-[10px]">검</span></button>
-              <button type="button" data-v="system" onclick="setPreviewTheme('system')" class="flex flex-col items-center gap-1 cursor-pointer" aria-label="시스템 따라"><span class="dot block rounded-full" style="width:30px;height:30px;background:linear-gradient(135deg,#fbfcfc 50%,#141718 50%);"></span><span class="lbl text-[10px]">시스템</span></button>
+            <div id="themeDots" class="flex items-start gap-1"><!-- 1.2.11: 단추 너비를 같게(48px) 해서 동그라미 간격을 똑같이 ('시스템' 글자가 길어도) -->
+              <button type="button" data-v="white" onclick="setPreviewTheme('white')" class="flex flex-col items-center gap-1 cursor-pointer" style="width:48px" aria-label="흰색"><span class="dot block rounded-full" style="width:24px;height:24px;background:#fbfcfc;"></span><span class="lbl text-[10px]">흰</span></button>
+              <button type="button" data-v="neutral" onclick="setPreviewTheme('neutral')" class="flex flex-col items-center gap-1 cursor-pointer" style="width:48px" aria-label="한지 미색"><span class="dot block rounded-full" style="width:24px;height:24px;background:#ecefea;"></span><span class="lbl text-[10px]">미</span></button>
+              <button type="button" data-v="dark" onclick="setPreviewTheme('dark')" class="flex flex-col items-center gap-1 cursor-pointer" style="width:48px" aria-label="검정"><span class="dot block rounded-full" style="width:24px;height:24px;background:#141718;"></span><span class="lbl text-[10px]">검</span></button>
+              <button type="button" data-v="system" onclick="setPreviewTheme('system')" class="flex flex-col items-center gap-1 cursor-pointer" style="width:48px" aria-label="시스템 따라"><span class="dot block rounded-full" style="width:24px;height:24px;background:linear-gradient(135deg,#fbfcfc 50%,#141718 50%);"></span><span class="lbl text-[10px]">시스템</span></button>
             </div>
           </div>
 
@@ -5074,8 +5074,14 @@
       document.querySelectorAll('#themeDots button').forEach(b => {
         const on = b.dataset.v === currentTheme;
         const dot = b.querySelector('.dot'), lbl = b.querySelector('.lbl');
-        if (dot) dot.style.boxShadow = on ? `0 0 0 2px ${dark ? '#141718' : '#fbfcfc'}, 0 0 0 4px ${accent}` : `inset 0 0 0 1px ${dark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)'}`;
-        if (lbl) { lbl.style.color = on ? accent : (dark ? 'rgba(255,255,255,0.55)' : '#6b7280'); lbl.style.fontWeight = on ? '700' : '500'; }
+        // 1.2.11 (사용자): 동그라미는 모두 24 그대로(고리 없음), 고른 것은 아래 글자에 배경색을 칠한다
+        if (dot) dot.style.boxShadow = `inset 0 0 0 1px ${dark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)'}`;
+        if (lbl) {
+          lbl.style.padding = '1px 7px'; lbl.style.borderRadius = '999px'; lbl.style.lineHeight = '1.5';
+          lbl.style.background = on ? accent : 'transparent';
+          lbl.style.color = on ? (dark ? '#141718' : '#fff') : (dark ? 'rgba(255,255,255,0.55)' : '#6b7280');
+          lbl.style.fontWeight = on ? '700' : '500';
+        }
         b.setAttribute('aria-pressed', on ? 'true' : 'false');
       });
       // 터치: 파문 · 숨결 · 별빛
@@ -8619,34 +8625,46 @@
       if (!cloudOn() || !cloud.fb || !cloud.user || !cloud.checked) return;
       cloud.status = 'saving';
       renderCloudCard();
-      const at = Date.now();
-      const snap = cloudSnapshot();
+      let snap = cloudSnapshot();
+      let merged = false;
+      // 담기 직전에 DB를 한 번 본다
+      let rd = null;
+      try {
+        const cur = await cloud.fb.fsM.getDoc(cloudRef('current'));
+        rd = cur.exists() ? cur.data() : null;
+      } catch (_) {
+        cloud.status = 'failed';
+        renderCloudCard();
+        cloudOfflineCheck();
+        return;
+      }
       // 1.2.9 안전장치 (사용자): 이 폰에 기록이 하나도 없는데 DB에는 있으면, 빈 것으로 덮지 않고 DB 것을 가져온다.
       // (예전 판에서 지워진 폰이 빈 기록으로 DB를 덮어 기록이 사라진 일이 있었다)
       // 진료 완료·데이터 비우기·사용자가 직접 지운 때는 빈 것도 담는다 (cloud.allowEmpty)
       if (!cloudHasRecords(snap) && !cloud.allowEmpty) {
-        try {
-          const cur = await cloud.fb.fsM.getDoc(cloudRef('current'));
-          const rd = cur.exists() ? cur.data() : null;
-          if (rd && rd.data && cloudHasRecords(rd.data)) {
-            cloud.status = 'idle';
-            cloudWriteLocal(rd.data, rd.savedAt, false);
-            cloudReloadWith('');
-            return;
-          }
-        } catch (_) {
-          cloud.status = 'failed';
-          renderCloudCard();
-          cloudOfflineCheck();
+        if (rd && rd.data && cloudHasRecords(rd.data)) {
+          cloud.status = 'idle';
+          cloudWriteLocal(rd.data, rd.savedAt, false);
+          cloudReloadWith('');
           return;
         }
       }
+      // 1.2.11 안전장치: 이 폰이 마지막으로 본 뒤에 다른 곳(웹판·앱·다른 기기)이 DB에 담았으면, 덮지 않고 합쳐서 담는다.
+      // (기분·약은 시각, 말씀은 글, 잠은 날짜, 설문은 종류+시각으로 — 로그인 전 폰을 합칠 때와 같은 방식)
+      // 진료 완료·직접 지운 때(allowEmpty)는 일부러 비운 것이라 합치지 않는다.
+      const knownAt = parseInt(cloudGet('lifeguard_cloud_saved_at') || '0', 10);
+      if (!cloud.allowEmpty && rd && rd.data && Object.keys(rd.data).length && (rd.savedAt || 0) !== knownAt) { // 시계가 기기마다 달라 '더 큰지'가 아니라 '내가 본 것과 다른지'로
+        snap = cloudMergeData(rd.data, snap, false);
+        merged = true;
+      }
+      const at = Date.now();
       try {
         await cloud.fb.fsM.setDoc(cloudRef('current'), { savedAt: at, app: 'web', data: snap });
         cloud.allowEmpty = false;
         cloudPut('lifeguard_cloud_saved_at', String(at));
         cloudPut('lifeguard_cloud_dirty', null);
         cloud.status = 'idle';
+        if (merged) { cloudWriteLocal(snap, at, false); cloudReloadWith(''); return; } // 합친 것을 화면에도
       } catch (_) {
         cloud.status = 'failed';
       }
@@ -8683,7 +8701,7 @@
       // ② 이 폰에 못 담은 것(담다가 끊긴 기록)이 있으면 먼저 담는다
       if (dirty) { cloudSave(); return; }
       // ③ 이미 DB와 같은 것을 들고 있으면 그대로
-      if ((remote.savedAt || 0) <= savedAt) return;
+      if ((remote.savedAt || 0) === savedAt) return; // 1.2.11: 기기마다 시계가 달라 '같은지'로 본다
       // ④ 딱 한 번: 로그인 없이 쓰던 폰(안드로이드 예전 판)에 기록이 있고 DB에도 있으면 합쳐서 담는다
       if (!savedAt && cloudHasRecords(local) && cloudHasRecords(rData)) {
         cloudWriteLocal(cloudMergeData(rData, local, false), remote.savedAt, true);
@@ -8884,6 +8902,8 @@
     }
     function cloudOffline() { return navigator.onLine === false || !cloudNativeOnline() || cloud.status === 'offline'; }
     function cloudWriteBlocked() {
+      // 1.2.11: DB와 맞추는 중(1~2초)에 적으면, 맞추기 전의 옛 기록 위에 적혀 다른 곳에서 적은 것을 덮을 수 있다 → 잠깐 기다리게
+      if (cloudAvailable() && cloud.syncing) { showToast('잠시만요, 기록을 맞추고 있어요'); return true; }
       if (!cloudAvailable() || !cloudOffline()) return false;
       showToast('인터넷이 이어지면 기록할 수 있어요');
       return true;
@@ -8972,8 +8992,9 @@
     });
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden' && cloudGet('lifeguard_cloud_dirty') === 'true') cloudSave();
-      // 1.2.9: 다시 열면(1분 넘게 지났으면) 다른 기기에서 적은 것이 있는지 DB를 다시 본다
-      if (document.visibilityState === 'visible' && cloudOn() && cloud.user && cloud.checked && Date.now() - (cloud.lastCheck || 0) > 60000) {
+      // 다시 열면 다른 곳(웹판·앱·다른 기기)에서 적은 것이 있는지 DB를 다시 본다.
+      // 1.2.11: 예전에는 1분이 안 지났으면 건너뛰어, 웹판↔앱을 금방 오가며 적으면 옛 기록으로 DB를 덮었다 → 늘 본다
+      if (document.visibilityState === 'visible' && cloudOn() && cloud.user && cloud.checked && !cloud.syncing) {
         cloud.checked = false; cloudAfterLogin();
       }
     });
