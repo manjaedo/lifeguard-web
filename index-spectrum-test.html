@@ -9061,7 +9061,7 @@
     let specMode = 'gap';
     const SPEC_MODES = [['gap', '① 4시간만'], ['sleep', '② 잠들 때까지'], ['short', '③ 적은 때만'], ['fade', '이어 칠하기']];
     const SPEC_NOTES = {
-      gap: '기분을 적은 뒤 <b>4시간만</b> 그 색으로 칠해요. 그 뒤는 모르니까 비워 둬요.',
+      gap: '기분을 적은 뒤 <b>4시간만</b> 그 색으로 칠해요. 그 뒤는 적지 않아 모르니까 비워 둬요.',
       sleep: '기분을 적은 때부터 <b>그날 잠들 때까지</b> 칠해요. 4시간이 지나면 옅게.',
       short: '기분을 <b>적은 때 앞뒤 1시간 반</b>만 칠해요. 기록이 촘촘한 날이 꽉 차 보여요.',
       fade: '기분을 적은 때부터 <b>다음에 적을 때까지</b> 칠해요. 4시간이 지나면 옅게.'
@@ -9080,7 +9080,9 @@
         m.style.setProperty('--spec-bg', t.bg); m.style.setProperty('--spec-card', t.card); m.style.setProperty('--spec-ink', t.ink);
         m.style.setProperty('--spec-muted', t.muted); m.style.setProperty('--spec-accent', t.accent); m.style.setProperty('--spec-soft', t.soft); });
       const box = document.getElementById('specModes');
-      if (box) box.innerHTML = SPEC_MODES.map(([k, lab]) => `<button type="button" onclick="specSetMode('${k}', event)" style="font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:999px;${k === specMode ? `background:${t.accent};color:${t.dark ? '#141718' : '#fff'}` : `background:${t.soft};color:${t.accent}`}">${lab}</button>`).join('');
+      // 사용자 11.23 "1번으로 하자": ① 4시간만으로 정함 → 고르는 단추는 숨김 (다른 방식 코드는 남겨 둠)
+      if (box) box.style.display = 'none';
+      if (false) box.innerHTML = SPEC_MODES.map(([k, lab]) => `<button type="button" onclick="specSetMode('${k}', event)" style="font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:999px;${k === specMode ? `background:${t.accent};color:${t.dark ? '#141718' : '#fff'}` : `background:${t.soft};color:${t.accent}`}">${lab}</button>`).join('');
       const note = document.getElementById('specNote'); if (note) note.innerHTML = SPEC_NOTES[specMode];
     }
     function openSpectrum(e) {
