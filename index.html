@@ -528,7 +528,7 @@
         #sleepModal .sl-now-btn.wake { background: #e8b98a; color: #2a1d10; }
         #sleepModal .sl-now-btn.sun { background: #e6eeee; color: #1f2a2c; }
         #sleepModal .sl-now-undo { margin-top: 10px; font-size: calc(12px * var(--sl-fs)); opacity: .55; text-decoration: underline; }
-        #sleepDial { touch-action: none; user-select: none; -webkit-user-select: none; }
+        #sleepDial { touch-action: pan-y; user-select: none; -webkit-user-select: none; } /* 1.2.11: 손잡이·띠 밖은 위아래로 쓸면 스크롤 (잡았을 때만 bindSleepDial이 막음) */
       </style>
       <div class="w-full h-full overflow-y-auto" style="padding: max(14px, env(safe-area-inset-top)) 16px max(14px, env(safe-area-inset-bottom));">
         <div class="w-full max-w-md mx-auto flex flex-col gap-3" style="min-height: 100%;">
@@ -7664,8 +7664,9 @@
       const pos = (ev) => { const r = svg.getBoundingClientRect(); return [14 + (ev.clientX - r.left) / r.width * 292, 14 + (ev.clientY - r.top) / r.height * 292]; }; // viewBox 14~306
       const rawMin = (px, py) => { let t = Math.atan2(px - SLEEP_C, -(py - SLEEP_C)); if (t < 0) t += 2 * Math.PI; return t / (2 * Math.PI) * 1440; };
       const inSeg = (x, m) => ((m - x.start + 1440) % 1440) <= sleepDur(x);
-      svg.addEventListener('pointerdown', (ev) => {
-        const st = sleepEdit; if (!st) return;
+      // 손가락이 닿은 곳이 손잡이·띠인지 (아니면 null → 화면 스크롤)
+      const hit = (ev) => {
+        const st = sleepEdit; if (!st) return null;
         const [px, py] = pos(ev);
         // 1) 밤잠·낮잠의 손잡이
         let best = null, bd = 1e9;
@@ -7683,12 +7684,20 @@
             for (const i of order) { const x = st.segs[i]; if (x.kind !== 'night' && inSeg(x, m)) { best = { i, k: 'move', off: (m - x.start + 1440) % 1440 }; break; } }
           }
         }
+        return best;
+      };
+      // 1.2.11 (사용자: 시계 테두리 밖을 위아래로 쓸어도 스크롤이 안 됨): 손잡이·띠를 잡았을 때만 스크롤을 막는다
+      svg.addEventListener('touchstart', (ev) => { if (ev.touches.length === 1 && hit(ev.touches[0])) ev.preventDefault(); }, { passive: false });
+      svg.addEventListener('pointerdown', (ev) => {
+        const st = sleepEdit; if (!st) return;
+        const best = hit(ev);
         if (!best) return;
         ev.preventDefault();
         drag = best; st.sel = best.i;
         try { svg.setPointerCapture(ev.pointerId); } catch (_) {}
         triggerHaptic();
-        renderSleepModal();
+        // 1.2.11: 바로 다시 그리면 뒤따르는 touchstart가 시계에 닿지 못해 스크롤을 못 막는다 → 한 박자 뒤에
+        setTimeout(renderSleepModal, 0);
       });
       svg.addEventListener('pointermove', (ev) => {
         const st = sleepEdit; if (!drag || !st) return;
