@@ -9029,10 +9029,8 @@
         <div style="font-weight:800;font-size:15px;" class="spec-accent">🌈 기분 스펙트럼 <span style="font-size:10px;font-weight:600;opacity:.6;">시험</span></div>
         <button type="button" onclick="specClose(event)" style="font-size:13px;font-weight:700;padding:6px 12px;border-radius:999px;" class="spec-chip">닫기 ✕</button>
       </div>
-      <div class="spec-note" style="font-size:11.5px;line-height:1.6;margin:0 4px 10px;">기분을 적은 때부터 다음에 적을 때까지 그 색으로 칠해요. <b>적은 뒤 4시간이 지나면 옅게</b> — 그 사이 기분은 모르니까요.</div>
-      <div style="display:flex;gap:6px;margin:0 2px 12px;">
-        <button type="button" id="specFadeBtn" onclick="specToggleFade(event)" class="spec-chip" style="font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:999px;"></button>
-      </div>
+      <div class="spec-note" id="specNote" style="font-size:11.5px;line-height:1.6;margin:0 4px 8px;"></div>
+      <div id="specModes" style="display:flex;flex-wrap:wrap;gap:6px;margin:0 2px 12px;"></div>
       <div class="spec-card"><div class="spec-head"><span>A · 기분 띠와 잠·걸음</span><button type="button" onclick="specZoom('A', event)" class="spec-chip spec-zbtn">확대 ⤢</button></div><svg id="specA" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegA"></div></div>
       <div class="spec-card"><div class="spec-head"><span>C · 하루 한 줄 (가로: 0시 → 24시)</span><button type="button" onclick="specZoom('C', event)" class="spec-chip spec-zbtn">확대 ⤢</button></div><svg id="specC" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegC"></div></div>
       <div class="spec-card"><div class="spec-head"><span>C 세로 · 아래 날짜, 왼쪽 시각</span><button type="button" onclick="specZoom('V', event)" class="spec-chip spec-zbtn">확대 ⤢</button></div><svg id="specV" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegV"></div></div>
@@ -9058,8 +9056,17 @@
   </style>
   <script>
     // 🧪 기분 스펙트럼 (사용자 11.23: "막대 색으로, 가로는 시간 · 색은 기분. A와 C를 설정 상세 아래 단추로, 확대도, 함께 보기처럼 잠·걸음도")
-    let specFade = true;
-    const SPEC_FADE_H = 4;
+    // 칠하는 방식 (사용자 11.23: "아침에 파랑 하나 적으면 그날은 쭉 파랑으로 봐야 하나?" → 넷을 견줘 봄)
+    // fade 다음 기록까지 · 4시간 뒤 옅게 / gap 4시간만 칠하고 비움 / sleep 잠들 때까지만 · 4시간 뒤 옅게 / short 적은 때 앞뒤 1시간 반만
+    let specMode = 'gap';
+    const SPEC_MODES = [['gap', '① 4시간만'], ['sleep', '② 잠들 때까지'], ['short', '③ 적은 때만'], ['fade', '이어 칠하기']];
+    const SPEC_NOTES = {
+      gap: '기분을 적은 뒤 <b>4시간만</b> 그 색으로 칠해요. 그 뒤는 모르니까 비워 둬요.',
+      sleep: '기분을 적은 때부터 <b>그날 잠들 때까지</b> 칠해요. 4시간이 지나면 옅게.',
+      short: '기분을 <b>적은 때 앞뒤 1시간 반</b>만 칠해요. 기록이 촘촘한 날이 꽉 차 보여요.',
+      fade: '기분을 적은 때부터 <b>다음에 적을 때까지</b> 칠해요. 4시간이 지나면 옅게.'
+    };
+    const SPEC_FADE_H = 4, SPEC_SHORT_H = 1.5;
     const SPEC_WAKE = '#D99A6C';
     function specTheme() {
       const dark = getEffectiveTheme(currentTheme) === 'dark';
@@ -9072,8 +9079,9 @@
       ['specModal', 'specZoomModal'].forEach(id => { const m = document.getElementById(id); if (!m) return;
         m.style.setProperty('--spec-bg', t.bg); m.style.setProperty('--spec-card', t.card); m.style.setProperty('--spec-ink', t.ink);
         m.style.setProperty('--spec-muted', t.muted); m.style.setProperty('--spec-accent', t.accent); m.style.setProperty('--spec-soft', t.soft); });
-      const fb = document.getElementById('specFadeBtn');
-      if (fb) { fb.textContent = specFade ? '✓ 적은 뒤 4시간 지나면 옅게' : '적은 뒤에도 그대로 칠하기'; fb.style.opacity = specFade ? '1' : '.7'; }
+      const box = document.getElementById('specModes');
+      if (box) box.innerHTML = SPEC_MODES.map(([k, lab]) => `<button type="button" onclick="specSetMode('${k}', event)" style="font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:999px;${k === specMode ? `background:${t.accent};color:${t.dark ? '#141718' : '#fff'}` : `background:${t.soft};color:${t.accent}`}">${lab}</button>`).join('');
+      const note = document.getElementById('specNote'); if (note) note.innerHTML = SPEC_NOTES[specMode];
     }
     function openSpectrum(e) {
       if (e && e.stopPropagation) e.stopPropagation();
@@ -9083,21 +9091,13 @@
       specRenderAll();
     }
     function specClose(e) { if (e && e.stopPropagation) e.stopPropagation(); const m = document.getElementById('specModal'); if (m) m.style.display = 'none'; }
-    function specToggleFade(e) { if (e && e.stopPropagation) e.stopPropagation(); triggerHaptic(); specFade = !specFade; specApplyTheme(); specRenderAll(); }
+    function specSetMode(k, e) { if (e && e.stopPropagation) e.stopPropagation(); triggerHaptic(); specMode = k; specApplyTheme(); specRenderAll(); }
     // 자료: 기간 · 기분 조각(적은 때 → 다음 적은 때) · 잠 조각(실제 시각) · 걸음
     function specData() {
       const { d1, diffDays } = getReportRange();
       const T0 = d1.getTime(), T1 = T0 + diffDays * 86400000, now = Date.now();
       const recs = (moodRecords || []).map(m => ({ t: new Date(m && m.time || '').getTime(), s: [2, 1, 0, -1, -2].includes(m && m.score) ? m.score : 0 }))
         .filter(r => !isNaN(r.t) && r.t >= T0 && r.t < T1).sort((a, b) => a.t - b.t);
-      const moods = [];
-      recs.forEach((r, i) => {
-        const end = Math.min(i + 1 < recs.length ? recs[i + 1].t : Math.min(now, T1), T1);
-        if (end <= r.t) return;
-        const fadeAt = specFade ? Math.min(end, r.t + SPEC_FADE_H * 3600000) : end;
-        moods.push({ a: r.t, b: fadeAt, s: r.s, o: 1 });
-        if (fadeAt < end) moods.push({ a: fadeAt, b: end, s: r.s, o: 0.28 });
-      });
       const days = reportActivityDays();
       const sleeps = [];
       const rel = (m) => ((m - 18 * 60) % 1440 + 1440) % 1440;
@@ -9106,6 +9106,25 @@
         const base = parseLocalDate(d.date); base.setDate(base.getDate() - 1); base.setHours(18, 0, 0, 0);
         d.segs.forEach(x => { const a = rel(x.start); let b = rel(x.end); if (b <= a) b = Math.min(1440, a + sleepDur(x));
           sleeps.push({ a: base.getTime() + a * 60000, b: base.getTime() + b * 60000, k: x.kind }); });
+      });
+      const H = 3600000, moods = [];
+      const sleepStarts = sleeps.filter(x => x.k !== 'wake').map(x => x.a).sort((a, b) => a - b);
+      recs.forEach((r, i) => {
+        const next = Math.min(i + 1 < recs.length ? recs[i + 1].t : Math.min(now, T1), T1);
+        if (next <= r.t) return;
+        if (specMode === 'short') {
+          const prev = i > 0 ? recs[i - 1].t : -Infinity;
+          const a = Math.max(r.t - SPEC_SHORT_H * H, (prev + r.t) / 2, T0);
+          const b = Math.min(r.t + SPEC_SHORT_H * H, i + 1 < recs.length ? (r.t + recs[i + 1].t) / 2 : Math.min(now, T1));
+          if (b > a) moods.push({ a, b, s: r.s, o: 1 });
+          return;
+        }
+        let end = next;
+        if (specMode === 'gap') end = Math.min(end, r.t + SPEC_FADE_H * H);
+        if (specMode === 'sleep') { const sl = sleepStarts.find(x => x > r.t); if (sl) end = Math.min(end, sl); }
+        const fadeAt = Math.min(end, r.t + SPEC_FADE_H * H);
+        moods.push({ a: r.t, b: fadeAt, s: r.s, o: 1 });
+        if (fadeAt < end) moods.push({ a: fadeAt, b: end, s: r.s, o: 0.28 });
       });
       return { d1, diffDays, T0, T1, moods, sleeps, days, recs };
     }
