@@ -3465,8 +3465,34 @@
     function noteWhen(t) {
       const at = noteMeta(t).at; if (!at) return '';
       const d = new Date(at); if (isNaN(d.getTime())) return '';
-      return `${d.getMonth() + 1}.${d.getDate()} ${String(d.getHours()).padStart(2, '0')}시`;
+      // 1.2.12 (사용자: "11/09 이렇게"): 월·일을 늘 두 자리로 → 날짜가 모두 다섯 글자라 줄이 맞는다
+      const p2 = (n) => String(n).padStart(2, '0');
+      return `${p2(d.getMonth() + 1)}/${p2(d.getDate())} ${p2(d.getHours())}시`;
     }
+    // 글자마다 같은 폭 칸에 넣는다 (이 글꼴은 '1'이 좁아서, 같은 글자 수여도 줄이 어긋났다)
+    function noteMonoHtml(str) {
+      return String(str).split('').map(ch => `<span style="display: inline-block; width: ${ch === '시' ? '1.1em' : (ch === '/' ? '0.45em' : '0.6em')}; text-align: center;">${escapeHtml(ch)}</span>`).join('');
+    }
+    // 날짜와 시를 따로 (줄마다 날짜 칸·시 칸을 각각 위아래로 맞추려고): ['11.21', '08시']
+    function noteWhenParts(t) { const w = noteWhen(t); if (!w) return null; const i = w.lastIndexOf(' '); return [w.slice(0, i), w.slice(i + 1)]; }
+    // 1.2.12 (사용자): 말씀을 적었을 때의 기분 — 말씀 적은 때 **앞뒤 1시간 안에** 적은 기분 중 가장 가까운 것.
+    // 그 사이에 적은 기분이 없으면 표시하지 않는다 (사용자: "앞뒤 1시간 사이에 감정 변화 없으면 남기지 마").
+    // 따로 저장하지 않고 기분 기록에서 그때그때 찾는다 (예전 말씀도 적은 때가 있으면 보임)
+    const NOTE_MOOD_WINDOW_MS = 1 * 3600000;
+    const NOTE_MOOD_GLYPH = { '2': '▲', '1': '△', '0': '○', '-1': '▽', '-2': '▼' };
+    function noteMood(t) {
+      const at = new Date(noteMeta(t).at || '').getTime();
+      if (isNaN(at)) return null;
+      let best = null, bt = Infinity;
+      (moodRecords || []).forEach(m => {
+        const mt = new Date(m && m.time || '').getTime();
+        if (isNaN(mt) || Math.abs(mt - at) > NOTE_MOOD_WINDOW_MS) return;
+        const gap = Math.abs(mt - at);
+        if (best === null || gap < bt) { bt = gap; best = [2, 1, 0, -1, -2].includes(m.score) ? m.score : 0; }
+      });
+      return best;
+    }
+    function noteMoodColorOn() { try { return !!chartColorOn; } catch (_) { return false; } } // 그래프 색 '칼라'일 때만 색, 흑백이면 한 색
     function toggleMemoStar(idx, e) {
       if (e && e.stopPropagation) e.stopPropagation();
       if (cloudWriteBlocked()) return;
@@ -4237,7 +4263,9 @@
       const anyStar = doctorNotes.some(n => noteMeta(n).star);
 
       container.innerHTML = doctorNotes.map((note, idx) => {
-        const star = !!noteMeta(note).star, when = noteWhen(note);
+        const star = !!noteMeta(note).star, when = noteWhen(note), nm = noteMood(note);
+        // 1.2.12 (사용자: "정렬이 엉망, 기분은 날짜 앞, 날짜도 위아래 정렬"): 기분 칸·날짜 칸을 늘 같은 너비로 둔다 (기분이 없어도 칸은 비워 둠)
+        const moodMark = `<span aria-label="${nm === null ? '' : '그때 기분'}" style="display: inline-block; width: calc(14px * var(--fs)); text-align: center; color: ${nm === null ? 'transparent' : (noteMoodColorOn() ? moodColor(nm) : cardNum)}; font-size: calc(11px * var(--fs));">${nm === null ? '' : NOTE_MOOD_GLYPH[String(nm)]}</span>`;
         return `
         <div id="memo-wrapper-${idx}" class="memo-wrapper relative rounded-xl mb-1.5 select-none transition-all duration-200" data-idx="${idx}" style="overflow: hidden;${anyStar && idx === firstPlain && idx > 0 ? ' margin-top: 12px;' : ''}">
           <!-- 뒤쪽 '삭제' 버튼 영역 (평소엔 opacity 0으로 완전히 숨겨져 절대 삐져나오지 않음, 좌로 밀 때만 부드럽게 페이드인 노출) -->
@@ -4256,8 +4284,8 @@
                     style="color: ${star ? cardNum : subColor}; font-size: calc(15px * var(--fs)); line-height: 1.1; width: 24px; margin: -2px 4px -2px -2px; padding: 0; text-align: center;">${star ? '★' : '☆'}</button>
             <!-- 텍스트 영역 (좌우 스와이프 전용). 길면 여러 줄로 다 보이고, 적은 때는 첫 줄 오른쪽에 -->
             <div class="memo-swipe-area flex items-start gap-2 flex-1 pr-1 cursor-pointer" data-idx="${idx}">
-              <span class="flex-1 leading-snug ${star ? 'font-bold' : ''}" style="color: ${cardText}; word-break: keep-all; overflow-wrap: anywhere;">${escapeHtml(note)}</span>
-              ${when ? `<span class="shrink-0 leading-snug" style="color: ${subColor}; font-size: calc(10px * var(--fs)); white-space: nowrap; padding-top: 1px;">${when}</span>` : ''}
+              <span class="flex-1 leading-snug ${star ? 'font-bold' : ''}" style="color: ${cardText}; word-break: break-all; overflow-wrap: anywhere;">${escapeHtml(note)}</span>
+              ${when ? `<span class="shrink-0 leading-snug" style="color: ${subColor}; font-size: calc(8.5px * var(--fs)); white-space: nowrap; padding-top: 2px; opacity: .85;">${moodMark}<span>${noteMonoHtml(noteWhenParts(note)[0])}</span><span style="margin-left: 0.4em;">${noteMonoHtml(noteWhenParts(note)[1])}</span></span>` : ''}
             </div>
             <!-- 순서 이동 드래그 핸들 (위아래 드래그 전용) -->
             <div class="memo-drag-handle p-1.5 -my-1 cursor-grab active:cursor-grabbing shrink-0" data-idx="${idx}" title="터치 후 끌어서 순서 이동">
@@ -6385,8 +6413,16 @@
       // 1.2.12 (사용자): 보내기에도 ★ 먼저, 적은 때(날짜·시)는 첫 줄 오른쪽에
       sortNotesByStar();
       const notes = (doctorNotes || []).map(n => String(n).trim()).filter(Boolean);
-      const noteStars = notes.map(n => !!noteMeta(n).star), noteWhens = notes.map(n => noteWhen(n));
-      const NOTE_WHEN_W = 150;
+      const noteStars = notes.map(n => !!noteMeta(n).star), noteWhens = notes.map(n => noteWhen(n)), noteMoods = notes.map(n => noteMood(n));
+      const NOTE_WHEN_W = 160;
+      // 보내기 사진: 날짜 칸·시 칸을 각각 가장 긴 것 너비로 두고 오른쪽 맞춤 (줄마다 날짜·시·기분이 위아래로 맞게)
+      const noteParts = notes.map(n => noteWhenParts(n));
+      // 글자마다 같은 폭 칸 (함께 보기와 같게): 숫자 12, '/' 9, '시' 22 — 날짜 '11/09' 57, 시 '08시' 46
+      const MONO_W = (ch) => ch === '시' ? 22 : (ch === '/' ? 9 : 12);
+      const monoWidth = (str) => String(str).split('').reduce((a, ch) => a + MONO_W(ch), 0);
+      const drawMono = (str, xLeft, yy) => { let x = xLeft; ctx.textAlign = 'center'; String(str).split('').forEach(ch => { ctx.fillText(ch, x + MONO_W(ch) / 2, yy); x += MONO_W(ch); }); };
+      const noteDateColW = monoWidth('00/00'), noteHourColW = monoWidth('00시');
+      const noteWhenColW = noteDateColW + 8 + noteHourColW;
       const noteLines = notes.map((n, i) => wrap(n, INNER - 48 - 40 - 40 - (noteWhens[i] ? NOTE_WHEN_W : 0), 32));
       const noteGapAfterStars = noteStars.some(Boolean) && noteStars.some(x => !x) ? 18 : 0;
       // 1.2.10 (사용자): 설정 '설문' 스위치가 켜져 있으면, 이번 기간에 한 설문의 마지막 점수를 사진에 (한 것만)
@@ -6494,8 +6530,16 @@
           ctx.fillStyle = TEXT; ctx.font = font(32, noteStars[i]);
           lines.forEach((ln, j) => ctx.fillText(ln, PAD + 40 + 48, ny + j * 46));
           if (noteWhens[i]) {
-            ctx.fillStyle = SUB; ctx.font = font(26); ctx.textAlign = 'right';
-            ctx.fillText(noteWhens[i], PAD + INNER - 40, ny);
+            // 날짜 칸(가장 긴 날짜 너비)을 오른쪽 끝에 두고, 그때 기분은 그 앞 같은 자리에 (줄마다 위아래가 맞게)
+            ctx.textAlign = 'right'; ctx.fillStyle = SUB; ctx.font = font(20); // 1.2.12 (사용자: 시간 글씨 확 줄이기)
+            const pp = noteParts[i], R = PAD + INNER - 40;
+            drawMono(pp[1], R - noteHourColW, ny);                       // 시
+            drawMono(pp[0], R - noteHourColW - 8 - noteDateColW, ny);    // 날짜
+            if (noteMoods[i] !== null) {
+              ctx.textAlign = 'center';
+              ctx.fillStyle = noteMoodColorOn() ? moodColor(noteMoods[i], true) : ACCENT; ctx.font = font(28);
+              ctx.fillText(NOTE_MOOD_GLYPH[String(noteMoods[i])], PAD + INNER - 40 - noteWhenColW - 20, ny);
+            }
             ctx.textAlign = 'left';
           }
           ny += (lines.length - 1) * 46 + 22;
