@@ -9341,6 +9341,7 @@
       <div class="spec-note" id="specNote" style="font-size:11.5px;line-height:1.6;margin:0 4px 8px;"></div>
       <div id="specModes" style="display:flex;flex-wrap:wrap;gap:6px;margin:0 2px 12px;"></div>
       <div class="spec-card"><div class="spec-head"><span>📅 달력 · 지난 진료부터 오늘까지</span></div><svg id="specM" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegM"></div></div>
+      <div class="spec-card"><div class="spec-head"><span>📅 달력 · 하루의 오르내림 (칸마다 0시 → 24시)</span></div><svg id="specM2" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegM2"></div></div>
       <div class="spec-card"><div class="spec-head"><span>A · 기분 띠와 잠·걸음</span><button type="button" onclick="specZoom('A', event)" class="spec-chip spec-zbtn">확대 ⤢</button></div><svg id="specA" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegA"></div></div>
       <div class="spec-card"><div class="spec-head"><span>C · 하루 한 줄 (가로: 0시 → 24시)</span><button type="button" onclick="specZoom('C', event)" class="spec-chip spec-zbtn">확대 ⤢</button></div><svg id="specC" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegC"></div></div>
       <div class="spec-card"><div class="spec-head"><span>C 세로 · 아래 날짜, 왼쪽 시각</span><button type="button" onclick="specZoom('V', event)" class="spec-chip spec-zbtn">확대 ⤢</button></div><svg id="specV" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegV"></div></div>
@@ -9537,7 +9538,7 @@
     }
     // 📅 달력 (사용자 11.24): 지난 진료부터 오늘까지를 달 달력에. 하루 한 번이면 그 색 동그라미 하나,
     // 여러 번이면 동그라미를 적은 차례대로 왼쪽부터 겹쳐 놓는다 (기분을 가공하지 않고 적은 그대로)
-    function specDrawMonth(svg, W) {
+    function specDrawMonth(svg, W, line) {
       const t = specTheme(), mk = specMk(svg);
       svg.textContent = '';
       const { d1 } = getReportRange();
@@ -9551,7 +9552,7 @@
       });
       byDay.forEach(a => a.sort((x, y) => x.t - y.t));
       const inRange = (d) => d >= d1 && d <= today;
-      const cw = W / 7, ch = Math.round(cw * 0.92), fs = Math.max(9, Math.min(12, cw * 0.22));
+      const cw = W / 7, ch = Math.round(cw * (line ? 1.25 : 0.92)), fs = Math.max(9, Math.min(12, cw * 0.22));
       const WD = ['일', '월', '화', '수', '목', '금', '토'];
       let y = 0;
       for (let m = new Date(d1.getFullYear(), d1.getMonth(), 1); m <= today; m = new Date(m.getFullYear(), m.getMonth() + 1, 1)) {
@@ -9578,6 +9579,24 @@
           nt.textContent = dd;
           if (!on) continue;
           const recs = byDay.get(key(d)) || [];
+          if (line) {
+            // 1.2.12 시험 (사용자 11.24): 칸 안에 그날의 오르내림 — 가로 0시→24시, 높이 = 기분 (▲ 위 · ▼ 아래)
+            const gx0 = cx + 2, gx1 = cx + cw - 2, gy0 = cy + fs + 9, gy1 = cy + ch - 6, gm = (gy0 + gy1) / 2;
+            const day0 = d.getTime();
+            // 점·선이 칸 밖으로 나가지 않게 점 반지름만큼 안쪽에서 그린다 (사용자 11.24 "칸을 넘어가면 안 됨")
+            const dotR = Math.max(2.6, cw * 0.07), pad = dotR + 1.2;
+            const ix0 = gx0 + pad, ix1 = gx1 - pad, iy0 = gy0 - 2 + pad, iy1 = gy1 + 2 - pad, im = (iy0 + iy1) / 2;
+            const px = (tm) => ix0 + Math.min(1, Math.max(0, (tm - day0) / 86400000)) * (ix1 - ix0);
+            const py = (sc) => im - sc * (iy1 - iy0) / 4;
+            mk('rect', { x: gx0, y: gy0 - 2, width: gx1 - gx0, height: gy1 - gy0 + 4, rx: 3, fill: t.empty });
+            // ○(파랑) 기준: 흐린 실선, 칸 안에서만 (사용자 11.24)
+            mk('line', { x1: gx0 + 1.5, x2: gx1 - 1.5, y1: im, y2: im, stroke: moodColor(0), 'stroke-width': 1, opacity: .35 });
+            mk('line', { x1: (gx0 + gx1) / 2, x2: (gx0 + gx1) / 2, y1: gy0 - 2, y2: gy1 + 2, stroke: t.grid, 'stroke-width': .5, opacity: .7 }); // 12시
+            if (!recs.length) continue;
+            if (recs.length > 1) mk('polyline', { points: recs.map(r => px(r.t).toFixed(1) + ',' + py(r.s).toFixed(1)).join(' '), fill: 'none', stroke: t.accent, 'stroke-width': 1.6, 'stroke-linejoin': 'round', opacity: .6 });
+            recs.forEach(r => mk('circle', { cx: px(r.t).toFixed(1), cy: py(r.s).toFixed(1), r: dotR, fill: moodColor(r.s), stroke: t.card, 'stroke-width': 1 }));
+            continue;
+          }
           const ccx = cx + cw / 2, ccy = cy + fs + 5 + (ch - fs - 5) / 2;
           const r = Math.min(cw * 0.25, (ch - fs - 8) * 0.42);
           if (!recs.length) { mk('circle', { cx: ccx, cy: ccy, r: r * 0.55, fill: 'none', stroke: t.grid, 'stroke-width': 1 }); continue; }
@@ -9590,13 +9609,15 @@
         y += rows * ch + 10;
       }
       svg.setAttribute('viewBox', `0 0 ${W} ${y}`); svg.setAttribute('width', '100%');
-      const leg = document.getElementById('specLegM');
+      const leg = document.getElementById(line ? 'specLegM2' : 'specLegM');
       if (leg) leg.innerHTML = [[2, '▲'], [1, '△'], [0, '○'], [-1, '▽'], [-2, '▼']].map(([s, g]) => `<span><i style="background:${moodColor(s)};border-radius:50%"></i>${g}</span>`).join('') +
-        `<span><i style="border:1.2px solid ${t.accent};background:none;border-radius:6px;width:16px"></i>지난 진료 · 오늘</span>`;
+        `<span><i style="border:1.2px solid ${t.accent};background:none;border-radius:6px;width:16px"></i>지난 진료 · 오늘</span>` +
+        (line ? `<span style="width:100%;text-align:center">칸 안: 왼쪽 0시 · 가운데 줄 12시 · 오른쪽 24시, 파란 줄은 ○</span>` : '');
     }
     function specRenderAll() {
       const w = (id) => { const s = document.getElementById(id); return Math.max(260, Math.round((s && s.getBoundingClientRect().width) || 340)); };
       specDrawMonth(document.getElementById('specM'), w('specM'));
+      specDrawMonth(document.getElementById('specM2'), w('specM2'), true);
       specDrawA(document.getElementById('specA'), w('specA'), false);
       specDrawC(document.getElementById('specC'), w('specC'), false, false);
       specDrawC(document.getElementById('specV'), w('specV'), false, true);
