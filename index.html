@@ -1000,7 +1000,7 @@
         <!-- 1.2.8: 14일 샘플 채우기 · 데이터 비우기 버튼은 뺌 (사용자: 이제 필요 없음). 함수는 테스트·데스크톱 미리보기용으로 남김 -->
 
         <!-- 기분 스펙트럼 단추 (1.2.12 시험판에서 본판으로) -->
-        <div class="stab-detail mb-3 px-1"><button type="button" onclick="openSpectrum(event)" class="w-full py-3 rounded-2xl text-[13px] font-bold border shadow-sm cursor-pointer" style="background:linear-gradient(90deg,#e8b80c22,#2e9b5822,#3a7bcc22,#ec872922,#dc413622);color:inherit;">🌈 기분 스펙트럼 보기 <span style="font-size:10px;opacity:.6">시험</span></button></div>
+        <div class="stab-detail mb-3 px-1"><button type="button" onclick="openSpectrum(event)" class="w-full py-3 rounded-2xl text-[13px] font-bold border shadow-sm cursor-pointer" style="background:linear-gradient(90deg,#e8b80c22,#74bb3722,#3a7bcc22,#ec872922,#dc413622);color:inherit;">🌈 기분 스펙트럼 보기 <span style="font-size:10px;opacity:.6">시험</span></button></div>
         <!-- 상세 칸 아래: 설정 설명 · 개인정보처리방침 · 새로워진 점을 한 줄로 (1.2.8 사용자) -->
         <div class="stab-detail flex items-center justify-center gap-2 pt-1 pb-3 whitespace-nowrap">
           <button type="button" onclick="openSettingsHelp(event)" class="text-[11px] opacity-60 hover:opacity-100 underline underline-offset-4 transition cursor-pointer" style="color: inherit;">설정 설명</button>
@@ -5544,7 +5544,7 @@
 
     // 기분 그래프 세로 높이: ○~△(▽)가 한 칸이면 △~▲(▽~▼)는 1.5칸 (1.2.6, 사용자 결정). ○에서 위로 + / 아래로 -
     // 기분 색 (1.2.7, 사용자 요청: 흐리고 작아 한눈에 알아보기 어렵다)
-    // ▲ 매우 좋음 노랑(1.2.12 사용자: 연두 → 노랑) · △ 좋음 초록 · ○ 보통 파랑 · ▽ 나쁨 주황 · ▼ 매우 나쁨 빨강. 어두운 화면은 조금 밝게
+    // ▲ 매우 좋음 노랑(1.2.12 사용자: 연두 → 노랑) · △ 좋음 연두(1.2.12 사용자: 초록 → 연두) · ○ 보통 파랑 · ▽ 나쁨 주황 · ▼ 매우 나쁨 빨강. 어두운 화면은 조금 밝게
     // 설정 > 그래프 색: 'mono'(흑백, 기본) / 'color'(칼라). 흑백이면 예전처럼 테마 한 색 (1.2.7, 사용자 결정)
     let chartColorOn = (function() { try { return localStorage.getItem('lifeguard_chart_color') === 'color'; } catch (_) { return false; } })();
     function setChartColor(on, e) {
@@ -5557,7 +5557,7 @@
       if (chartZoomState) drawChartZoom();
     }
     function updateChartColorUI() {
-      // 1.2.8 (사용자 결정): 칼라를 고르면 '그래프 색' 글자가 한 자씩 우리 기분 색으로 (노랑 · 초록 · 주황 · 빨강)
+      // 1.2.8 (사용자 결정): 칼라를 고르면 '그래프 색' 글자가 한 자씩 우리 기분 색으로 (노랑 · 연두 · 주황 · 빨강)
       const ct = document.getElementById('settingsChartColorTitle');
       if (ct) {
         if (chartColorOn) {
@@ -5589,8 +5589,8 @@
     }
     function moodColor(score, forceLight) {
       const dark = !forceLight && getEffectiveTheme(currentTheme) === 'dark';
-      const L = { '2': '#e8b80c', '1': '#2e9b58', '0': '#3a7bcc', '-1': '#ec8729', '-2': '#dc4136' };
-      const D = { '2': '#f3cf4c', '1': '#4dc07e', '0': '#6aa4ec', '-1': '#f4a254', '-2': '#f06a5f' };
+      const L = { '2': '#e8b80c', '1': '#74bb37', '0': '#3a7bcc', '-1': '#ec8729', '-2': '#dc4136' };
+      const D = { '2': '#f3cf4c', '1': '#9bd660', '0': '#6aa4ec', '-1': '#f4a254', '-2': '#f06a5f' };
       return (dark ? D : L)[String(score)] || (dark ? D['0'] : L['0']);
     }
     // 곡선용 세로 그라데이션: 높이마다 그 기분의 색. userSpaceOnUse라 그래프 높이에 그대로 맞는다
@@ -7600,7 +7600,7 @@
     const WHATS_NEW_ITEMS = [
       ['⭐', '선생님께 드릴 말씀 앞의 ☆를 누르면 꼭 말할 것으로 맨 위에 모여요. 적은 날짜·시각과 그때 기분도 옆에 보여요.'],
       ['🌈', '설정 상세 칸 맨 아래 ‘기분 스펙트럼 보기’에서 지난 진료부터 오늘까지 기분을 달력으로 볼 수 있어요.'],
-      ['🎨', '‘매우 좋음’ 색이 노랑으로 바뀌었어요.'],
+      ['🎨', '기분 색이 바뀌었어요. ‘매우 좋음’은 노랑, ‘좋음’은 연두예요.'],
       ['✓', '‘진료 완료’ 뒤에 지난 기록이 다시 나타나던 문제를 고쳤어요.'],
       ['🌿', '이 안내는 한 번만 떠요. 설정 상세 칸 맨 아래 ‘새로워진 점 보기’에서 다시 볼 수 있어요.']
     ];
