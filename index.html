@@ -786,9 +786,6 @@
             <span>↗</span> 보내기
           </button>
           </div>
-          <div id="reportFooterText" class="text-[10px] text-center text-gray-400 mt-2 leading-relaxed">
-            진료를 마친 후 터치하면 지난 기록이 비워지고,<br>오늘부터 새로운 백지(0)에서 다시 시작합니다.
-          </div>
         </div>
       </div>
 
@@ -3439,6 +3436,52 @@
       const arr = safeJsonParse('lifeguard_doctor_notes', []);
       return arr.map(n => String(n));
     })();
+    // 1.2.12 (사용자): 말씀마다 ★(진료 때 꼭 말할 것)와 적은 때(날짜·시). 말씀 목록은 예전처럼 글만 두고
+    // (아직 고치지 않은 앱도 그대로 읽게), 덧붙은 것은 글을 열쇠로 따로 둔다: { 글: { at: ISO, star: true } }
+    let doctorNoteMeta = (function() {
+      const o = safeJsonParse('lifeguard_doctor_notes_meta', {});
+      return (o && typeof o === 'object' && !Array.isArray(o)) ? o : {};
+    })();
+    function noteMeta(t) { const m = doctorNoteMeta[String(t).trim()]; return (m && typeof m === 'object') ? m : {}; }
+    function saveDoctorNotes() {
+      try {
+        localStorage.setItem('lifeguard_doctor_notes_meta', JSON.stringify(doctorNoteMeta));
+        localStorage.setItem('lifeguard_doctor_notes', JSON.stringify(doctorNotes));
+      } catch (_) {}
+    }
+    function noteAdded(val) { doctorNoteMeta[String(val).trim()] = { at: new Date().toISOString() }; }
+    function noteRemoved(val) {
+      const t = String(val).trim();
+      if (!doctorNotes.some(n => String(n).trim() === t)) delete doctorNoteMeta[t];
+    }
+    // ★ 말씀이 늘 위에 (같은 것끼리는 순서 그대로)
+    function sortNotesByStar() {
+      const st = doctorNotes.filter(n => noteMeta(n).star), rest = doctorNotes.filter(n => !noteMeta(n).star);
+      doctorNotes = st.concat(rest);
+    }
+    // '11.21 20시' (분은 빼고)
+    function noteWhen(t) {
+      const at = noteMeta(t).at; if (!at) return '';
+      const d = new Date(at); if (isNaN(d.getTime())) return '';
+      return `${d.getMonth() + 1}.${d.getDate()} ${String(d.getHours()).padStart(2, '0')}시`;
+    }
+    function toggleMemoStar(idx, e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      if (cloudWriteBlocked()) return;
+      const t = doctorNotes[idx]; if (t === undefined) return;
+      const key = String(t).trim();
+      const m = Object.assign({}, noteMeta(t));
+      if (m.star) delete m.star; else m.star = true;
+      doctorNoteMeta[key] = m;
+      // 켠 것은 ★ 묶음 맨 아래로, 끈 것은 ★ 묶음 바로 아래로
+      doctorNotes.splice(idx, 1);
+      const nStar = doctorNotes.filter(n => noteMeta(n).star).length;
+      doctorNotes.splice(nStar, 0, t);
+      sortNotesByStar();
+      triggerHaptic();
+      saveDoctorNotes();
+      renderDoctorNotes();
+    }
 
     let moodRecords = (function() {
       const raw = safeJsonParse('lifeguard_mood_records', []);
@@ -4185,9 +4228,16 @@
       const cardText = isDark ? '#eff3f2' : '#2d3748';
       const cardNum = isDark ? '#9ec0c4' : '#597075';
       const handleColor = isDark ? '#9ec0c4' : '#597075';
+      const subColor = isDark ? 'rgba(255,255,255,.42)' : '#9aa7ab';
+      const starBg = isDark ? '#27302f' : '#edf2f2', starBorder = isDark ? 'rgba(158,192,196,.45)' : 'rgba(89,112,117,.35)';
+      sortNotesByStar();
+      const firstPlain = doctorNotes.findIndex(n => !noteMeta(n).star);
+      const anyStar = doctorNotes.some(n => noteMeta(n).star);
 
-      container.innerHTML = doctorNotes.map((note, idx) => `
-        <div id="memo-wrapper-${idx}" class="memo-wrapper relative rounded-xl mb-1.5 select-none transition-all duration-200" data-idx="${idx}" style="overflow: hidden;">
+      container.innerHTML = doctorNotes.map((note, idx) => {
+        const star = !!noteMeta(note).star, when = noteWhen(note);
+        return `
+        <div id="memo-wrapper-${idx}" class="memo-wrapper relative rounded-xl mb-1.5 select-none transition-all duration-200" data-idx="${idx}" style="overflow: hidden;${anyStar && idx === firstPlain && idx > 0 ? ' margin-top: 12px;' : ''}">
           <!-- 뒤쪽 '삭제' 버튼 영역 (평소엔 opacity 0으로 완전히 숨겨져 절대 삐져나오지 않음, 좌로 밀 때만 부드럽게 페이드인 노출) -->
           <div id="memo-del-btn-${idx}"
                style="position: absolute; top: 0; bottom: 0; right: 0; width: 56px; background-color: #d9534f; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: calc(11px * var(--fs)); border-radius: 10px; cursor: pointer; user-select: none; opacity: 0; pointer-events: none; transition: opacity 0.15s ease;"
@@ -4196,16 +4246,19 @@
           </div>
           <!-- 전면 카드: 좌로 밀면 '삭제' 영역 노출 (엑스 표시 없음) -->
           <div id="memo-front-${idx}"
-               class="memo-front-card relative z-10 rounded-xl p-2.5 text-[11px] flex items-center justify-between"
-               style="background-color: ${cardBg}; border: 1px solid ${cardBorder}; color: ${cardText}; transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); transform: translateX(0px);"
+               class="memo-front-card relative z-10 rounded-xl p-2.5 text-[11px] flex items-start justify-between"
+               style="background-color: ${star ? starBg : cardBg}; border: 1px solid ${star ? starBorder : cardBorder}; color: ${cardText}; transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); transform: translateX(0px);"
                data-idx="${idx}">
-            <!-- 텍스트 영역 (좌우 스와이프 전용) -->
-            <div class="memo-swipe-area flex items-start gap-2 flex-1 pr-2 cursor-pointer" data-idx="${idx}">
-              <span class="font-bold text-[11px] min-w-[16px]" style="color: ${cardNum};">${idx + 1}.</span>
-              <span class="flex-1 leading-snug" style="color: ${cardText};">${escapeHtml(note)}</span>
+            <!-- 1.2.12 ★: 누르면 진료 때 꼭 말할 것으로 맨 위에 -->
+            <button type="button" class="memo-star shrink-0" onclick="toggleMemoStar(${idx}, event)" aria-label="${star ? '꼭 말할 것 끄기' : '꼭 말할 것으로 표시'}" aria-pressed="${star}"
+                    style="color: ${star ? cardNum : subColor}; font-size: calc(15px * var(--fs)); line-height: 1.1; width: 24px; margin: -2px 4px -2px -2px; padding: 0; text-align: center;">${star ? '★' : '☆'}</button>
+            <!-- 텍스트 영역 (좌우 스와이프 전용). 길면 여러 줄로 다 보이고, 적은 때는 첫 줄 오른쪽에 -->
+            <div class="memo-swipe-area flex items-start gap-2 flex-1 pr-1 cursor-pointer" data-idx="${idx}">
+              <span class="flex-1 leading-snug ${star ? 'font-bold' : ''}" style="color: ${cardText}; word-break: keep-all; overflow-wrap: anywhere;">${escapeHtml(note)}</span>
+              ${when ? `<span class="shrink-0 leading-snug" style="color: ${subColor}; font-size: calc(10px * var(--fs)); white-space: nowrap; padding-top: 1px;">${when}</span>` : ''}
             </div>
             <!-- 순서 이동 드래그 핸들 (위아래 드래그 전용) -->
-            <div class="memo-drag-handle p-1.5 cursor-grab active:cursor-grabbing shrink-0" data-idx="${idx}" title="터치 후 끌어서 순서 이동">
+            <div class="memo-drag-handle p-1.5 -my-1 cursor-grab active:cursor-grabbing shrink-0" data-idx="${idx}" title="터치 후 끌어서 순서 이동">
               <svg class="w-4 h-4 opacity-60 hover:opacity-100" viewBox="0 0 24 24" fill="${handleColor}">
                 <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
                 <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
@@ -4214,7 +4267,7 @@
             </div>
           </div>
         </div>
-      `).join('');
+      `; }).join('');
 
       // 1. 좌로 밀기 (Swipe-to-delete) 핸들러 등록
       container.querySelectorAll('.memo-swipe-area').forEach(swipeArea => {
@@ -4407,9 +4460,8 @@
             if (currentSlot !== fromIdx) {
               const [moved] = doctorNotes.splice(fromIdx, 1);
               doctorNotes.splice(currentSlot, 0, moved);
-              try {
-                localStorage.setItem('lifeguard_doctor_notes', JSON.stringify(doctorNotes));
-              } catch(e) {}
+              sortNotesByStar(); // 1.2.12: ★는 늘 위에 (★ 말씀끼리·나머지끼리만 순서가 바뀜)
+              saveDoctorNotes();
             }
             renderDoctorNotes();
           }, 240);
@@ -4496,8 +4548,9 @@
         setTimeout(() => {
           // 1.2.9: 사용자가 직접 지운 것은 폰이 비어도 그대로 지운다 (1.2.12: 다른 기기 기록은 덮지 않고, 지운 것만 뺀다)
           if (doctorNotes[idx] !== undefined) cloudMarkRemoved('lifeguard_doctor_notes', String(doctorNotes[idx]));
-          doctorNotes.splice(idx, 1);
-          localStorage.setItem('lifeguard_doctor_notes', JSON.stringify(doctorNotes));
+          const gone = doctorNotes.splice(idx, 1)[0];
+          if (gone !== undefined) noteRemoved(gone);
+          saveDoctorNotes();
           renderDoctorNotes();
         }, 250);
       }, 100);
@@ -4513,8 +4566,9 @@
       if (!val) { if (input) input.focus(); return; }
       triggerHaptic();
       cloudUnmarkRemoved('lifeguard_doctor_notes', val);
+      noteAdded(val);
       doctorNotes.push(val);
-      try { localStorage.setItem('lifeguard_doctor_notes', JSON.stringify(doctorNotes)); } catch (err) {}
+      saveDoctorNotes();
       input.value = '';
       renderDoctorNotes();
       const container = document.getElementById('memoItemsContainer');
@@ -4539,8 +4593,9 @@
       if (val && cloudWriteBlocked()) return; // 1.2.9: 적은 글은 칸에 그대로 두고 막는다
       if (val) {
         cloudUnmarkRemoved('lifeguard_doctor_notes', val);
+        noteAdded(val);
         doctorNotes.push(val);
-        try { localStorage.setItem('lifeguard_doctor_notes', JSON.stringify(doctorNotes)); } catch(err) {}
+        saveDoctorNotes();
         if (input) input.value = '';
         renderDoctorNotes();
         showToast('선생님께 드릴 말씀이 저장되었습니다 💬');
@@ -4636,6 +4691,7 @@
       moodRecords = [];
       pillRecords = [];
       doctorNotes = [];
+      doctorNoteMeta = {};
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       lastVisitDate = todayStr;
@@ -4643,6 +4699,7 @@
         localStorage.setItem('lifeguard_mood_records', '[]');
         localStorage.setItem('lifeguard_pill_records', '[]');
         localStorage.setItem('lifeguard_doctor_notes', '[]');
+        localStorage.setItem('lifeguard_doctor_notes_meta', '{}');
         localStorage.setItem('lifeguard_last_visit_date', todayStr);
         localStorage.setItem('lifeguard_surveys', '[]'); // 1.2.9: 설문도 이 주기 것은 보관함에 담겼으니 비운다
       } catch(e) {}
@@ -6323,8 +6380,13 @@
         if (cur) lines.push(cur);
         return lines.length ? lines : [''];
       };
+      // 1.2.12 (사용자): 보내기에도 ★ 먼저, 적은 때(날짜·시)는 첫 줄 오른쪽에
+      sortNotesByStar();
       const notes = (doctorNotes || []).map(n => String(n).trim()).filter(Boolean);
-      const noteLines = notes.map(n => wrap(n, INNER - 48 - 40, 32));
+      const noteStars = notes.map(n => !!noteMeta(n).star), noteWhens = notes.map(n => noteWhen(n));
+      const NOTE_WHEN_W = 150;
+      const noteLines = notes.map((n, i) => wrap(n, INNER - 48 - 40 - 40 - (noteWhens[i] ? NOTE_WHEN_W : 0), 32));
+      const noteGapAfterStars = noteStars.some(Boolean) && noteStars.some(x => !x) ? 18 : 0;
       // 1.2.10 (사용자): 설정 '설문' 스위치가 켜져 있으면, 이번 기간에 한 설문의 마지막 점수를 사진에 (한 것만)
       const surveyRows = surveyEnabled() ? SURVEY_ORDER.map(id => {
         const last = surveyList().filter(r => r.id === id).sort((a, b) => a.time < b.time ? 1 : -1)[0];
@@ -6344,7 +6406,7 @@
       if (showSleep) H += 28 + sleepCardH;
       if (showSteps) H += 28 + stepsCardH;
       if (surveyRows.length) H += 28 + surveyCardH;
-      const notesCardH = 40 + 36 + 28 + noteLines.reduce((a, l) => a + l.length * 46 + 22, 0) - 22 + 44;
+      const notesCardH = 40 + 36 + 28 + noteLines.reduce((a, l) => a + l.length * 46 + 22, 0) - 22 + 44 + noteGapAfterStars;
       if (notes.length) H += 28 + notesCardH;
       H += 40 + 34 + PAD;
       // 1.2.12: 기록이 길면 아이폰 사파리가 그릴 수 있는 크기(약 1,600만 점)를 넘어 빈 사진이 되던 것 → 넘지 않게 해상도만 낮춘다
@@ -6421,11 +6483,19 @@
         let ny = y + 40 + 36;
         ctx.fillStyle = ACCENT; ctx.font = font(34, true); ctx.fillText('선생님께 드릴 말씀', PAD + 40, ny);
         ny += 28;
+        let num = 0;
         noteLines.forEach((lines, i) => {
+          if (i > 0 && noteStars[i - 1] && !noteStars[i]) ny += noteGapAfterStars;
           ny += 46;
-          ctx.fillStyle = ACCENT; ctx.font = font(32, true); ctx.fillText(`${i + 1}.`, PAD + 40, ny);
-          ctx.fillStyle = TEXT; ctx.font = font(32);
+          ctx.fillStyle = ACCENT; ctx.font = font(32, true);
+          ctx.fillText(noteStars[i] ? '★' : `${++num}.`, PAD + 40, ny);
+          ctx.fillStyle = TEXT; ctx.font = font(32, noteStars[i]);
           lines.forEach((ln, j) => ctx.fillText(ln, PAD + 40 + 48, ny + j * 46));
+          if (noteWhens[i]) {
+            ctx.fillStyle = SUB; ctx.font = font(26); ctx.textAlign = 'right';
+            ctx.fillText(noteWhens[i], PAD + INNER - 40, ny);
+            ctx.textAlign = 'left';
+          }
           ny += (lines.length - 1) * 46 + 22;
         });
         y += cardH;
@@ -8977,7 +9047,7 @@
           out[k] = JSON.stringify(unionBy(arr(first, k), arr(second, k), x => x && x.id ? x.id + '|' + x.time : '').sort((a, b) => a.time < b.time ? -1 : 1));
         } else if (k === 'lifeguard_doctor_notes') {
           out[k] = JSON.stringify(unionBy(arr(first, k), arr(second, k), x => String(x).trim()));
-        } else if (k === 'lifeguard_sleep_log') {
+        } else if (k === 'lifeguard_sleep_log' || k === 'lifeguard_doctor_notes_meta') { // 1.2.12: 말씀의 ★·적은 때도 글로 합친다
           out[k] = JSON.stringify(Object.assign({}, obj(second, k), obj(first, k)));
         } else if (k === 'lifeguard_last_visit_date') {
           // 지워졌다 다시 이은 폰은 오늘이 '지난 진료일'로 새로 적혀 있어서 DB 것을 쓴다. 둘 다 쓰던 폰이면 진료 완료가 늦은 쪽
