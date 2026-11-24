@@ -999,6 +999,8 @@
 
         <!-- 1.2.8: 14일 샘플 채우기 · 데이터 비우기 버튼은 뺌 (사용자: 이제 필요 없음). 함수는 테스트·데스크톱 미리보기용으로 남김 -->
 
+        <!-- 기분 스펙트럼 단추 (1.2.12 시험판에서 본판으로) -->
+        <div class="stab-detail mb-3 px-1"><button type="button" onclick="openSpectrum(event)" class="w-full py-3 rounded-2xl text-[13px] font-bold border shadow-sm cursor-pointer" style="background:linear-gradient(90deg,#e8b80c22,#2e9b5822,#3a7bcc22,#ec872922,#dc413622);color:inherit;">🌈 기분 스펙트럼 보기 <span style="font-size:10px;opacity:.6">시험</span></button></div>
         <!-- 상세 칸 아래: 설정 설명 · 개인정보처리방침 · 새로워진 점을 한 줄로 (1.2.8 사용자) -->
         <div class="stab-detail flex items-center justify-center gap-2 pt-1 pb-3 whitespace-nowrap">
           <button type="button" onclick="openSettingsHelp(event)" class="text-[11px] opacity-60 hover:opacity-100 underline underline-offset-4 transition cursor-pointer" style="color: inherit;">설정 설명</button>
@@ -1118,7 +1120,7 @@
         </div>
       </div>
       <div class="pt-2">
-      <div id="settingsVersion" class="text-center text-[10px] text-gray-400">Life Guard v1.2.11-alpha (알파판)</div>
+      <div id="settingsVersion" class="text-center text-[10px] text-gray-400">Life Guard v1.2.12-alpha (알파판)</div>
       </div>
     </div>
 
@@ -5074,7 +5076,7 @@
         ['activitySleep', 'activitySteps'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = ''; });
         const labelEl = document.getElementById('activityLabel');
         if (labelEl) labelEl.textContent = '걸음';
-        // 칼라: 3천 걸음 기준 1천 걸음마다 기분 색처럼 (모자라면 빨강 쪽, 넘치면 연두 쪽)
+        // 칼라: 3천 걸음 기준 1천 걸음마다 기분 색처럼 (모자라면 빨강 쪽, 넘치면 노랑 쪽)
         const g = document.getElementById('activitySteps');
         const top = 6, base = 70, h = base - top;
         // 눈금 (1.2.8, 사용자: 단위·기준선이 있어야): 5k마다, 꼭대기는 1만(넘으면 늘어남)
@@ -5542,7 +5544,7 @@
 
     // 기분 그래프 세로 높이: ○~△(▽)가 한 칸이면 △~▲(▽~▼)는 1.5칸 (1.2.6, 사용자 결정). ○에서 위로 + / 아래로 -
     // 기분 색 (1.2.7, 사용자 요청: 흐리고 작아 한눈에 알아보기 어렵다)
-    // ▲ 매우 좋음 연두 · △ 좋음 초록 · ○ 보통 파랑 · ▽ 나쁨 주황 · ▼ 매우 나쁨 빨강. 어두운 화면은 조금 밝게
+    // ▲ 매우 좋음 노랑(1.2.12 사용자: 연두 → 노랑) · △ 좋음 초록 · ○ 보통 파랑 · ▽ 나쁨 주황 · ▼ 매우 나쁨 빨강. 어두운 화면은 조금 밝게
     // 설정 > 그래프 색: 'mono'(흑백, 기본) / 'color'(칼라). 흑백이면 예전처럼 테마 한 색 (1.2.7, 사용자 결정)
     let chartColorOn = (function() { try { return localStorage.getItem('lifeguard_chart_color') === 'color'; } catch (_) { return false; } })();
     function setChartColor(on, e) {
@@ -5555,7 +5557,7 @@
       if (chartZoomState) drawChartZoom();
     }
     function updateChartColorUI() {
-      // 1.2.8 (사용자 결정): 칼라를 고르면 '그래프 색' 글자가 한 자씩 우리 기분 색으로 (연두 · 초록 · 주황 · 빨강)
+      // 1.2.8 (사용자 결정): 칼라를 고르면 '그래프 색' 글자가 한 자씩 우리 기분 색으로 (노랑 · 초록 · 주황 · 빨강)
       const ct = document.getElementById('settingsChartColorTitle');
       if (ct) {
         if (chartColorOn) {
@@ -5587,8 +5589,8 @@
     }
     function moodColor(score, forceLight) {
       const dark = !forceLight && getEffectiveTheme(currentTheme) === 'dark';
-      const L = { '2': '#74bb37', '1': '#2e9b58', '0': '#3a7bcc', '-1': '#ec8729', '-2': '#dc4136' };
-      const D = { '2': '#9bd660', '1': '#4dc07e', '0': '#6aa4ec', '-1': '#f4a254', '-2': '#f06a5f' };
+      const L = { '2': '#e8b80c', '1': '#2e9b58', '0': '#3a7bcc', '-1': '#ec8729', '-2': '#dc4136' };
+      const D = { '2': '#f3cf4c', '1': '#4dc07e', '0': '#6aa4ec', '-1': '#f4a254', '-2': '#f06a5f' };
       return (dark ? D : L)[String(score)] || (dark ? D['0'] : L['0']);
     }
     // 곡선용 세로 그라데이션: 높이마다 그 기분의 색. userSpaceOnUse라 그래프 높이에 그대로 맞는다
@@ -7592,13 +7594,14 @@
     }
 
     // ── 새로워진 점 안내 (버전별). 저절로는 한 번만 뜬다. 다시 보려면 설정 맨 아래 '새로워진 점 보기' ──
-    const WHATS_NEW_VERSION = '1.2.11';
-    // 1.2.11에서 바뀐 것 (잠 기록). 세 번째 값 'android'는 안드로이드 앱에서만, 'web'은 웹·아이폰에서만
+    const WHATS_NEW_VERSION = '1.2.12';
+    // 1.2.12에서 바뀐 것. 세 번째 값 'android'는 안드로이드 앱에서만, 'web'은 웹·아이폰에서만
+    // (1.2.11 것: 잠 기록 꾹 누르기 · 밤중에 깬 때와 낮잠 · 시계 가운데 시각 · 설정 상세에서 켜고 끄기)
     const WHATS_NEW_ITEMS = [
-      ['🌙', '잠 기록이 쉬워졌어요. 첫 화면 위 가운데를 꾹 누르면 ‘잘 자요’, 깨서 한 번 더 꾹 누르면 ‘깼어요’예요.'],
-      ['👁', '밤중에 깼다가 다시 잘 때도 꾹. 밤중에 깬 때와 낮잠은 앱이 알아서 나눠 적어요.'],
-      ['🕐', '잠 기록 창 시계 가운데에 잠든·깬 시각이 보이고, 눌러서 바로 고칠 수 있어요.'],
-      ['🛏️', '잠 기록은 설정 상세 칸에서 켜고 꺼요.'],
+      ['⭐', '선생님께 드릴 말씀 앞의 ☆를 누르면 꼭 말할 것으로 맨 위에 모여요. 적은 날짜·시각과 그때 기분도 옆에 보여요.'],
+      ['🌈', '설정 상세 칸 맨 아래 ‘기분 스펙트럼 보기’에서 지난 진료부터 오늘까지 기분을 달력으로 볼 수 있어요.'],
+      ['🎨', '‘매우 좋음’ 색이 노랑으로 바뀌었어요.'],
+      ['✓', '‘진료 완료’ 뒤에 지난 기록이 다시 나타나던 문제를 고쳤어요.'],
       ['🌿', '이 안내는 한 번만 떠요. 설정 상세 칸 맨 아래 ‘새로워진 점 보기’에서 다시 볼 수 있어요.']
     ];
     let whatsNewEl = null;
@@ -8693,7 +8696,7 @@
     }
 
     // ── 뒤로가기: 열려 있는 창이 있으면 그 창부터 닫는다 (안드로이드 앱·웹 공통) ──
-    const BACK_WINDOW_IDS = ['surveyModal', 'sleepModal', 'reportShare', 'chartZoom', 'dailyCheckinModal', 'finishVisitModal', 'memoModal', 'peaceModal', 'settingsModal', 'reportModal'];
+    const BACK_WINDOW_IDS = ['specZoomModal', 'specModal', 'surveyModal', 'sleepModal', 'reportShare', 'chartZoom', 'dailyCheckinModal', 'finishVisitModal', 'memoModal', 'peaceModal', 'settingsModal', 'reportModal'];
     function isWindowOpen(id) {
       const el = document.getElementById(id);
       return !!el && !el.classList.contains('opacity-0') && !el.classList.contains('hidden') && el.style.display !== 'none';
@@ -8708,6 +8711,8 @@
     function closeTopWindow() {
       if (cloudSheetOpen()) { closeCloudSheet(); return true; } // 1.2.12: 맨 위(z-80)
       if (whatsNewEl) { closeWhatsNew(); return true; }
+      if (isWindowOpen('specZoomModal')) { specZoomClose(); return true; } // 1.2.12: 기분 스펙트럼 본판에
+      if (isWindowOpen('specModal')) { specClose(); return true; }
       if (isWindowOpen('surveyModal')) { if (surveyRun && surveyRun.stage === 'q' && surveyRun.i > 0 || surveyRun && surveyRun.stage === 'extra') surveyBack(); else closeSurvey(); return true; }
       if (isWindowOpen('sleepModal')) { closeSleepModal(); return true; }
       if (isWindowOpen('reportShare')) { closeReportShare(); return true; }
@@ -9398,6 +9403,320 @@
     if ('serviceWorker' in navigator && location.protocol === 'https:') {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
+  </script>
+  <!-- ── 🧪 시험판: 기분 스펙트럼 (1.2.12 사용자 "본판에서 접근 가능하게": 본판에도 들어감) ── -->
+  <div id="specModal" onclick="event.stopPropagation()" style="display:none;position:fixed;inset:0;z-index:60;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+    <div style="max-width:440px;margin:0 auto;padding:14px 14px 40px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 2px 10px;">
+        <div style="font-weight:800;font-size:15px;" class="spec-accent">🌈 기분 스펙트럼 <span style="font-size:10px;font-weight:600;opacity:.6;">시험</span></div>
+        <button type="button" onclick="specClose(event)" style="font-size:13px;font-weight:700;padding:6px 12px;border-radius:999px;" class="spec-chip">닫기 ✕</button>
+      </div>
+      <div class="spec-note" id="specNote" style="font-size:11.5px;line-height:1.6;margin:0 4px 8px;"></div>
+      <div id="specModes" style="display:flex;flex-wrap:wrap;gap:6px;margin:0 2px 12px;"></div>
+      <div class="spec-card"><div class="spec-head"><span>📅 달력 · 지난 진료부터 오늘까지</span></div><svg id="specM" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegM"></div></div>
+      <div class="spec-card"><div class="spec-head"><span>📅 달력 · 하루의 오르내림 (칸마다 0시 → 24시)</span></div><svg id="specM2" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegM2"></div></div>
+      <div class="spec-card"><div class="spec-head"><span>A · 기분 띠와 잠·걸음</span><button type="button" onclick="specZoom('A', event)" class="spec-chip spec-zbtn">확대 ⤢</button></div><svg id="specA" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegA"></div></div>
+      <div class="spec-card"><div class="spec-head"><span>C · 하루 한 줄 (가로: 0시 → 24시)</span><button type="button" onclick="specZoom('C', event)" class="spec-chip spec-zbtn">확대 ⤢</button></div><svg id="specC" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegC"></div></div>
+      <div class="spec-card"><div class="spec-head"><span>C 세로 · 아래 날짜, 왼쪽 시각</span><button type="button" onclick="specZoom('V', event)" class="spec-chip spec-zbtn">확대 ⤢</button></div><svg id="specV" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegV"></div></div>
+    </div>
+  </div>
+  <div id="specZoomModal" onclick="event.stopPropagation()" style="display:none;position:fixed;inset:0;z-index:61;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px;">
+      <div id="specZoomTitle" style="font-weight:800;font-size:14px;" class="spec-accent"></div>
+      <button type="button" onclick="specZoomClose(event)" class="spec-chip" style="font-size:13px;font-weight:700;padding:6px 12px;border-radius:999px;">닫기 ✕</button>
+    </div>
+    <div id="specZoomScroll" style="flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:0 10px 20px;"><svg id="specZoomSvg" style="display:block"></svg></div>
+  </div>
+  <style>
+    #specModal, #specZoomModal { background: var(--spec-bg); color: var(--spec-ink); }
+    .spec-card { background: var(--spec-card); border-radius: 20px; padding: 12px 12px 10px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+    .spec-head { display:flex; align-items:center; justify-content:space-between; font-size:12.5px; font-weight:800; color: var(--spec-accent); margin: 0 2px 8px; }
+    .spec-accent { color: var(--spec-accent); }
+    .spec-note { color: var(--spec-muted); }
+    .spec-chip { background: var(--spec-soft); color: var(--spec-accent); }
+    .spec-zbtn { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+    .spec-leg { display:flex; flex-wrap:wrap; gap: 4px 10px; justify-content:center; font-size: 10.5px; color: var(--spec-muted); margin-top: 6px; }
+    .spec-leg i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:3px; vertical-align:-1px; }
+  </style>
+  <script>
+    // 🧪 기분 스펙트럼 (사용자 11.23: "막대 색으로, 가로는 시간 · 색은 기분. A와 C를 설정 상세 아래 단추로, 확대도, 함께 보기처럼 잠·걸음도")
+    // 칠하는 방식 (사용자 11.23: "아침에 파랑 하나 적으면 그날은 쭉 파랑으로 봐야 하나?" → 넷을 견줘 봄)
+    // fade 다음 기록까지 · 4시간 뒤 옅게 / gap 4시간만 칠하고 비움 / sleep 잠들 때까지만 · 4시간 뒤 옅게 / short 적은 때 앞뒤 1시간 반만
+    let specMode = 'gap';
+    const SPEC_MODES = [['gap', '① 4시간만'], ['sleep', '② 잠들 때까지'], ['short', '③ 적은 때만'], ['fade', '이어 칠하기']];
+    const SPEC_NOTES = {
+      gap: '기분을 적은 뒤 <b>4시간만</b> 그 색으로 칠해요. 그 뒤는 적지 않아 모르니까 비워 둬요.',
+      sleep: '기분을 적은 때부터 <b>그날 잠들 때까지</b> 칠해요. 4시간이 지나면 옅게.',
+      short: '기분을 <b>적은 때 앞뒤 1시간 반</b>만 칠해요. 기록이 촘촘한 날이 꽉 차 보여요.',
+      fade: '기분을 적은 때부터 <b>다음에 적을 때까지</b> 칠해요. 4시간이 지나면 옅게.'
+    };
+    const SPEC_FADE_H = 4, SPEC_SHORT_H = 1.5;
+    const SPEC_WAKE = '#D99A6C';
+    function specTheme() {
+      const dark = getEffectiveTheme(currentTheme) === 'dark';
+      const neutral = getEffectiveTheme(currentTheme) === 'neutral';
+      return dark ? { dark, bg: '#141718', card: '#1e2223', ink: '#e8eeee', muted: 'rgba(255,255,255,.55)', accent: '#9ec0c4', soft: 'rgba(158,192,196,.14)', grid: 'rgba(255,255,255,.12)', empty: 'rgba(255,255,255,.06)', sleep: '#c9d6ff' }
+        : { dark, bg: neutral ? '#ecefea' : '#fbfcfc', card: '#ffffff', ink: '#3b4547', muted: '#7b8789', accent: neutral ? '#455a5c' : '#597075', soft: 'rgba(89,112,117,.10)', grid: '#dfe5e6', empty: '#eef1f1', sleep: '#3c4a7a' };
+    }
+    function specApplyTheme() {
+      const t = specTheme();
+      ['specModal', 'specZoomModal'].forEach(id => { const m = document.getElementById(id); if (!m) return;
+        m.style.setProperty('--spec-bg', t.bg); m.style.setProperty('--spec-card', t.card); m.style.setProperty('--spec-ink', t.ink);
+        m.style.setProperty('--spec-muted', t.muted); m.style.setProperty('--spec-accent', t.accent); m.style.setProperty('--spec-soft', t.soft); });
+      const box = document.getElementById('specModes');
+      // 사용자 11.23 "1번으로 하자": ① 4시간만으로 정함 → 고르는 단추는 숨김 (다른 방식 코드는 남겨 둠)
+      if (box) box.style.display = 'none';
+      if (false) box.innerHTML = SPEC_MODES.map(([k, lab]) => `<button type="button" onclick="specSetMode('${k}', event)" style="font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:999px;${k === specMode ? `background:${t.accent};color:${t.dark ? '#141718' : '#fff'}` : `background:${t.soft};color:${t.accent}`}">${lab}</button>`).join('');
+      const note = document.getElementById('specNote'); if (note) note.innerHTML = SPEC_NOTES[specMode];
+    }
+    function openSpectrum(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      triggerHaptic();
+      const m = document.getElementById('specModal'); if (!m) return;
+      specApplyTheme(); m.style.display = 'block'; m.scrollTop = 0;
+      specRenderAll(); syncBackState();
+    }
+    function specClose(e) { if (e && e.stopPropagation) e.stopPropagation(); const m = document.getElementById('specModal'); if (m) m.style.display = 'none'; syncBackState(); }
+    function specSetMode(k, e) { if (e && e.stopPropagation) e.stopPropagation(); triggerHaptic(); specMode = k; specApplyTheme(); specRenderAll(); }
+    // 자료: 기간 · 기분 조각(적은 때 → 다음 적은 때) · 잠 조각(실제 시각) · 걸음
+    function specData() {
+      const { d1, diffDays } = getReportRange();
+      const T0 = d1.getTime(), T1 = T0 + diffDays * 86400000, now = Date.now();
+      const recs = (moodRecords || []).map(m => ({ t: new Date(m && m.time || '').getTime(), s: [2, 1, 0, -1, -2].includes(m && m.score) ? m.score : 0 }))
+        .filter(r => !isNaN(r.t) && r.t >= T0 && r.t < T1).sort((a, b) => a.t - b.t);
+      const days = reportActivityDays();
+      const sleeps = [];
+      const rel = (m) => ((m - 18 * 60) % 1440 + 1440) % 1440;
+      days.forEach(d => {
+        if (!d.segs || !d.segs.length) return;
+        const base = parseLocalDate(d.date); base.setDate(base.getDate() - 1); base.setHours(18, 0, 0, 0);
+        d.segs.forEach(x => { const a = rel(x.start); let b = rel(x.end); if (b <= a) b = Math.min(1440, a + sleepDur(x));
+          sleeps.push({ a: base.getTime() + a * 60000, b: base.getTime() + b * 60000, k: x.kind }); });
+      });
+      const H = 3600000, moods = [];
+      const sleepStarts = sleeps.filter(x => x.k !== 'wake').map(x => x.a).sort((a, b) => a - b);
+      recs.forEach((r, i) => {
+        const next = Math.min(i + 1 < recs.length ? recs[i + 1].t : Math.min(now, T1), T1);
+        if (next <= r.t) return;
+        if (specMode === 'short') {
+          const prev = i > 0 ? recs[i - 1].t : -Infinity;
+          const a = Math.max(r.t - SPEC_SHORT_H * H, (prev + r.t) / 2, T0);
+          const b = Math.min(r.t + SPEC_SHORT_H * H, i + 1 < recs.length ? (r.t + recs[i + 1].t) / 2 : Math.min(now, T1));
+          if (b > a) moods.push({ a, b, s: r.s, o: 1 });
+          return;
+        }
+        let end = next;
+        if (specMode === 'gap') end = Math.min(end, r.t + SPEC_FADE_H * H);
+        if (specMode === 'sleep') { const sl = sleepStarts.find(x => x > r.t); if (sl) end = Math.min(end, sl); }
+        const fadeAt = Math.min(end, r.t + SPEC_FADE_H * H);
+        moods.push({ a: r.t, b: fadeAt, s: r.s, o: 1 });
+        if (fadeAt < end) moods.push({ a: fadeAt, b: end, s: r.s, o: 0.28 });
+      });
+      return { d1, diffDays, T0, T1, moods, sleeps, days, recs };
+    }
+    function specMk(svg) { const NS = 'http://www.w3.org/2000/svg'; return (tag, at, p) => { const el = document.createElementNS(NS, tag); for (const k in at) el.setAttribute(k, String(at[k])); (p || svg).appendChild(el); return el; }; }
+    const specMD = (d1, i) => { const d = new Date(d1); d.setDate(d1.getDate() + i); return `${d.getMonth() + 1}.${d.getDate()}`; };
+    // A: 가로 = 시간(진료일 → 오늘). 기분 띠 · 잠 줄(잔 때·깬 때·낮잠) · 걸음 막대가 같은 시간 축
+    function specDrawA(svg, W, big) {
+      const D = specData(), t = specTheme(), mk = specMk(svg);
+      svg.textContent = '';
+      const L = big ? 34 : 30, R = W - 6, w = R - L;
+      const moodH = big ? 120 : 58, sleepH = big ? 34 : 18, stepH = big ? 70 : 34, gap = big ? 14 : 8, fs = big ? 10 : 8.5;
+      const yM = 4, yS = yM + moodH + gap, yW = yS + sleepH + gap, yAx = yW + stepH + 4, H = yAx + 16;
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('width', big ? W : '100%'); if (big) svg.setAttribute('height', H);
+      const X = (ms) => L + (ms - D.T0) / (D.T1 - D.T0) * w;
+      const lab = (y, txt) => { const e = mk('text', { x: L - 5, y, 'text-anchor': 'end', 'font-size': fs, fill: t.muted, 'font-weight': 700 }); e.textContent = txt; };
+      // 기분
+      const cp = mk('clipPath', { id: 'spA' + (big ? 'z' : '') }); mk('rect', { x: L, y: yM, width: w, height: moodH, rx: big ? 12 : 9 }, cp);
+      const g = mk('g', { 'clip-path': `url(#spA${big ? 'z' : ''})` });
+      mk('rect', { x: L, y: yM, width: w, height: moodH, fill: t.empty }, g);
+      D.moods.forEach(m => mk('rect', { x: X(m.a).toFixed(2), y: yM, width: Math.max(0.6, X(m.b) - X(m.a) + 0.3).toFixed(2), height: moodH, fill: moodColor(m.s), opacity: m.o }, g));
+      if (big) D.recs.forEach(r => mk('line', { x1: X(r.t), x2: X(r.t), y1: yM + moodH - 7, y2: yM + moodH, stroke: t.dark ? '#141718' : '#fff', 'stroke-width': 1.2, opacity: .8 }, g));
+      lab(yM + moodH / 2 + 3, '기분');
+      // 잠
+      mk('rect', { x: L, y: yS, width: w, height: sleepH, rx: 4, fill: t.empty });
+      D.sleeps.slice().sort((a, b) => (a.k === 'wake') - (b.k === 'wake')).forEach(s => {
+        const x1 = Math.max(L, X(s.a)), x2 = Math.min(R, X(s.b)); if (x2 <= x1) return;
+        if (s.k === 'wake') mk('rect', { x: x1, y: yS, width: Math.max(1, x2 - x1), height: sleepH, fill: SPEC_WAKE });
+        else mk('rect', { x: x1, y: yS + (s.k === 'nap' ? sleepH * .25 : 0), width: x2 - x1, height: s.k === 'nap' ? sleepH * .5 : sleepH, rx: 2, fill: t.sleep, opacity: s.k === 'nap' ? .45 : .85 });
+      });
+      lab(yS + sleepH / 2 + 3, '잠');
+      // 걸음
+      const steps = D.days.map(d => d.steps);
+      const mx = Math.max(10000, ...steps.filter(v => v != null));
+      const dw = w / D.diffDays;
+      mk('line', { x1: L, x2: R, y1: yW + stepH, y2: yW + stepH, stroke: t.grid });
+      steps.forEach((v, i) => { if (v == null) return; const h = v / mx * stepH; mk('rect', { x: L + i * dw + dw * .2, y: yW + stepH - h, width: dw * .6, height: Math.max(.8, h), rx: Math.min(2, dw * .2), fill: chartColorOn ? moodColorAt(v / 2000 - 3) : t.accent, opacity: .75 }); });
+      lab(yW + stepH / 2 + 3, '걸음');
+      // 날짜 눈금
+      const every = big ? 1 : Math.max(1, Math.ceil(D.diffDays / 7));
+      for (let i = 0; i <= D.diffDays; i++) {
+        const x = L + i * dw;
+        mk('line', { x1: x, x2: x, y1: yM, y2: yAx, stroke: t.grid, 'stroke-width': .6, opacity: .7, 'stroke-dasharray': '2,3' });
+        if (i < D.diffDays && i % every === 0) { const e = mk('text', { x: x + dw / 2, y: yAx + 11, 'text-anchor': 'middle', 'font-size': fs, fill: t.muted }); e.textContent = specMD(D.d1, i); }
+      }
+      return D;
+    }
+    // C: 하루 한 줄. vertical이면 90도로 세움 (아래가 날짜, 왼쪽이 시각, 위가 0시)
+    function specDrawC(svg, W, big, vertical) {
+      const D = specData(), t = specTheme(), mk = specMk(svg);
+      svg.textContent = '';
+      const n = D.diffDays, fs = big ? 10 : 8.5, id = 'spC' + (vertical ? 'v' : 'h') + (big ? 'z' : '');
+      let H, cell; // cell(i, a, b) → 그날 i의 a~b시 칸
+      if (!vertical) {
+        const L = 34, R = W - (big ? 40 : 30), rowH = big ? 22 : 12, gap = big ? 5 : 3, y0 = 4;
+        H = y0 + n * (rowH + gap) + 16;
+        cell = (i, a, b) => ({ x: L + (R - L) * a / 24, y: y0 + i * (rowH + gap), w: (R - L) * (b - a) / 24, h: rowH });
+        for (let i = 0; i < n; i++) { const c = cell(i, 0, 24); const e = mk('text', { x: L - 5, y: c.y + rowH - 3, 'text-anchor': 'end', 'font-size': fs, fill: t.muted }); e.textContent = specMD(D.d1, i); }
+        [0, 6, 12, 18, 24].forEach(h => { const e = mk('text', { x: L + (R - L) * h / 24, y: H - 4, 'text-anchor': h === 0 ? 'start' : h === 24 ? 'end' : 'middle', 'font-size': fs, fill: t.muted }); e.textContent = h + '시'; });
+        specStepsSide(D, mk, t, i => cell(i, 24, 24), rowH, R, W, fs, false);
+      } else {
+        const L = 26, T = 4, B = big ? 520 : 250, colGap = big ? 5 : 2;
+        const colW = Math.max(big ? 22 : 4, ((W - L - 4) - (n - 1) * colGap) / n);
+        if (big) W = L + n * (colW + colGap) + 30;
+        H = B + (big ? 70 : 40);
+        cell = (i, a, b) => ({ x: L + i * (colW + colGap), y: T + (B - T) * (24 - b) / 24, w: colW, h: (B - T) * (b - a) / 24 }); // 사용자: 0시가 아래, 24시가 꼭대기
+        [0, 6, 12, 18, 24].forEach(h => { const e = mk('text', { x: L - 4, y: T + (B - T) * (24 - h) / 24 + 3, 'text-anchor': 'end', 'font-size': fs, fill: t.muted }); e.textContent = h + '시';
+          if (big) { const r = mk('text', { x: W - 2, y: T + (B - T) * (24 - h) / 24 + 3, 'text-anchor': 'end', 'font-size': fs, fill: t.muted }); r.textContent = h + '시'; } }); // 확대하면 옆으로 밀려도 오른쪽에서 시각을 읽게
+        const every = big ? 1 : Math.max(1, Math.ceil(n / 7));
+        for (let i = 0; i < n; i += every) { const c = cell(i, 0, 0); const e = mk('text', { x: c.x + colW / 2, y: B + 13, 'text-anchor': 'middle', 'font-size': fs, fill: t.muted }); e.textContent = specMD(D.d1, i); }
+        specStepsSide(D, mk, t, i => cell(i, 24, 24), colW, B + 18, H, fs, true);
+      }
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('width', big ? W : '100%'); if (big) svg.setAttribute('height', H);
+      const dayMs = 86400000;
+      for (let i = 0; i < n; i++) {
+        const s0 = D.T0 + i * dayMs, s1 = s0 + dayMs, full = cell(i, 0, 24);
+        const cp = mk('clipPath', { id: id + i }); mk('rect', { x: full.x, y: full.y, width: full.w, height: full.h, rx: big ? 5 : 3 }, cp);
+        const g = mk('g', { 'clip-path': `url(#${id + i})` });
+        mk('rect', { x: full.x, y: full.y, width: full.w, height: full.h, fill: t.empty }, g);
+        const part = (a, b) => { a = Math.max(a, s0); b = Math.min(b, s1); return b > a ? cell(i, (a - s0) / 3600000, (b - s0) / 3600000) : null; };
+        D.moods.forEach(m => { const c = part(m.a, m.b); if (c) mk('rect', { x: c.x, y: c.y, width: c.w + (vertical ? 0 : .3), height: c.h + (vertical ? .3 : 0), fill: moodColor(m.s), opacity: m.o }, g); });
+        // 잠은 기분 위에 덮는다 (자는 동안의 기분은 없으니까)
+        D.sleeps.slice().sort((a, b) => (a.k === 'wake') - (b.k === 'wake')).forEach(sl => { const c = part(sl.a, sl.b); if (!c) return;
+          if (sl.k === 'wake') mk('rect', { x: c.x, y: c.y, width: Math.max(vertical ? c.w : 1, c.w), height: Math.max(vertical ? 1 : c.h, c.h), fill: SPEC_WAKE }, g);
+          else mk('rect', { x: c.x, y: c.y, width: c.w, height: c.h, fill: t.dark ? '#0b0d1a' : '#2b3557', opacity: sl.k === 'nap' ? .45 : .82 }, g); });
+      }
+    }
+    // 걸음: 가로면 줄 오른쪽 끝에 짧은 막대, 세로면 칸 아래에 막대
+    function specStepsSide(D, mk, t, at, size, edge, far, fs, vertical) {
+      const vals = D.days.map(d => d.steps), mx = Math.max(10000, ...vals.filter(v => v != null));
+      vals.forEach((v, i) => { if (v == null) return; const c = at(i), k = v / mx;
+        if (!vertical) mk('rect', { x: edge + 4, y: c.y + size * .2, width: Math.max(1, (far - edge - 8) * k), height: size * .6, rx: 1.5, fill: t.accent, opacity: .55 });
+        else mk('rect', { x: c.x + size * .15, y: edge + 4, width: size * .7, height: Math.max(1, (far - edge - 8) * k), rx: 1.5, fill: t.accent, opacity: .55 }); });
+    }
+    function specLegend(id, withSteps) {
+      const t = specTheme(), el = document.getElementById(id); if (!el) return;
+      const mood = [2, 1, 0, -1, -2].map(s => `<span><i style="background:${moodColor(s)}"></i>${({ 2: '▲', 1: '△', 0: '○', '-1': '▽', '-2': '▼' })[s]}</span>`).join('');
+      el.innerHTML = mood + `<span><i style="background:${id === 'specLegA' ? t.sleep : (t.dark ? '#0b0d1a' : '#2b3557')};opacity:.85"></i>잠</span><span><i style="background:${SPEC_WAKE}"></i>깬 때</span>` + (withSteps ? `<span><i style="background:${t.accent};opacity:.6"></i>걸음</span>` : '');
+    }
+    // 📅 달력 (사용자 11.24): 지난 진료부터 오늘까지를 달 달력에. 하루 한 번이면 그 색 동그라미 하나,
+    // 여러 번이면 동그라미를 적은 차례대로 왼쪽부터 겹쳐 놓는다 (기분을 가공하지 않고 적은 그대로). 진하기는 그 기분이 이어진 시간에 따라 (1.2.12)
+    function specDrawMonth(svg, W, line) {
+      const t = specTheme(), mk = specMk(svg);
+      svg.textContent = '';
+      const { d1 } = getReportRange();
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const key = (d) => localDateKey(d);
+      const byDay = new Map();
+      (moodRecords || []).forEach(m => {
+        const tm = new Date(m && m.time || ''); if (isNaN(tm.getTime())) return;
+        const s = [2, 1, 0, -1, -2].includes(m.score) ? m.score : 0;
+        const k = key(tm); if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push({ t: tm.getTime(), s });
+      });
+      byDay.forEach(a => a.sort((x, y) => x.t - y.t));
+      const inRange = (d) => d >= d1 && d <= today;
+      const cw = W / 7, ch = Math.round(cw * (line ? 1.25 : 0.92)), fs = Math.max(9, Math.min(12, cw * 0.22));
+      const WD = ['일', '월', '화', '수', '목', '금', '토'];
+      let y = 0;
+      for (let m = new Date(d1.getFullYear(), d1.getMonth(), 1); m <= today; m = new Date(m.getFullYear(), m.getMonth() + 1, 1)) {
+        // 달 이름 · 요일
+        const tt = mk('text', { x: 4, y: y + 16, 'font-size': fs + 2, 'font-weight': 800, fill: t.accent });
+        tt.textContent = (m.getFullYear() !== today.getFullYear() ? m.getFullYear() + '년 ' : '') + (m.getMonth() + 1) + '월';
+        y += 26;
+        WD.forEach((w, i) => { const e = mk('text', { x: i * cw + cw / 2, y: y + 10, 'text-anchor': 'middle', 'font-size': fs - 1, fill: i === 0 ? '#dc4136' : t.muted, opacity: i === 0 ? .7 : 1 }); e.textContent = w; });
+        y += 16;
+        const first = m.getDay(), last = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate();
+        // 첫 달은 지난 진료일이 든 주부터 (그 앞 빈 주는 그리지 않음), 마지막 달은 오늘이 든 주까지
+        const skip = (m.getFullYear() === d1.getFullYear() && m.getMonth() === d1.getMonth()) ? Math.floor((first + d1.getDate() - 1) / 7) : 0;
+        const lastRow = (m.getFullYear() === today.getFullYear() && m.getMonth() === today.getMonth()) ? Math.floor((first + today.getDate() - 1) / 7) : Math.ceil((first + last) / 7) - 1;
+        const rows = lastRow - skip + 1;
+        for (let dd = 1; dd <= last; dd++) {
+          const d = new Date(m.getFullYear(), m.getMonth(), dd);
+          const cell = first + dd - 1, row = Math.floor(cell / 7) - skip;
+          if (row < 0 || row >= rows) continue;
+          const cx = (cell % 7) * cw, cy = y + row * ch;
+          const on = inRange(d), isToday = d.getTime() === today.getTime(), isVisit = d.getTime() === d1.getTime();
+          // 날짜 숫자 (기간 밖은 옅게). 지난 진료일·오늘은 테두리
+          if (isToday || isVisit) mk('rect', { x: cx + cw / 2 - fs * 0.95, y: cy + 2, width: fs * 1.9, height: fs + 5, rx: (fs + 5) / 2, fill: 'none', stroke: t.accent, 'stroke-width': 1.2 });
+          const nt = mk('text', { x: cx + cw / 2, y: cy + fs + 3, 'text-anchor': 'middle', 'font-size': fs, 'font-weight': (isToday || isVisit) ? 800 : 500, fill: on ? t.ink : t.muted, opacity: on ? 1 : 0.35 });
+          nt.textContent = dd;
+          if (!on) continue;
+          const recs = byDay.get(key(d)) || [];
+          if (line) {
+            // 1.2.12 시험 (사용자 11.24): 칸 안에 그날의 오르내림 — 가로 0시→24시, 높이 = 기분 (▲ 위 · ▼ 아래)
+            const gx0 = cx + 2, gx1 = cx + cw - 2, gy0 = cy + fs + 9, gy1 = cy + ch - 6, gm = (gy0 + gy1) / 2;
+            const day0 = d.getTime();
+            // 점·선이 칸 밖으로 나가지 않게 점 반지름만큼 안쪽에서 그린다 (사용자 11.24 "칸을 넘어가면 안 됨")
+            const dotR = Math.max(2.6, cw * 0.07), pad = dotR + 1.2;
+            const ix0 = gx0 + pad, ix1 = gx1 - pad, iy0 = gy0 - 2 + pad, iy1 = gy1 + 2 - pad, im = (iy0 + iy1) / 2;
+            const px = (tm) => ix0 + Math.min(1, Math.max(0, (tm - day0) / 86400000)) * (ix1 - ix0);
+            const py = (sc) => im - sc * (iy1 - iy0) / 4;
+            mk('rect', { x: gx0, y: gy0 - 2, width: gx1 - gx0, height: gy1 - gy0 + 4, rx: 3, fill: t.empty });
+            // ○(파랑) 기준: 흐린 실선, 칸 안에서만 (사용자 11.24)
+            mk('line', { x1: gx0 + 1.5, x2: gx1 - 1.5, y1: im, y2: im, stroke: moodColor(0), 'stroke-width': 1, opacity: .35 });
+            mk('line', { x1: (gx0 + gx1) / 2, x2: (gx0 + gx1) / 2, y1: gy0 - 2, y2: gy1 + 2, stroke: t.grid, 'stroke-width': .5, opacity: .7 }); // 12시
+            if (!recs.length) continue;
+            if (recs.length > 1) mk('polyline', { points: recs.map(r => px(r.t).toFixed(1) + ',' + py(r.s).toFixed(1)).join(' '), fill: 'none', stroke: t.accent, 'stroke-width': 1.6, 'stroke-linejoin': 'round', opacity: .6 });
+            recs.forEach(r => mk('circle', { cx: px(r.t).toFixed(1), cy: py(r.s).toFixed(1), r: dotR, fill: moodColor(r.s), stroke: t.card, 'stroke-width': 1 }));
+            continue;
+          }
+          const ccx = cx + cw / 2, ccy = cy + fs + 5 + (ch - fs - 5) / 2;
+          const r = Math.min(cw * 0.25, (ch - fs - 8) * 0.42);
+          if (!recs.length) { mk('circle', { cx: ccx, cy: ccy, r: r * 0.55, fill: 'none', stroke: t.grid, 'stroke-width': 1 }); continue; }
+          const n = recs.length, room = cw * 0.86 - 2 * r;
+          const step = n > 1 ? Math.min(r * 0.9, room / (n - 1)) : 0;
+          const x0 = ccx - step * (n - 1) / 2;
+          // 1.2.12 (사용자 11.24 "하루에 여러 번이면 동그라미 투명도를 기분 시간 비중에 따라"):
+          // 기분 하나가 이어진 시간 = 적은 때부터 그날 다음 기록까지 (마지막은 자정까지, 오늘이면 지금까지).
+          // 그날 가장 오래 이어진 기분이 가장 진하고(1), 짧을수록 옅게(가장 옅어도 0.2). 한 번뿐이면 그대로 진하게.
+          const dayEnd = Math.min(d.getTime() + 86400000, Math.max(Date.now(), recs[n - 1].t + 1));
+          const dur = recs.map((rc, i) => Math.max(0, (i + 1 < n ? recs[i + 1].t : dayEnd) - rc.t));
+          const maxDur = Math.max(...dur);
+          const alpha = (i) => n === 1 || maxDur <= 0 ? 1 : 0.2 + 0.8 * dur[i] / maxDur;
+          recs.forEach((rc, i) => mk('circle', { cx: (x0 + i * step).toFixed(2), cy: ccy, r: r.toFixed(2), fill: moodColor(rc.s), 'fill-opacity': alpha(i).toFixed(2), stroke: t.card, 'stroke-width': 1.3 }));
+          if (n >= 4) { const e = mk('text', { x: cx + cw - 3, y: cy + fs + 3, 'text-anchor': 'end', 'font-size': fs - 2.5, fill: t.muted }); e.textContent = n; }
+        }
+        y += rows * ch + 10;
+      }
+      svg.setAttribute('viewBox', `0 0 ${W} ${y}`); svg.setAttribute('width', '100%');
+      const leg = document.getElementById(line ? 'specLegM2' : 'specLegM');
+      if (leg) leg.innerHTML = [[2, '▲'], [1, '△'], [0, '○'], [-1, '▽'], [-2, '▼']].map(([s, g]) => `<span><i style="background:${moodColor(s)};border-radius:50%"></i>${g}</span>`).join('') +
+        `<span><i style="border:1.2px solid ${t.accent};background:none;border-radius:6px;width:16px"></i>지난 진료 · 오늘</span>` +
+        (line ? `<span style="width:100%;text-align:center">칸 안: 왼쪽 0시 · 가운데 줄 12시 · 오른쪽 24시, 파란 줄은 ○</span>` : `<span style="width:100%;text-align:center">하루에 여러 번이면 오래 이어진 기분일수록 진하게</span>`);
+    }
+    function specRenderAll() {
+      const w = (id) => { const s = document.getElementById(id); return Math.max(260, Math.round((s && s.getBoundingClientRect().width) || 340)); };
+      specDrawMonth(document.getElementById('specM'), w('specM'));
+      specDrawMonth(document.getElementById('specM2'), w('specM2'), true);
+      specDrawA(document.getElementById('specA'), w('specA'), false);
+      specDrawC(document.getElementById('specC'), w('specC'), false, false);
+      specDrawC(document.getElementById('specV'), w('specV'), false, true);
+      specLegend('specLegA', true); specLegend('specLegC', true); specLegend('specLegV', true);
+    }
+    function specZoom(kind, e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      triggerHaptic();
+      const m = document.getElementById('specZoomModal'), svg = document.getElementById('specZoomSvg'); if (!m || !svg) return;
+      specApplyTheme(); m.style.display = 'flex';
+      const n = getReportRange().diffDays, vw = window.innerWidth - 20;
+      document.getElementById('specZoomTitle').textContent = { A: 'A · 기분 띠와 잠·걸음', C: 'C · 하루 한 줄', V: 'C 세로' }[kind];
+      if (kind === 'A') specDrawA(svg, Math.max(vw, n * 72), true);
+      else if (kind === 'C') specDrawC(svg, Math.max(vw, 560), true, false);
+      else specDrawC(svg, vw, true, true);
+      const sc = document.getElementById('specZoomScroll'); sc.scrollLeft = kind === 'C' ? 0 : sc.scrollWidth; sc.scrollTop = 0; // A·세로는 가장 최근 쪽부터, 가로 C는 날짜가 보이게 왼쪽부터
+      syncBackState();
+    }
+    function specZoomClose(e) { if (e && e.stopPropagation) e.stopPropagation(); const m = document.getElementById('specZoomModal'); if (m) m.style.display = 'none'; syncBackState(); }
   </script>
 </body>
 </html>
