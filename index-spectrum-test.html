@@ -9340,6 +9340,7 @@
       </div>
       <div class="spec-note" id="specNote" style="font-size:11.5px;line-height:1.6;margin:0 4px 8px;"></div>
       <div id="specModes" style="display:flex;flex-wrap:wrap;gap:6px;margin:0 2px 12px;"></div>
+      <div class="spec-card"><div class="spec-head"><span>📅 달력 · 지난 진료부터 오늘까지</span></div><svg id="specM" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegM"></div></div>
       <div class="spec-card"><div class="spec-head"><span>A · 기분 띠와 잠·걸음</span><button type="button" onclick="specZoom('A', event)" class="spec-chip spec-zbtn">확대 ⤢</button></div><svg id="specA" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegA"></div></div>
       <div class="spec-card"><div class="spec-head"><span>C · 하루 한 줄 (가로: 0시 → 24시)</span><button type="button" onclick="specZoom('C', event)" class="spec-chip spec-zbtn">확대 ⤢</button></div><svg id="specC" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegC"></div></div>
       <div class="spec-card"><div class="spec-head"><span>C 세로 · 아래 날짜, 왼쪽 시각</span><button type="button" onclick="specZoom('V', event)" class="spec-chip spec-zbtn">확대 ⤢</button></div><svg id="specV" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegV"></div></div>
@@ -9534,8 +9535,68 @@
       const mood = [2, 1, 0, -1, -2].map(s => `<span><i style="background:${moodColor(s)}"></i>${({ 2: '▲', 1: '△', 0: '○', '-1': '▽', '-2': '▼' })[s]}</span>`).join('');
       el.innerHTML = mood + `<span><i style="background:${id === 'specLegA' ? t.sleep : (t.dark ? '#0b0d1a' : '#2b3557')};opacity:.85"></i>잠</span><span><i style="background:${SPEC_WAKE}"></i>깬 때</span>` + (withSteps ? `<span><i style="background:${t.accent};opacity:.6"></i>걸음</span>` : '');
     }
+    // 📅 달력 (사용자 11.24): 지난 진료부터 오늘까지를 달 달력에. 하루 한 번이면 그 색 동그라미 하나,
+    // 여러 번이면 동그라미를 적은 차례대로 왼쪽부터 겹쳐 놓는다 (기분을 가공하지 않고 적은 그대로)
+    function specDrawMonth(svg, W) {
+      const t = specTheme(), mk = specMk(svg);
+      svg.textContent = '';
+      const { d1 } = getReportRange();
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const key = (d) => localDateKey(d);
+      const byDay = new Map();
+      (moodRecords || []).forEach(m => {
+        const tm = new Date(m && m.time || ''); if (isNaN(tm.getTime())) return;
+        const s = [2, 1, 0, -1, -2].includes(m.score) ? m.score : 0;
+        const k = key(tm); if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push({ t: tm.getTime(), s });
+      });
+      byDay.forEach(a => a.sort((x, y) => x.t - y.t));
+      const inRange = (d) => d >= d1 && d <= today;
+      const cw = W / 7, ch = Math.round(cw * 0.92), fs = Math.max(9, Math.min(12, cw * 0.22));
+      const WD = ['일', '월', '화', '수', '목', '금', '토'];
+      let y = 0;
+      for (let m = new Date(d1.getFullYear(), d1.getMonth(), 1); m <= today; m = new Date(m.getFullYear(), m.getMonth() + 1, 1)) {
+        // 달 이름 · 요일
+        const tt = mk('text', { x: 4, y: y + 16, 'font-size': fs + 2, 'font-weight': 800, fill: t.accent });
+        tt.textContent = (m.getFullYear() !== today.getFullYear() ? m.getFullYear() + '년 ' : '') + (m.getMonth() + 1) + '월';
+        y += 26;
+        WD.forEach((w, i) => { const e = mk('text', { x: i * cw + cw / 2, y: y + 10, 'text-anchor': 'middle', 'font-size': fs - 1, fill: i === 0 ? '#dc4136' : t.muted, opacity: i === 0 ? .7 : 1 }); e.textContent = w; });
+        y += 16;
+        const first = m.getDay(), last = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate();
+        // 첫 달은 지난 진료일이 든 주부터 (그 앞 빈 주는 그리지 않음), 마지막 달은 오늘이 든 주까지
+        const skip = (m.getFullYear() === d1.getFullYear() && m.getMonth() === d1.getMonth()) ? Math.floor((first + d1.getDate() - 1) / 7) : 0;
+        const lastRow = (m.getFullYear() === today.getFullYear() && m.getMonth() === today.getMonth()) ? Math.floor((first + today.getDate() - 1) / 7) : Math.ceil((first + last) / 7) - 1;
+        const rows = lastRow - skip + 1;
+        for (let dd = 1; dd <= last; dd++) {
+          const d = new Date(m.getFullYear(), m.getMonth(), dd);
+          const cell = first + dd - 1, row = Math.floor(cell / 7) - skip;
+          if (row < 0 || row >= rows) continue;
+          const cx = (cell % 7) * cw, cy = y + row * ch;
+          const on = inRange(d), isToday = d.getTime() === today.getTime(), isVisit = d.getTime() === d1.getTime();
+          // 날짜 숫자 (기간 밖은 옅게). 지난 진료일·오늘은 테두리
+          if (isToday || isVisit) mk('rect', { x: cx + cw / 2 - fs * 0.95, y: cy + 2, width: fs * 1.9, height: fs + 5, rx: (fs + 5) / 2, fill: 'none', stroke: t.accent, 'stroke-width': 1.2 });
+          const nt = mk('text', { x: cx + cw / 2, y: cy + fs + 3, 'text-anchor': 'middle', 'font-size': fs, 'font-weight': (isToday || isVisit) ? 800 : 500, fill: on ? t.ink : t.muted, opacity: on ? 1 : 0.35 });
+          nt.textContent = dd;
+          if (!on) continue;
+          const recs = byDay.get(key(d)) || [];
+          const ccx = cx + cw / 2, ccy = cy + fs + 5 + (ch - fs - 5) / 2;
+          const r = Math.min(cw * 0.25, (ch - fs - 8) * 0.42);
+          if (!recs.length) { mk('circle', { cx: ccx, cy: ccy, r: r * 0.55, fill: 'none', stroke: t.grid, 'stroke-width': 1 }); continue; }
+          const n = recs.length, room = cw * 0.86 - 2 * r;
+          const step = n > 1 ? Math.min(r * 0.9, room / (n - 1)) : 0;
+          const x0 = ccx - step * (n - 1) / 2;
+          recs.forEach((rc, i) => mk('circle', { cx: (x0 + i * step).toFixed(2), cy: ccy, r: r.toFixed(2), fill: moodColor(rc.s), stroke: t.card, 'stroke-width': 1.3 }));
+          if (n >= 4) { const e = mk('text', { x: cx + cw - 3, y: cy + fs + 3, 'text-anchor': 'end', 'font-size': fs - 2.5, fill: t.muted }); e.textContent = n; }
+        }
+        y += rows * ch + 10;
+      }
+      svg.setAttribute('viewBox', `0 0 ${W} ${y}`); svg.setAttribute('width', '100%');
+      const leg = document.getElementById('specLegM');
+      if (leg) leg.innerHTML = [[2, '▲'], [1, '△'], [0, '○'], [-1, '▽'], [-2, '▼']].map(([s, g]) => `<span><i style="background:${moodColor(s)};border-radius:50%"></i>${g}</span>`).join('') +
+        `<span><i style="border:1.2px solid ${t.accent};background:none;border-radius:6px;width:16px"></i>지난 진료 · 오늘</span>`;
+    }
     function specRenderAll() {
       const w = (id) => { const s = document.getElementById(id); return Math.max(260, Math.round((s && s.getBoundingClientRect().width) || 340)); };
+      specDrawMonth(document.getElementById('specM'), w('specM'));
       specDrawA(document.getElementById('specA'), w('specA'), false);
       specDrawC(document.getElementById('specC'), w('specC'), false, false);
       specDrawC(document.getElementById('specV'), w('specV'), false, true);
