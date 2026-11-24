@@ -773,6 +773,10 @@
             </div>
           </div>
           <div id="memoItemsContainer" class="space-y-1.5"></div>
+          <style>
+            #memoItemsContainer.memo-when-below .memo-swipe-area { flex-direction: column; align-items: stretch; gap: 2px; }
+            #memoItemsContainer.memo-when-below .memo-when { align-self: flex-end; padding-top: 0 !important; }
+          </style>
         </div>
 
         <!-- 한줄메모 아래 진료 완료 버튼 & 2줄 안내문 (진료완료 버튼 높이만큼인 mt-11 약 44px 여유 있게 이격) -->
@@ -4241,6 +4245,27 @@
         .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
+    // 1.2.12 (사용자: "글자 제일 크게 하니 글 들어갈 공간이 너무 좁네"): 글 칸이 좁아질 때만 기분·날짜·시를 글 아래 줄로 내린다.
+    // 폰 자체 글자 크기도 함께 잡히도록 글자 크기 단계가 아니라 실제로 남는 폭을 잰다. 모든 메모를 같은 방식으로 맞춘다.
+    const NOTE_TEXT_MIN_EM = 12; // 글 칸에 한 줄 12글자쯤은 남아야 오른쪽에 둔다
+    let noteWhenObserver = null;
+    function layoutNoteWhen() {
+      const c = document.getElementById('memoItemsContainer');
+      if (!c) return;
+      if (!noteWhenObserver && typeof ResizeObserver === 'function') {
+        let lastW = 0;
+        noteWhenObserver = new ResizeObserver(() => { const w = c.clientWidth; if (w && w !== lastW) { lastW = w; layoutNoteWhen(); } });
+        noteWhenObserver.observe(c);
+      }
+      const w = c.querySelector('.memo-when');
+      if (!w) { c.classList.remove('memo-when-below'); return; }
+      const area = w.parentElement, text = area.firstElementChild;
+      if (!area.clientWidth) return; // 창이 닫혀 있으면 열릴 때 다시 잰다
+      const fs = parseFloat(getComputedStyle(text).fontSize) || 14;
+      const left = area.clientWidth - w.offsetWidth - 8;
+      c.classList.toggle('memo-when-below', left < fs * NOTE_TEXT_MIN_EM);
+    }
+
     function renderDoctorNotes() {
       const container = document.getElementById('memoItemsContainer');
       if (!container) return;
@@ -4285,7 +4310,7 @@
             <!-- 텍스트 영역 (좌우 스와이프 전용). 길면 여러 줄로 다 보이고, 적은 때는 첫 줄 오른쪽에 -->
             <div class="memo-swipe-area flex items-start gap-2 flex-1 pr-1 cursor-pointer" data-idx="${idx}">
               <span class="flex-1 leading-snug ${star ? 'font-bold' : ''}" style="color: ${cardText}; word-break: break-all; overflow-wrap: anywhere;">${escapeHtml(note)}</span>
-              ${when ? `<span class="shrink-0 leading-snug" style="color: ${subColor}; font-size: calc(8.5px * var(--fs)); white-space: nowrap; padding-top: 2px; opacity: .85;">${moodMark}<span>${noteMonoHtml(noteWhenParts(note)[0])}</span><span style="margin-left: 0.4em;">${noteMonoHtml(noteWhenParts(note)[1])}</span></span>` : ''}
+              ${when ? `<span class="memo-when shrink-0 leading-snug" style="color: ${subColor}; font-size: calc(8.5px * var(--fs)); white-space: nowrap; padding-top: 2px; opacity: .85;">${moodMark}<span>${noteMonoHtml(noteWhenParts(note)[0])}</span><span style="margin-left: 0.4em;">${noteMonoHtml(noteWhenParts(note)[1])}</span></span>` : ''}
             </div>
             <!-- 순서 이동 드래그 핸들 (위아래 드래그 전용) -->
             <div class="memo-drag-handle p-1.5 -my-1 cursor-grab active:cursor-grabbing shrink-0" data-idx="${idx}" title="터치 후 끌어서 순서 이동">
@@ -4298,6 +4323,7 @@
           </div>
         </div>
       `; }).join('');
+      layoutNoteWhen();
 
       // 1. 좌로 밀기 (Swipe-to-delete) 핸들러 등록
       container.querySelectorAll('.memo-swipe-area').forEach(swipeArea => {
