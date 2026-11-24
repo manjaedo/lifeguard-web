@@ -11,7 +11,7 @@
   <title>Life Guard</title>
   <!-- 안드로이드 크롬에서 웹판을 '앱 설치'하기 위한 안내서 (앱 APK 안에서는 쓰이지 않음) -->
   <link rel="manifest" href="manifest.webmanifest">
-  <script src="tailwindcss.min.js" onerror="this.onerror=null;this.src='https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js';"></script>
+  <script src="tailwindcss.min.js"></script>
   <style>
     * {
       -webkit-tap-highlight-color: transparent;
@@ -700,7 +700,7 @@
             </div>
           </div>
           <svg id="reportChartSvg" class="w-full cursor-pointer" viewBox="0 0 260 120" style="height:128px" onclick="openChartZoom(event)">
-            <line x1="22" y1="45" x2="256" y2="45" stroke="#7fa7aa" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.4"/>
+            <line x1="22" y1="60" x2="256" y2="60" stroke="#7fa7aa" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.4"/>
             <g id="chartGrid"></g>
             <g id="chartTicks"></g>
             <path id="chartPath" d="" fill="none" stroke="#597075" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>
@@ -779,7 +779,7 @@
         <div class="mt-11 text-center">
           <div class="flex flex-wrap justify-center gap-2.5">
           <button id="resetCycleBtn" onclick="confirmResetCycle()" class="border border-[#597075]/40 bg-[#597075]/10 hover:bg-[#597075] hover:text-white text-[#597075] text-xs font-bold px-5 py-2.5 rounded-2xl transition inline-flex items-center gap-1.5 shadow-sm">
-            <span>✓</span> 진료 완료 (새 주기 시작)
+            <span>✓</span> 진료 완료
           </button>
           <!-- 보내기 (1.2.7): 큰 글자에서 윗줄 제목과 부딪혀 진료 완료 오른쪽으로 옮김 (사용자 결정). 모양은 진료 완료와 같게 (테마 바뀔 때 함께) -->
           <button id="reportShareBtn" onclick="openReportShare(event)" class="border border-[#597075]/40 bg-[#597075]/10 hover:bg-[#597075] hover:text-white text-[#597075] text-xs font-bold px-5 py-2.5 rounded-2xl transition inline-flex items-center gap-1.5 shadow-sm">
@@ -1223,16 +1223,14 @@
         </div>
         <h4 id="finishVisitTitle" class="text-sm font-bold text-[#597075] mb-2">오늘 진료를 마치셨나요?</h4>
         <p id="finishVisitDesc" class="text-[11px] text-gray-600 leading-relaxed mb-4">
-          선생님께 보여드린 지난 진료 기록이 모두 비워지고,<br>
-          오늘부터 깨끗한 백지(0)에서 다시 시작합니다.<br><br>
-          새 주기를 시작하시겠습니까?
+          오늘부터 새로 시작합니다.
         </p>
         <div id="finishVisitActions" class="flex gap-2">
           <button id="finishVisitCancelBtn" type="button" onclick="closeFinishVisitModal(event)" class="flex-1 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-500 font-medium hover:bg-gray-50 active:scale-95 transition cursor-pointer">
-            취소
+            아니오
           </button>
           <button id="finishVisitConfirmBtn" type="button" onclick="executeFinishVisit(event)" class="flex-1 py-2.5 rounded-xl bg-[#597075] text-xs text-white font-bold hover:bg-[#485c60] active:scale-95 transition shadow-sm cursor-pointer">
-            완료
+            예
           </button>
         </div>
       </div>
@@ -1462,10 +1460,15 @@
       }
       // 아이폰은 다른 앱에 다녀오면 'suspended'가 아니라 'interrupted'가 되기도 한다
       if (audioCtx.state !== 'running') {
-        try { audioCtx.resume(); } catch (_) {}
+        try { const pr = audioCtx.resume(); if (pr && pr.catch) pr.catch(() => {}); } catch (_) {}
       }
       startPeaceScopeVisualizer();
     }
+    // 1.2.12: 아이폰에서 화면을 껐다 켜거나 다른 앱에 다녀오면 소리가 멈춘 채 다시 안 나던 것 → 돌아올 때 다시 깨운다
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible' || !audioCtx || audioCtx.state === 'running' || audioCtx.state === 'closed') return;
+      try { if (isSoundOn && isWindowOpen('peaceModal')) { const pr = audioCtx.resume(); if (pr && pr.catch) pr.catch(() => {}); } } catch (_) {}
+    });
 
     // 소리청음실의 호흡 원 아래 실시간 떨리는 파형 선 (원의 지름 길이와 일치)
     let scopeLevel = 0;   // 소리 크기를 아주 천천히 따라가는 값 (0~1)
@@ -1608,6 +1611,11 @@
       }
       return realSoundLoads[kind];
     }
+    // 1.2.12: 끝난 타이머는 목록에서 뺀다 (오래 틀어 두면 목록이 끝없이 길어지던 것)
+    function medLater(fn, ms) {
+      const id = setTimeout(() => { const i = meditationIntervals.indexOf(id); if (i >= 0) meditationIntervals.splice(i, 1); fn(); }, ms);
+      return id;
+    }
     // 녹음을 끝없이 이어 튼다: 한 바퀴가 끝나기 3초 전부터 다음 바퀴를 겹쳐 넣어 이음새가 들리지 않게
     function startRealSound(kind, gen, idx, vol) {
       vol = vol || 1;
@@ -1623,12 +1631,18 @@
           const g = audioCtx.createGain();
           src.connect(g); g.connect(bus);
           const len = buf.duration - offset;
-          g.gain.setValueCurveAtTime(fadeIn, startAt, XF);
-          g.gain.setValueCurveAtTime(fadeOut, startAt + len - XF, XF);
+          if (len >= 2 * XF + 0.1) {
+            g.gain.setValueCurveAtTime(fadeIn, startAt, XF);
+            g.gain.setValueCurveAtTime(fadeOut, startAt + len - XF, XF);
+          } else { g.gain.setValueAtTime(Math.max(0.0001, vol), startAt); } // 1.2.12: 남은 길이가 6초보다 짧으면 겹치는 곡선이 오류를 냈다
           src.start(startAt, offset); src.stop(startAt + len + 0.05);
           meditationActiveNodes.push(src, g);
+          src.onended = () => { // 1.2.12: 다 끝난 소리는 목록에서 뺀다
+            [src, g].forEach(nd => { const i = meditationActiveNodes.indexOf(nd); if (i >= 0) meditationActiveNodes.splice(i, 1); });
+            try { g.disconnect(); } catch (_) {}
+          };
           const nextAt = startAt + len - XF;
-          meditationIntervals.push(setTimeout(() => {
+          meditationIntervals.push(medLater(() => {
             if (gen === soundGen && audioCtx && isSoundOn) playOnce(nextAt, 0.1);
           }, Math.max(0, (nextAt - audioCtx.currentTime - 1) * 1000)));
         };
@@ -1637,9 +1651,11 @@
       });
     }
 
+    let meditationFading = []; // 1.2.12: 사라지는 중인 소리 (바로 멈춰야 할 때 함께 멈춘다)
     function stopMeditationSound(fadeSec) {
       fadeSec = fadeSec || 0;
       soundGen++;
+      if (!fadeSec && meditationFading.length) { const f = meditationFading; meditationFading = []; f.forEach(x => { clearTimeout(x.timer); x.kill(); }); }
       meditationIntervals.forEach(t => { clearInterval(t); clearTimeout(t); });
       meditationIntervals = [];
       const nodes = meditationActiveNodes;
@@ -1662,7 +1678,9 @@
           bus.gain.setValueAtTime(Math.max(bus.gain.value, 0.0001), t);
           bus.gain.exponentialRampToValueAtTime(0.0001, t + fadeSec);
         } catch (_) {}
-        setTimeout(kill, fadeSec * 1000 + 100);
+        const item = { kill };
+        item.timer = setTimeout(() => { meditationFading = meditationFading.filter(x => x !== item); kill(); }, fadeSec * 1000 + 100);
+        meditationFading.push(item);
       } else {
         kill();
       }
@@ -1807,7 +1825,7 @@
               o.start(when); o.stop(when + 0.09);
             };
             const scheduleDrops = () => {
-              meditationIntervals.push(setTimeout(() => {
+              meditationIntervals.push(medLater(() => {
                 if (gen !== soundGen || !audioCtx || !isSoundOn) return;
                 const t = audioCtx.currentTime + 0.02;
                 const n = 1 + Math.floor(Math.random() * 3);
@@ -1877,7 +1895,7 @@
             if (breathCount === nextBowlAt) {
               const delayMs = Math.random() * 1500;
               const strength = 0.7 + Math.random() * 0.45;
-              meditationIntervals.push(setTimeout(() => {
+              meditationIntervals.push(medLater(() => {
                 if (gen === soundGen) strikeTibetanBowl(340, strength);
               }, delayMs));
               nextBowlAt = breathCount + 3 + Math.floor(Math.random() * 2);
@@ -1995,14 +2013,14 @@
           const windStrength = () => Math.sin((((audioCtx.currentTime - windStart) % 8) / 8) * Math.PI);
           function scheduleChime(first) {
             const waitMs = first ? 1500 : 3000 + Math.random() * 4000; // 3~7초 사이 불규칙
-            meditationIntervals.push(setTimeout(() => {
+            meditationIntervals.push(medLater(() => {
               if (gen !== soundGen || !audioCtx || !isSoundOn) return;
               const w = windStrength();
               if (Math.random() < 0.3 + 0.65 * w) {
                 ringBell(pickPitch(), 0.09 + 0.09 * w, 3.6);
                 // 바람이 셀 때만 가끔 한 번 더, 더 작게
                 if (w > 0.7 && Math.random() < 0.35) {
-                  meditationIntervals.push(setTimeout(() => {
+                  meditationIntervals.push(medLater(() => {
                     if (gen === soundGen) ringBell(pickPitch(), 0.05 + 0.05 * w, 3.2);
                   }, 350 + Math.random() * 450));
                 }
@@ -2052,7 +2070,7 @@
           const scale = [659.25, 783.99, 880.00, 987.77, 1174.66, 1318.51];
           function twinkle(first) {
             const waitMs = first ? 1200 : 1600 + Math.random() * 3000;
-            meditationIntervals.push(setTimeout(() => {
+            meditationIntervals.push(medLater(() => {
               if (gen !== soundGen || !audioCtx || !isSoundOn) return;
               const t = audioCtx.currentTime + 0.05;
               crystal(t, scale[Math.floor(Math.random() * scale.length)], 0.035 + Math.random() * 0.025, Math.random() * 1.2 - 0.6);
@@ -2105,7 +2123,7 @@
           }
           function scheduleNote(first) {
             const waitMs = first ? 2000 : 2200 + Math.random() * 2800; // 2~5초에 한 음
-            meditationIntervals.push(setTimeout(() => {
+            meditationIntervals.push(medLater(() => {
               if (gen !== soundGen || !audioCtx || !isSoundOn) return;
               // 앞 음에서 크게 튀지 않게 한두 칸만 움직인다
               last = Math.max(0, Math.min(scale.length - 1, last + [-2, -1, -1, 1, 1, 2][Math.floor(Math.random() * 6)]));
@@ -2197,7 +2215,7 @@
             });
           }
           function scheduleBird2() {
-            meditationIntervals.push(setTimeout(() => {
+            meditationIntervals.push(medLater(() => {
               if (gen !== soundGen || !audioCtx || !isSoundOn) return;
               birdPhrase2(); scheduleBird2();
             }, 5000 + Math.random() * 8000));
@@ -2205,11 +2223,11 @@
           scheduleBird2();
           function scheduleBird(first) {
             const waitMs = first ? 1500 : 2500 + Math.random() * 4500; // 2.5~7초 사이 불규칙
-            meditationIntervals.push(setTimeout(() => {
+            meditationIntervals.push(medLater(() => {
               if (gen !== soundGen || !audioCtx || !isSoundOn) return;
               birdPhrase();
               if (Math.random() < 0.25) {
-                meditationIntervals.push(setTimeout(() => { if (gen === soundGen) birdPhrase(); }, 600 + Math.random() * 700));
+                meditationIntervals.push(medLater(() => { if (gen === soundGen) birdPhrase(); }, 600 + Math.random() * 700));
               }
               scheduleBird(false);
             }, waitMs));
@@ -2254,7 +2272,7 @@
           // 불이 바쁘게 탈 때와 잠잠할 때가 천천히 오간다
           let busy = 0.5;
           function crackleLoop() {
-            meditationIntervals.push(setTimeout(() => {
+            meditationIntervals.push(medLater(() => {
               if (gen !== soundGen || !audioCtx || !isSoundOn) return;
               const t = audioCtx.currentTime + 0.02;
               busy = Math.min(1, Math.max(0.15, busy + (Math.random() - 0.5) * 0.12));
@@ -2320,7 +2338,7 @@
           let pos = 3;
           function phrase(first) {
             const waitMs = first ? 1500 : 3500 + Math.random() * 3000;
-            meditationIntervals.push(setTimeout(() => {
+            meditationIntervals.push(medLater(() => {
               if (gen !== soundGen || !audioCtx || !isSoundOn) return;
               const t = audioCtx.currentTime + 0.05;
               const n = 3 + Math.floor(Math.random() * 3);
@@ -2365,7 +2383,7 @@
             o.start(when); o.stop(when + 0.09);
           }
           function scheduleDrops() {
-            meditationIntervals.push(setTimeout(() => {
+            meditationIntervals.push(medLater(() => {
               if (gen !== soundGen || !audioCtx || !isSoundOn) return;
               const t = audioCtx.currentTime + 0.02;
               const n = 1 + Math.floor(Math.random() * 3);
@@ -2868,9 +2886,13 @@
     }
 
     // 터치한 그 자리에서 연하게 나타났다 사라지는 피드백 ("기분 기록")
+    // 1.2.12: 도형·알약이 사라지는 0.65초 동안 한 번 더 눌려도 두 번 적지 않는다
+    let moodRecordingUntil = 0, pillRecordingUntil = 0;
     function recordMood(e, sym, btn, clickedIdx) {
       e.stopPropagation();
+      if (Date.now() < moodRecordingUntil) return;
       if (cloudWriteBlocked()) return; // 1.2.9: 인터넷이 없으면 보기만
+      moodRecordingUntil = Date.now() + 700;
       triggerHaptic();
       resetCanvasTimers();
       let cx = e.clientX;
@@ -2920,7 +2942,9 @@
     // 터치한 그 자리에서 연하게 나타났다 사라지는 피드백 ("약 먹었음")
     function recordPill(e, btn) {
       e.stopPropagation();
+      if (Date.now() < pillRecordingUntil) return;
       if (cloudWriteBlocked()) return; // 1.2.9: 인터넷이 없으면 보기만
+      pillRecordingUntil = Date.now() + 700;
       triggerHaptic();
       resetCanvasTimers();
       let cx = e.clientX;
@@ -2968,7 +2992,8 @@
     function checkIosGuide() {
       if (window.AndroidBridge) return;
       const isIosDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
-      const dismissed = localStorage.getItem('lifeguard_ios_guide_dismissed');
+      let dismissed = null;
+      try { dismissed = localStorage.getItem('lifeguard_ios_guide_dismissed'); } catch (_) { dismissed = 'true'; }
       const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
       if (isIosDevice && !dismissed && !isStandalone) {
         setTimeout(() => {
@@ -2982,6 +3007,7 @@
       if (!modal) return;
       modal.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-full');
       modal.classList.add('opacity-100', 'pointer-events-auto', 'translate-y-0');
+      try { syncBackState(); } catch (_) {} // 1.2.12: 뒤로가기로 닫히게
     }
 
     function dismissIosGuide() {
@@ -2989,7 +3015,8 @@
       if (!modal) return;
       modal.classList.remove('opacity-100', 'pointer-events-auto', 'translate-y-0');
       modal.classList.add('opacity-0', 'pointer-events-none', 'translate-y-full');
-      localStorage.setItem('lifeguard_ios_guide_dismissed', 'true');
+      try { localStorage.setItem('lifeguard_ios_guide_dismissed', 'true'); } catch (_) {} // 1.2.12: 사파리 개인 정보 보호 모드 등
+      try { syncBackState(); } catch (_) {}
     }
 
     // Modal Handlers
@@ -4006,6 +4033,8 @@
 
     function finishDailyCheckin() {
       if (dailyCheckinClosing) return;
+      // 1.2.12: 창을 열어 둔 사이 인터넷이 끊겼으면 적지 않고, 고른 것을 그대로 둔 채 창도 열어 둔다
+      if ((dailyCheckinMood || (isMedicationEnabled && dailyCheckinMedChecked)) && cloudWriteBlocked()) return;
       dailyCheckinClosing = true;
       const saved = saveDailyCheckinEntries();
       dailyCheckinMood = null;
@@ -4049,8 +4078,19 @@
     }
 
     // 안드로이드 홈 위젯의 캡슐을 누르면: 캡슐이 눌린 채로 선택창을 열고, 도형을 고르면 저장
+    // 1.2.12: 알림으로 들어오면 그 위에 남을 수 있던 창(잠·설문·크게 보기·보내기·작은 창)도 닫는다
+    function closeOverlaysForCheckin() {
+      try {
+        if (cloudSheetOpen()) closeCloudSheet();
+        if (isWindowOpen('sleepModal')) closeSleepModal();
+        if (isWindowOpen('surveyModal')) closeSurvey();
+        if (isWindowOpen('chartZoom')) closeChartZoom();
+        if (isWindowOpen('reportShare')) closeReportShare();
+      } catch (_) {}
+    }
     window.openDailyCheckinWithMedFromNative = function() {
       if (isDailyCheckinInProgress()) return;
+      closeOverlaysForCheckin();
       closeSettingsModal(); closeReportModal(); closePeaceModal(); saveAndCloseMemo();
       setTimeout(() => {
         openDailyCheckinModal();
@@ -4064,6 +4104,7 @@
     // 안드로이드 상단 알림 본문 터치 시 호출: 데일리요 스타일 기분 선택창 즉시 오픈
     window.openDailyCheckinModalFromNative = function() {
       if (isDailyCheckinInProgress()) return;
+      closeOverlaysForCheckin();
       closeSettingsModal();
       closeReportModal();
       closePeaceModal();
@@ -4453,7 +4494,8 @@
         wrapper.style.opacity = '0';
 
         setTimeout(() => {
-          cloud.allowEmpty = true; // 1.2.9: 사용자가 직접 지운 것은 폰이 비어도 그대로 지운다
+          // 1.2.9: 사용자가 직접 지운 것은 폰이 비어도 그대로 지운다 (1.2.12: 다른 기기 기록은 덮지 않고, 지운 것만 뺀다)
+          if (doctorNotes[idx] !== undefined) cloudMarkRemoved('lifeguard_doctor_notes', String(doctorNotes[idx]));
           doctorNotes.splice(idx, 1);
           localStorage.setItem('lifeguard_doctor_notes', JSON.stringify(doctorNotes));
           renderDoctorNotes();
@@ -4470,6 +4512,7 @@
       const val = (input?.value || '').trim();
       if (!val) { if (input) input.focus(); return; }
       triggerHaptic();
+      cloudUnmarkRemoved('lifeguard_doctor_notes', val);
       doctorNotes.push(val);
       try { localStorage.setItem('lifeguard_doctor_notes', JSON.stringify(doctorNotes)); } catch (err) {}
       input.value = '';
@@ -4495,6 +4538,7 @@
       const val = (input?.value || '').trim();
       if (val && cloudWriteBlocked()) return; // 1.2.9: 적은 글은 칸에 그대로 두고 막는다
       if (val) {
+        cloudUnmarkRemoved('lifeguard_doctor_notes', val);
         doctorNotes.push(val);
         try { localStorage.setItem('lifeguard_doctor_notes', JSON.stringify(doctorNotes)); } catch(err) {}
         if (input) input.value = '';
@@ -4548,7 +4592,7 @@
       if (actions) actions.style.display = 'flex';
       // 1.2.9 (사용자 철학, PHILOSOPHY 3-③): 지난 기록은 DB 보관함에 쌓이지만 화면에서는 말하지 않는다. 당사자는 비우고 다시 시작할 뿐
       const fvDesc = document.getElementById('finishVisitDesc');
-      if (fvDesc) fvDesc.innerHTML = '선생님께 보여드린 지난 진료 기록이 모두 비워지고,<br>오늘부터 깨끗한 백지(0)에서 다시 시작합니다.<br><br>새 주기를 시작하시겠습니까?';
+      if (fvDesc) fvDesc.innerHTML = '오늘부터 새로 시작합니다.';
       modal.classList.remove('hidden');
       modal.style.display = 'flex';
       void modal.offsetWidth; // force reflow for smooth opacity transition
@@ -4604,6 +4648,7 @@
       } catch(e) {}
       clearActivityData();
       clearSleepLog();
+      sleepLive = null; saveSleepLive(); // 1.2.12: '지금 잘게요'도 함께 비운다
       updateMedicationSettingUI();
       renderDoctorNotes();
       renderReportData(); // 설문 칸도 함께 다시 그린다
@@ -4621,13 +4666,15 @@
       if (finishVisitBusy) return;
       finishVisitBusy = true;
       // 비우기 전에 지난 주기를 보관함에 담고, 담긴 것을 확인한 뒤에만 비운다 (1.2.9)
-      const res = await cloudArchiveCycle();
-      finishVisitBusy = false;
+      let res = 'fail';
+      try { res = await cloudArchiveCycle(); } catch (_) { res = 'fail'; } // 1.2.12: 무슨 일이 있어도 단추가 잠기지 않게
+      finally { finishVisitBusy = false; }
       if (res === 'fail') { showToast('인터넷이 이어지면 다시 눌러 주세요.'); return; }
       modalClosingUntil = Date.now() + 2000;
       hideControls();
-      cloud.allowEmpty = true; // 일부러 비움: 빈 것을 DB에 담아도 됨
+      cloudMarkReset(); // 일부러 비움: 빈 것을 DB에 담아도 됨 (1.2.12: 폰에도 적어 둠)
       performDataReset();
+      cloudSave(); // 1.2.12: 2~3초 기다리지 않고 바로 담는다
       // 1.2.11: 방금 보관함으로 넘긴 주기의 설문 점수도 '지난 점수'에 바로 보이게, 보관함을 다시 읽는다
       if (res === 'done') cloudCountArchive();
 
@@ -4651,7 +4698,7 @@
         setTimeout(() => {
           if (iconWrap) iconWrap.textContent = '✓';
           if (title) title.textContent = '오늘 진료를 마치셨나요?';
-          if (desc) desc.innerHTML = '선생님께 보여드린 지난 진료 기록이 모두 비워지고,<br>오늘부터 깨끗한 백지(0)에서 다시 시작합니다.<br><br>새 주기를 시작하시겠습니까?';
+          if (desc) desc.innerHTML = '오늘부터 새로 시작합니다.';
           if (actions) actions.style.display = 'flex';
           hideControls();
         }, 400);
@@ -4718,15 +4765,7 @@
       return isNaN(d.getTime()) ? null : d;
     }
 
-    // 함께 보는 기록의 날짜 범위 (renderReportData와 같은 계산)
-    function getReportRange() {
-      const now = new Date();
-      const last = parseLocalDate(lastVisitDate) || now;
-      const d1 = new Date(last.getFullYear(), last.getMonth(), last.getDate());
-      const d2 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const diffDays = Math.max(1, Math.round((d2 - d1) / 86400000) + 1);
-      return { d1, d2, diffDays };
-    }
+    // (1.2.12: 같은 이름의 getReportRange가 두 개 있어 앞의 것은 쓰이지 않았다 → 뒤의 것 하나만 둠)
 
     // 읽기 시작 시각: 지난 진료일 0시와 마지막으로 비운 시각 중 늦은 쪽. 너무 오래전이면 190일 전까지만.
     function getActivitySyncFrom() {
@@ -5056,9 +5095,14 @@
       const detail = document.getElementById('sleepChartDetail');
       if (detail) {
         let key = activitySelectedDate && byDate.get(activitySelectedDate) && byDate.get(activitySelectedDate).sleep_min !== null ? activitySelectedDate : null;
-        if (!key) { const w = days.filter(d => d.sleep_min !== null); key = w.length ? w[w.length - 1].date : null; }
+        const emptyPick = !key && activitySelectedDate; // 1.2.12: 적은 게 없는 날을 누르면 그날에 '잠 기록 없음' (예전엔 다른 날로 돌아감)
+        if (!key && !emptyPick) { const w = days.filter(d => d.sleep_min !== null); key = w.length ? w[w.length - 1].date : null; }
         const rec = key ? byDate.get(key) : null;
-        if (!rec) { detail.textContent = '아직 적은 잠이 없어요. 첫 화면 위 침대를 눌러 적어요.'; }
+        if (emptyPick) {
+          const dt = parseLocalDate(activitySelectedDate);
+          detail.textContent = `${dt.getMonth() + 1}.${dt.getDate()} (${['일', '월', '화', '수', '목', '금', '토'][dt.getDay()]}) · 잠 기록 없음`;
+        }
+        else if (!rec) { detail.textContent = '아직 적은 잠이 없어요. 첫 화면 위 침대를 눌러 적어요.'; }
         else {
           const dt = parseLocalDate(key);
           const wd = ['일', '월', '화', '수', '목', '금', '토'][dt.getDay()];
@@ -5080,7 +5124,12 @@
       if (!svg || !e) return;
       const rect = svg.getBoundingClientRect();
       if (!rect.width) return;
-      const x = (e.clientX - rect.left) / rect.width * 260;
+      // 1.2.12: 넓은 화면에서는 그림 양옆에 빈 칸이 생겨 날짜가 1~3일 밀렸다 → 그림 좌표로 바꿔서 본다
+      let x = (e.clientX - rect.left) / rect.width * 260;
+      try {
+        const m = svg.getScreenCTM();
+        if (m) { const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; x = pt.matrixTransform(m.inverse()).x; }
+      } catch (_) {}
       const { d1, diffDays } = getReportRange();
       const X0 = 22, X1 = 254;
       if (x < X0 || x > X1) return;
@@ -5197,18 +5246,19 @@
       if (e && e.stopPropagation) e.stopPropagation();
       triggerHaptic();
       const app = !!window.AndroidBridge;
+      // 1.2.12 (사용자: "길고 어려움, 다 들어야 함?"): 항목마다 한 줄로
       const items = [
-        ['💊 복약', '복약 치료를 받지 않으면 꺼 두세요. 첫 화면과 함께 보기에서 약이 숨고 기분만 보여요.'],
-        app ? ['🔔 알림', '매일 정한 시각에 오늘 기분을 묻는 알림이 와요.'] : null,
-        ['🛟 기록 지키기', '구글로 로그인하면 기록을 저절로 담아 두어, 폰을 바꾸거나 기록이 지워져도 다시 불러올 수 있어요. 이름은 담지 않아요.'],
-        ['글자 크기', '앱 전체 글자를 보통 · 크게 · 아주 크게로 바꿔요.'],
-        ['테마', '흰 · 미(한지 미색) · 검(어두운 화면) · 시스템(폰 설정을 따라 밝게/어둡게).'],
-        ['그래프 색', '흑백은 한 가지 색, 칼라는 기분·잠·걸음을 색으로 나눠 보여 줘요.'],
-        ['터치', '화면을 누를 때 퍼지는 모양이에요. 파문 · 숨결 · 별빛.'],
-        ['기분 모양', '첫 화면 기분 단추의 모양을 글자·이모지·그림으로 바꿀 수 있어요. 그림은 이 기기에만 두고, 기록과 그래프는 그대로예요.'],
-        ['잠 기록', '켜면 첫 화면 위 가운데에 침대가 생겨 잠을 적을 수 있고, 함께 보기에 잠 줄이 보여요. 꺼도 적어 둔 잠은 지워지지 않아요.'],
-        app ? ['걸음 기록', 'Health Connect에서 하루 걸음 수를 읽어 함께 보기에 보여 줘요. 읽기만 하고, 하루 합계를 다른 기록처럼 담아 둬요.'] : null,
-        ['설문', '켜면 함께 보기에 설문 칸이 생겨 우울·불안·몸 증상 설문을 할 수 있어요. 꺼도 지난 결과는 지워지지 않아요.']
+        ['💊 복약', '약을 먹지 않으면 꺼 두세요.'],
+        app ? ['🔔 알림', '정한 시각에 기분을 물어요.'] : null,
+        ['🛟 기록 지키기', '폰을 바꿔도 기록이 그대로예요.'],
+        ['글자 크기', '글자를 크게 볼 수 있어요.'],
+        ['테마', '화면 바탕색을 골라요.'],
+        ['그래프 색', '그래프를 한 색이나 여러 색으로 봐요.'],
+        ['터치', '누를 때 퍼지는 모양이에요.'],
+        ['기분 모양', '기분 단추 모양을 바꿔요.'],
+        ['잠 기록', '켜면 잠을 적을 수 있어요.'],
+        app ? ['걸음 기록', '하루 걸음 수를 보여 줘요.'] : null,
+        ['설문', '켜면 설문을 할 수 있어요.']
       ].filter(Boolean);
       const dark = getEffectiveTheme(currentTheme) === 'dark';
       const sub = dark ? 'text-white/60' : 'text-gray-500';
@@ -6297,8 +6347,10 @@
       const notesCardH = 40 + 36 + 28 + noteLines.reduce((a, l) => a + l.length * 46 + 22, 0) - 22 + 44;
       if (notes.length) H += 28 + notesCardH;
       H += 40 + 34 + PAD;
-      c.width = W * SHARE_S; c.height = H * SHARE_S;
-      ctx.scale(SHARE_S, SHARE_S); // 크기를 바꾸면 그리기 상태가 초기화되므로 그 뒤에
+      // 1.2.12: 기록이 길면 아이폰 사파리가 그릴 수 있는 크기(약 1,600만 점)를 넘어 빈 사진이 되던 것 → 넘지 않게 해상도만 낮춘다
+      const S = Math.min(SHARE_S, Math.sqrt(16000000 / (W * H)));
+      c.width = Math.floor(W * S); c.height = Math.floor(H * S);
+      ctx.scale(S, S); // 크기를 바꾸면 그리기 상태가 초기화되므로 그 뒤에
       const rr = (x, y, w, h, r, fill, stroke) => {
         ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h);
         ctx.fillStyle = fill; ctx.fill();
@@ -6423,7 +6475,11 @@
     function closeReportShare(e) {
       if (e && e.stopPropagation) e.stopPropagation();
       const m = document.getElementById('reportShare');
-      if (m) { m.classList.add('hidden'); m.style.display = 'none'; }
+      if (m) {
+        m.classList.add('hidden'); m.style.display = 'none';
+        // 1.2.12: 다 본 사진은 놓아준다 (메모리)
+        m.querySelectorAll('img').forEach(img => { if (img.dataset.url) { URL.revokeObjectURL(img.dataset.url); delete img.dataset.url; img.removeAttribute('src'); } });
+      }
       reportShareBlob = null;
       reportShareToken++; // 만드는 중이면 그 결과는 버린다
     }
@@ -6516,8 +6572,9 @@
 
     function clearAllData() {
       if (cloudWriteBlocked()) return; // 1.2.9
-      cloud.allowEmpty = true; // 일부러 비움
+      cloudMarkReset(); // 일부러 비움
       performDataReset();
+      cloudSave();
       showToast('모든 데이터가 비워졌습니다. 새로운 백지(0)에서 시작합니다. 🌿');
     }
 
@@ -7414,6 +7471,7 @@
       const el = whatsNewEl;
       if (!el) return;
       whatsNewEl = null;
+      try { syncBackState(); } catch (_) {} // 1.2.12
       try { localStorage.setItem('lifeguard_whats_new_hidden', WHATS_NEW_VERSION); } catch (_) {}
       modalClosingUntil = Date.now() + 400;
       el.style.opacity = '0';
@@ -7532,13 +7590,23 @@
       const part = (o) => Math.max(0, Math.min(o + lw, L) - Math.max(o, 0));
       return Math.min(lw, part(a) + part(a - 1440));
     }
+    // 1.2.12: 하루 1440분을 칸으로 세어 겹친 곳을 두 번 세지 않는다
+    //   (깬 때끼리 겹치면 두 번 빼고, 낮잠이 밤잠과 겹치면 두 번 더하던 것)
     function sleepSummary(segs) {
-      const sum = (k) => segs.filter(x => x.kind === k).reduce((n, x) => n + sleepDur(x), 0);
-      const nights = segs.filter(x => x.kind === 'night');
-      const inNight = (w) => nights.reduce((m, n) => m + sleepOverlap(w, n), 0);
-      const wk = segs.filter(x => x.kind === 'wake' && inNight(x) > 0); // 밤잠 밖의 깬 때는 세지 않음
-      const awake = wk.reduce((m, w) => m + inNight(w), 0);
-      return { night: Math.max(0, sum('night') - awake), nap: sum('nap'), wakes: wk.length, awake };
+      const mark = (kind) => {
+        const a = new Uint8Array(1440);
+        segs.forEach(x => { if (!x || x.kind !== kind) return; const L = sleepDur(x); for (let i = 0; i < L; i++) a[(x.start + i) % 1440] = 1; });
+        return a;
+      };
+      const N = mark('night'), W = mark('wake'), P = mark('nap');
+      let night = 0, awake = 0, nap = 0;
+      for (let i = 0; i < 1440; i++) {
+        if (N[i]) { if (W[i]) awake++; else night++; }
+        else if (P[i]) nap++;
+      }
+      const nights = segs.filter(x => x && x.kind === 'night');
+      const wakes = segs.filter(x => x && x.kind === 'wake' && nights.some(n => sleepOverlap(x, n) > 0)).length; // 밤잠 밖의 깬 때는 세지 않음
+      return { night, nap, wakes, awake };
     }
     function sleepWakeOutside(segs, w) {
       return !segs.some(n => n.kind === 'night' && sleepOverlap(w, n) > 0);
@@ -7803,8 +7871,8 @@
           const old = x[drag.k];
           if (x.kind === 'night') { if (!sleepMoveNight(x, drag.k, snap(m)) || x[drag.k] === old) return; }
           else x[drag.k] = snap(m);
-          // 깬 때·낮잠은 손잡이가 반대쪽을 넘어가 하루 가까이 되는 일이 없게 (1.2.11)
-          if (x.kind !== 'night' && (sleepDur(x) === 0 || sleepDur(x) > SLEEP_MAX[x.kind])) { x[drag.k] = old; return; }
+          // 손잡이가 반대쪽을 넘어가 0분이나 하루 가까이 되는 일이 없게 (1.2.11 깬 때·낮잠, 1.2.12 밤잠도)
+          if (sleepDur(x) === 0 || sleepDur(x) > (SLEEP_MAX[x.kind] || 1440)) { x[drag.k] = old; return; }
         }
         triggerHaptic();
         st.dirty = true; sleepAutoSave();
@@ -7839,7 +7907,7 @@
       [0, 1, 2, 3, 4, 5, 6, 7].map(j => { const t = j * Math.PI / 4; return `<line x1="${(9 + 6 * Math.cos(t)).toFixed(1)}" y1="${(9 + 6 * Math.sin(t)).toFixed(1)}" x2="${(9 + 8 * Math.cos(t)).toFixed(1)}" y2="${(9 + 8 * Math.sin(t)).toFixed(1)}"/>`; }).join('') + '</svg>';
     // 1.2.11 (사용자 폰: 낮잠 오후 7:10 ~ 오후 5:20 → 22시간 낮잠, 잠잔 시간 28시간):
     // 깬 때·낮잠은 시작을 바꾸면 길이 그대로 통째로 옮기고, 끝을 바꿨는데 끝이 시작보다 앞서면(너무 길어지면) 길이 그대로 시작을 당긴다
-    const SLEEP_MAX = { wake: 4 * 60, nap: 6 * 60 };
+    const SLEEP_MAX = { wake: 4 * 60, nap: 6 * 60, night: 20 * 60 }; // 1.2.12: 밤잠도 0분·하루 가까이로 튀지 않게
     // 1.2.11 (사용자): 밤잠 손잡이를 옮겨도 밤잠 안의 깬 때를 넘어가지 못하게.
     // 잠든 시각은 맨 처음 깬 때의 시작까지, 깬 시각은 맨 나중 깬 때의 끝까지만 ('잠 밖' 깬 때는 따지지 않음)
     function sleepMoveNight(x, k, m) {
@@ -7891,12 +7959,12 @@
       const box = document.getElementById('sleepCenter');
       const st = sleepEdit;
       if (!box || !st) return;
-      const ni = Math.max(0, st.segs.findIndex(x => x.kind === 'night'));
+      const ni = st.segs.findIndex(x => x.kind === 'night'); // 1.2.12: 낮잠만 있는 날은 -1 (낮잠을 밤잠으로 보이지 않게)
       const sm = sleepSummary(st.segs);
       box.textContent = '';
       const tot = document.getElementById('sleepTotal');
       if (tot) tot.innerHTML = `<span class="cap">잠잔 시간</span> <b>${formatSleepMin(sm.night + sm.nap)}</b>`;
-      if (!st.segs[ni]) return;
+      if (ni < 0 || !st.segs[ni]) { fitSleepCenter(); return; }
       box.appendChild(sleepTimeChip(ni, 'start', '잠든 시각', SLEEP_ICON_BED));
       box.appendChild(sleepTimeChip(ni, 'end', '깬 시각', SLEEP_ICON_SUN));
       box.style.opacity = (!st.saved && !st.fromAuto && !st.dirty) ? '0.75' : '1';
@@ -7919,7 +7987,7 @@
       const box = document.getElementById('sleepFine');
       const st = sleepEdit;
       if (!box || !st) return;
-      const nightIdx = () => Math.max(0, st.segs.findIndex(x => x.kind === 'night'));
+      const nightIdx = () => st.segs.findIndex(x => x.kind === 'night'); // 1.2.12: 없으면 -1
       box.textContent = '';
       box.className = 'mt-2';
       [['wake', '밤중에 깬 때', 'var(--sl-wake)', '이 깬 때 지우기'], ['nap', '낮잠', 'var(--sl-nap)', '이 낮잠 지우기']].forEach(([kind, title, color, delAria]) => {
@@ -7932,7 +8000,7 @@
         add.onclick = (ev) => {
           ev.stopPropagation(); triggerHaptic();
           if (kind === 'wake') {
-            const n = st.segs[nightIdx()];
+            const n = nightIdx() >= 0 ? st.segs[nightIdx()] : null;
             const mid = n ? (n.start + Math.round(sleepDur(n) / 2 / 5) * 5) % 1440 : 180;
             st.segs.push({ kind: 'wake', start: mid, end: (mid + 5) % 1440 }); // 1.2.11 (사용자): 기본 5분
           } else st.segs.push({ kind: 'nap', start: 14 * 60, end: 15 * 60 });
@@ -7954,7 +8022,7 @@
           }
           const del = document.createElement('button'); del.type = 'button'; del.className = 'sl-x';
           del.textContent = '×'; del.setAttribute('aria-label', delAria);
-          del.onclick = (ev) => { ev.stopPropagation(); triggerHaptic(); st.segs.splice(i, 1); st.sel = nightIdx(); st.dirty = true; sleepAutoSave(); renderSleepModal(); };
+          del.onclick = (ev) => { ev.stopPropagation(); triggerHaptic(); st.segs.splice(i, 1); st.sel = Math.max(0, nightIdx()); st.dirty = true; sleepAutoSave(); renderSleepModal(); };
           r.appendChild(del);
           sec.appendChild(r);
         });
@@ -7980,6 +8048,7 @@
       if (!st || !st.dirty) return;
       const sm = sleepSummary(st.segs);
       const rec = { mode: 'time', segs: st.segs.map(x => ({ kind: x.kind, start: x.start, end: x.end })), sleep_min: sm.night + sm.nap, nap_min: sm.nap, wake_count: sm.wakes };
+      cloudUnmarkRemoved('lifeguard_sleep_log', st.date);
       sleepLog[st.date] = rec;
       saveSleepLog();
       st.saved = true;
@@ -7995,7 +8064,7 @@
       clearTimeout(sleepSaveTimer); sleepSaveTimer = null; sleepSavedSinceOpen = false;
       if (!sleepLog[st.date]) return;
       triggerHaptic();
-      cloud.allowEmpty = true; // 직접 지운 것
+      cloudMarkRemoved('lifeguard_sleep_log', st.date); // 직접 지운 것 (1.2.12)
       delete sleepLog[st.date];
       saveSleepLog();
       loadSleepEdit(st.date);
@@ -8070,6 +8139,7 @@
         segs.push({ kind, start: sMin, end: eMin });
       }
       const sm = sleepSummary(segs);
+      cloudUnmarkRemoved('lifeguard_sleep_log', key);
       sleepLog[key] = { mode: 'time', src: 'live', segs, sleep_min: sm.night + sm.nap, nap_min: sm.nap, wake_count: sm.wakes };
       saveSleepLog();
       return { key, kind, min: Math.round((b - a) / 60000), total: sm.night + sm.nap };
@@ -8078,6 +8148,7 @@
     function sleepCancelLive(e) {
       if (e && e.stopPropagation) e.stopPropagation();
       if (!sleepLive) return;
+      if (cloudWriteBlocked()) return; // 1.2.12
       triggerHaptic();
       sleepLive = null; saveSleepLive();
       showToast("'잘게요'를 지웠어요");
@@ -8147,8 +8218,12 @@
       ['pointerup', 'pointercancel', 'pointerleave'].forEach(n => btn.addEventListener(n, () => { if (timer) reset(); }));
     })();
     function finishSleepHold() {
-      try { if (navigator.vibrate) navigator.vibrate([18, 60, 18]); } catch (_) {}
-      triggerHaptic();
+      // 1.2.12: 진동을 끈 사람에게는 울리지 않고, 두 번 울림이 바로 뒤 진동에 끊기지 않게 하나만
+      if (isHapticEnabled) {
+        let done = false;
+        try { if (!window.AndroidBridge && navigator.vibrate) done = navigator.vibrate([18, 60, 18]); } catch (_) {}
+        if (!done) triggerHaptic();
+      }
       hideSleepEntry();
       sleepToggleLive(); // 낮이고 밤이고: 안 자면 잘게요, 자는 중이면 깼어요 (사용자 결정)
     }
@@ -8312,15 +8387,22 @@
         levels: [[4, '최소'], [9, '가벼운 정도'], [14, '중간 정도'], [30, '심한 정도']] },
     };
     const SURVEY_ORDER = ['phq9', 'gad7', 'phq15'];
+    // 1.2.12: 점수는 숫자로, 답은 배열로만 받는다 (망가지거나 이상한 값이 화면에 그대로 들어가지 않게)
+    function surveyClean(r) {
+      if (!r || !SURVEYS[r.id] || typeof r.time !== 'string') return null;
+      const n = Number(r.score);
+      return Object.assign({}, r, { score: Number.isFinite(n) ? Math.round(n) : 0, answers: Array.isArray(r.answers) ? r.answers.map(a => Number(a) || 0) : [] });
+    }
     function surveyList() {
-      return safeJsonParse('lifeguard_surveys', []).filter(r => r && SURVEYS[r.id] && typeof r.time === 'string');
+      const v = safeJsonParse('lifeguard_surveys', []);
+      return (Array.isArray(v) ? v : []).map(surveyClean).filter(Boolean);
     }
     // 지난 점수: 이 주기 것(폰) + 보관함에 넘어간 지난 주기 것(DB, cloudCountArchive가 읽어 둠)
     function surveyHistory(id) {
       const seen = new Set();
       let past = [];
       try { past = cloud.archSurveys || []; } catch (_) {} // 앱이 막 켜지는 중에는 cloud가 아직 없을 수 있음
-      return surveyList().concat(past)
+      return surveyList().concat((Array.isArray(past) ? past : []).map(surveyClean))
         .filter(r => r && r.id === id && typeof r.time === 'string' && !seen.has(r.time) && seen.add(r.time))
         .sort((a, b) => a.time < b.time ? 1 : -1);
     }
@@ -8422,6 +8504,7 @@
       }, 220);
     }
     function surveyFinish(r) {
+      if (cloudWriteBlocked()) return; // 1.2.12: 끊겼으면 마지막 물음에 그대로 머문다 (이어지면 다시 고르면 남음)
       const def = SURVEYS[r.id];
       const answers = r.answers.map(a => a === undefined ? 0 : a);
       const score = answers.reduce((s, a) => s + (a || 0), 0);
@@ -8475,11 +8558,15 @@
       const el = document.getElementById(id);
       return !!el && !el.classList.contains('opacity-0') && !el.classList.contains('hidden') && el.style.display !== 'none';
     }
+    // 1.2.12: 그때그때 만드는 작은 창(설정 설명 등, 로그인 창은 빼고)과 아이폰 설치 안내도 창으로 친다
+    function cloudSheetOpen() { const s = document.getElementById('cloudSheet'); return !!s && s.dataset.kind !== 'gate'; }
+    function iosGuideOpen() { const m = document.getElementById('iosGuideModal'); return !!m && m.classList.contains('opacity-100'); }
     function isAnyWindowOpen() {
-      return !!whatsNewEl || BACK_WINDOW_IDS.some(isWindowOpen);
+      return !!whatsNewEl || cloudSheetOpen() || iosGuideOpen() || BACK_WINDOW_IDS.some(isWindowOpen);
     }
     // 맨 위에 열린 창 하나를 닫는다. 닫은 것이 있으면 true.
     function closeTopWindow() {
+      if (cloudSheetOpen()) { closeCloudSheet(); return true; } // 1.2.12: 맨 위(z-80)
       if (whatsNewEl) { closeWhatsNew(); return true; }
       if (isWindowOpen('surveyModal')) { if (surveyRun && surveyRun.stage === 'q' && surveyRun.i > 0 || surveyRun && surveyRun.stage === 'extra') surveyBack(); else closeSurvey(); return true; }
       if (isWindowOpen('sleepModal')) { closeSleepModal(); return true; }
@@ -8491,6 +8578,7 @@
       if (isWindowOpen('peaceModal')) { closePeaceModal(); return true; }
       if (isWindowOpen('settingsModal')) { closeSettingsModal(); return true; }
       if (isWindowOpen('reportModal')) { closeReportModal(); return true; }
+      if (iosGuideOpen()) { dismissIosGuide(); return true; }
       return false;
     }
 
@@ -8506,6 +8594,7 @@
     const webBackEnabled = !window.AndroidBridge && !!(window.history && history.pushState);
     let webBackArmed = false;     // 뒤로 갈 자리를 만들어 둔 상태
     let webBackUnwinding = false; // 닫기 버튼으로 닫아서, 만들어 둔 자리를 거두는 중
+    let webBackUnwindTimer = null;
     function syncBackState() {
       if (!webBackEnabled || webBackUnwinding) return;
       const open = isAnyWindowOpen();
@@ -8516,13 +8605,15 @@
         } else if (!open && webBackArmed) {
           webBackArmed = false;
           webBackUnwinding = true;
+          // 1.2.12: popstate가 안 오는 브라우저에서 '거두는 중'이 굳어 뒤로가기가 영영 안 먹던 것 막기
+          clearTimeout(webBackUnwindTimer); webBackUnwindTimer = setTimeout(() => { webBackUnwinding = false; }, 1000);
           history.back();
         }
       } catch (_) {}
     }
     if (webBackEnabled) {
       window.addEventListener('popstate', () => {
-        if (webBackUnwinding) { webBackUnwinding = false; syncBackState(); return; }
+        if (webBackUnwinding) { webBackUnwinding = false; clearTimeout(webBackUnwindTimer); syncBackState(); return; }
         webBackArmed = false;
         closeTopWindow();
         syncBackState(); // 아래에 다른 창이 더 열려 있으면 다시 자리를 만든다
@@ -8718,11 +8809,67 @@
       clearTimeout(cloud.timer);
       cloud.timer = setTimeout(cloudSave, 2500);
     }
-    async function cloudSave() {
+    // 1.2.12: 일부러 비움(진료 완료·데이터 비우기)은 폰에도 적어 둔다.
+    //   예전에는 메모리에만 있어서, 비운 뒤 DB에 담기 전에 앱을 닫으면 다시 열 때 '폰이 비었으니 DB 것을 가져오기'가 지난 기록을 되살렸다.
+    function cloudMarkReset() {
+      cloud.allowEmpty = true;
+      if (cloudOn() && cloud.user) cloudPut('lifeguard_cloud_reset', 'true'); // 로그인 안 한 때는 남기지 않는다 (나중에 로그인하며 DB를 비우지 않게)
+    }
+    function cloudResetPending() { return !!cloud.allowEmpty || cloudGet('lifeguard_cloud_reset') === 'true'; }
+    // 1.2.12: 한 건 지움(말씀·잠)은 합치기를 건너뛰지 않는다. 지운 것만 적어 두었다가 합친 뒤에 다시 뺀다.
+    //   (예전에는 지울 때도 합치기를 건너뛰어, 그 사이 다른 기기에서 적은 기록을 덮었다)
+    //   k: 기록 이름, id: 합칠 때 쓰는 열쇠 (말씀은 글, 잠은 날짜)
+    function cloudRemovedList() {
+      try { const v = JSON.parse(cloudGet('lifeguard_cloud_removed') || '[]'); return Array.isArray(v) ? v.filter(x => x && x.k && typeof x.id === 'string') : []; } catch (_) { return []; }
+    }
+    function cloudMarkRemoved(k, id) {
+      if (!cloudOn()) return;
+      const list = cloudRemovedList();
+      list.push({ k, id: String(id), t: Date.now() + '-' + Math.random().toString(36).slice(2, 7) });
+      cloudPut('lifeguard_cloud_removed', JSON.stringify(list.slice(-200)));
+    }
+    // 지운 뒤 담기 전에 같은 것을 다시 적으면(같은 날 잠, 같은 글) 지움 표시를 뗀다
+    function cloudUnmarkRemoved(k, id) {
+      const list = cloudRemovedList();
+      const left = list.filter(x => !(x.k === k && (k === 'lifeguard_doctor_notes' ? x.id.trim() === String(id).trim() : x.id === String(id))));
+      if (left.length !== list.length) cloudPut('lifeguard_cloud_removed', left.length ? JSON.stringify(left) : null);
+    }
+    function cloudApplyRemoved(data, removed) {
+      if (!removed.length) return data;
+      const out = Object.assign({}, data);
+      const notes = removed.filter(x => x.k === 'lifeguard_doctor_notes').map(x => x.id.trim());
+      const days = removed.filter(x => x.k === 'lifeguard_sleep_log').map(x => x.id);
+      if (notes.length && out.lifeguard_doctor_notes) {
+        try {
+          const left = notes.slice();
+          out.lifeguard_doctor_notes = JSON.stringify(JSON.parse(out.lifeguard_doctor_notes).filter(n => { const i = left.indexOf(String(n).trim()); if (i < 0) return true; left.splice(i, 1); return false; }));
+        } catch (_) {}
+      }
+      if (days.length && out.lifeguard_sleep_log) {
+        try { const o = JSON.parse(out.lifeguard_sleep_log); days.forEach(d => { delete o[d]; }); out.lifeguard_sleep_log = JSON.stringify(o); } catch (_) {}
+      }
+      return out;
+    }
+
+    // 1.2.12: 담기는 한 번에 하나씩. 담는 중에 또 부르면, 끝난 뒤 한 번 더 담는다 (그때의 새 기록으로).
+    //   (예전에는 두 번이 겹쳐 먼저 시작한 옛 것이 나중에 담기거나, 담는 중에 적은 기록의 '못 담음' 표시가 지워질 수 있었다)
+    let cloudSaveChain = Promise.resolve();
+    function cloudSave() {
+      clearTimeout(cloud.timer);
+      if (cloud.saveQueued) return cloud.saveQueued;
+      const run = cloudSaveChain.then(() => { cloud.saveQueued = null; return cloudSaveOnce(); });
+      cloud.saveQueued = run;
+      cloudSaveChain = run.catch(() => {});
+      return run;
+    }
+    async function cloudSaveOnce() {
       clearTimeout(cloud.timer);
       if (!cloudOn() || !cloud.fb || !cloud.user || !cloud.checked) return;
       cloud.status = 'saving';
       renderCloudCard();
+      const localAt = cloudGet('lifeguard_cloud_local_at');
+      const reset = cloudResetPending();
+      const removed = cloudRemovedList();
       let snap = cloudSnapshot();
       let merged = false;
       // 담기 직전에 DB를 한 번 본다
@@ -8738,8 +8885,8 @@
       }
       // 1.2.9 안전장치 (사용자): 이 폰에 기록이 하나도 없는데 DB에는 있으면, 빈 것으로 덮지 않고 DB 것을 가져온다.
       // (예전 판에서 지워진 폰이 빈 기록으로 DB를 덮어 기록이 사라진 일이 있었다)
-      // 진료 완료·데이터 비우기·사용자가 직접 지운 때는 빈 것도 담는다 (cloud.allowEmpty)
-      if (!cloudHasRecords(snap) && !cloud.allowEmpty) {
+      // 진료 완료·데이터 비우기(reset), 사용자가 직접 지운 때(removed)는 빈 것도 담는다
+      if (!cloudHasRecords(snap) && !reset && !removed.length) {
         if (rd && rd.data && cloudHasRecords(rd.data)) {
           cloud.status = 'idle';
           cloudWriteLocal(rd.data, rd.savedAt, false);
@@ -8749,18 +8896,20 @@
       }
       // 1.2.11 안전장치: 이 폰이 마지막으로 본 뒤에 다른 곳(웹판·앱·다른 기기)이 DB에 담았으면, 덮지 않고 합쳐서 담는다.
       // (기분·약은 시각, 말씀은 글, 잠은 날짜, 설문은 종류+시각으로 — 로그인 전 폰을 합칠 때와 같은 방식)
-      // 진료 완료·직접 지운 때(allowEmpty)는 일부러 비운 것이라 합치지 않는다.
+      // 진료 완료·데이터 비우기(reset)는 일부러 비운 것이라 합치지 않는다. 한 건 지운 것은 합친 뒤 다시 뺀다 (1.2.12).
       const knownAt = parseInt(cloudGet('lifeguard_cloud_saved_at') || '0', 10);
-      if (!cloud.allowEmpty && rd && rd.data && Object.keys(rd.data).length && (rd.savedAt || 0) !== knownAt) { // 시계가 기기마다 달라 '더 큰지'가 아니라 '내가 본 것과 다른지'로
-        snap = cloudMergeData(rd.data, snap, false);
+      if (!reset && rd && rd.data && Object.keys(rd.data).length && (rd.savedAt || 0) !== knownAt) { // 시계가 기기마다 달라 '더 큰지'가 아니라 '내가 본 것과 다른지'로
+        snap = cloudApplyRemoved(cloudMergeData(rd.data, snap, false), removed);
         merged = true;
       }
       const at = Date.now();
       try {
         await cloud.fb.fsM.setDoc(cloudRef('current'), { savedAt: at, app: 'web', data: snap });
-        cloud.allowEmpty = false;
+        if (reset) { cloud.allowEmpty = false; cloudPut('lifeguard_cloud_reset', null); }
+        if (removed.length) { const done = new Set(removed.map(x => x.t)); const left = cloudRemovedList().filter(x => !done.has(x.t)); cloudPut('lifeguard_cloud_removed', left.length ? JSON.stringify(left) : null); }
         cloudPut('lifeguard_cloud_saved_at', String(at));
-        cloudPut('lifeguard_cloud_dirty', null);
+        // 담는 동안 새로 적은 것이 없을 때만 '못 담음' 표시를 지운다 (있으면 곧 한 번 더 담는다)
+        if (cloudGet('lifeguard_cloud_local_at') === localAt) cloudPut('lifeguard_cloud_dirty', null);
         cloud.status = 'idle';
         if (merged) { cloudWriteLocal(snap, at, false); cloudReloadWith(''); return; } // 합친 것을 화면에도
       } catch (_) {
@@ -8797,7 +8946,7 @@
       // ① DB가 비어 있으면 이 폰 것을 담는다
       if (!rData || !Object.keys(rData).length) { cloudSave(); return; }
       // ② 이 폰에 못 담은 것(담다가 끊긴 기록)이 있으면 먼저 담는다
-      if (dirty) { cloudSave(); return; }
+      if (dirty || cloudResetPending() || cloudRemovedList().length) { cloudSave(); return; } // 1.2.12: 일부러 비운 것·지운 것도 먼저
       // ③ 이미 DB와 같은 것을 들고 있으면 그대로
       if ((remote.savedAt || 0) === savedAt) return; // 1.2.11: 기기마다 시계가 달라 '같은지'로 본다
       // ④ 딱 한 번: 로그인 없이 쓰던 폰(안드로이드 예전 판)에 기록이 있고 DB에도 있으면 합쳐서 담는다
@@ -8887,7 +9036,9 @@
     async function cloudArchiveCycle() {
       if (!cloudOn() || !cloud.fb || !cloud.user) return cloudAvailable() ? 'fail' : 'none';
       const data = cloudSnapshot();
-      if (!cloudHasRecords(data) && !(JSON.parse(data.lifeguard_surveys || '[]').length)) return 'none';
+      const cnt = (k) => { try { const v = JSON.parse(data[k] || '[]'); return Array.isArray(v) ? v.length : 0; } catch (_) { return 0; } };
+      // 1.2.12: 걸음만 있는 주기도 보관함에 담는다
+      if (!cloudHasRecords(data) && !cnt('lifeguard_surveys') && !cnt('lifeguard_activity_daily')) return 'none';
       const now = new Date();
       const p = (n) => String(n).padStart(2, '0');
       const id = 'c' + now.getFullYear() + p(now.getMonth() + 1) + p(now.getDate()) + '-' + p(now.getHours()) + p(now.getMinutes()) + p(now.getSeconds());
@@ -8964,11 +9115,12 @@
       wrap.style.cssText = 'position:fixed;inset:0;z-index:80;background:rgba(20,28,30,0.45);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px';
       wrap.innerHTML = '<div onclick="event.stopPropagation()" class="rounded-3xl p-5 w-full space-y-3 shadow-2xl ' + (dark ? 'bg-[#222628] text-white/85 border border-[#333a3d]' : 'bg-white text-gray-700') + '" style="max-width:340px;max-height:86vh;overflow-y:auto;word-break:keep-all">' + html + '</div>';
       document.body.appendChild(wrap);
+      try { syncBackState(); } catch (_) {} // 1.2.12: 설정 설명·로그아웃 등 작은 창도 뒤로가기로 닫히게
     }
     function closeCloudSheet(e) {
       if (e && e.stopPropagation) e.stopPropagation();
       const s = document.getElementById('cloudSheet');
-      if (s) s.remove();
+      if (s) { s.remove(); try { syncBackState(); } catch (_) {} }
     }
     function cloudBtn(label, onclick, primary) {
       const dark = cloudIsDark();
