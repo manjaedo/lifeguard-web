@@ -9422,8 +9422,8 @@
     }
   </script>
   <!-- ── 🧪 시험판: 기분 스펙트럼 (1.2.12 사용자 "본판에서 접근 가능하게": 본판에도 들어감) ── -->
-  <div id="specModal" onclick="event.stopPropagation()" style="display:none;position:fixed;inset:0;z-index:60;overflow-y:auto;-webkit-overflow-scrolling:touch;">
-    <div style="max-width:440px;margin:0 auto;padding:14px 14px 40px;">
+  <div id="specModal" onclick="event.stopPropagation()" style="display:none;position:fixed;inset:0;z-index:60;overflow:auto;-webkit-overflow-scrolling:touch;">
+    <div id="specInner" style="max-width:440px;margin:0 auto;padding:14px 14px 40px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 2px 10px;">
         <div style="font-weight:800;font-size:15px;" class="spec-accent">🌈 기분 스펙트럼 <span style="font-size:10px;font-weight:600;opacity:.6;">시험</span></div>
         <button type="button" onclick="specClose(event)" style="font-size:13px;font-weight:700;padding:6px 12px;border-radius:999px;" class="spec-chip">닫기 ✕</button>
@@ -9442,7 +9442,7 @@
       <div id="specZoomTitle" style="font-weight:800;font-size:14px;" class="spec-accent"></div>
       <button type="button" onclick="specZoomClose(event)" class="spec-chip" style="font-size:13px;font-weight:700;padding:6px 12px;border-radius:999px;">닫기 ✕</button>
     </div>
-    <div id="specZoomScroll" style="flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:0 10px 20px;"><svg id="specZoomSvg" style="display:block"></svg></div>
+    <div id="specZoomScroll" style="flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:0 10px 20px;"><div id="specZoomInner" style="width:max-content"><svg id="specZoomSvg" style="display:block"></svg></div></div>
   </div>
   <style>
     #specModal, #specZoomModal { background: var(--spec-bg); color: var(--spec-ink); }
@@ -9472,8 +9472,8 @@
     function specTheme() {
       const dark = getEffectiveTheme(currentTheme) === 'dark';
       const neutral = getEffectiveTheme(currentTheme) === 'neutral';
-      return dark ? { dark, bg: '#141718', card: '#1e2223', ink: '#e8eeee', muted: 'rgba(255,255,255,.55)', accent: '#9ec0c4', soft: 'rgba(158,192,196,.14)', grid: 'rgba(255,255,255,.12)', empty: 'rgba(255,255,255,.06)', sleep: '#5b6366', sleepC: '#4a5154' }
-        : { dark, bg: neutral ? '#ecefea' : '#fbfcfc', card: '#ffffff', ink: '#3b4547', muted: '#7b8789', accent: neutral ? '#455a5c' : '#597075', soft: 'rgba(89,112,117,.10)', grid: '#dfe5e6', empty: '#eef1f1', sleep: '#c3cacc', sleepC: '#cfd5d7' } // 1.2.12 사용자: 잠은 옅은 회색;
+      return dark ? { dark, bg: '#141718', card: '#1e2223', ink: '#e8eeee', muted: 'rgba(255,255,255,.55)', accent: '#9ec0c4', soft: 'rgba(158,192,196,.14)', grid: 'rgba(255,255,255,.12)', empty: 'rgba(255,255,255,.06)', sleep: '#6f7779', sleepC: '#6f7779' }
+        : { dark, bg: neutral ? '#ecefea' : '#fbfcfc', card: '#ffffff', ink: '#3b4547', muted: '#7b8789', accent: neutral ? '#455a5c' : '#597075', soft: 'rgba(89,112,117,.10)', grid: '#dfe5e6', empty: '#eef1f1', sleep: '#c5cbcd', sleepC: '#c5cbcd' } // 잠 색 (사용자 11.24·11.25 "옅은 회색"): A·C·C 세로·범례 모두 이 한 색;
     }
     function specApplyTheme() {
       const t = specTheme();
@@ -9490,7 +9490,8 @@
       if (e && e.stopPropagation) e.stopPropagation();
       triggerHaptic();
       const m = document.getElementById('specModal'); if (!m) return;
-      specApplyTheme(); m.style.display = 'block'; m.scrollTop = 0;
+      specApplyTheme(); m.style.display = 'block';
+      specPinchReset(m, document.getElementById('specInner'));
       specRenderAll(); syncBackState();
     }
     function specClose(e) { if (e && e.stopPropagation) e.stopPropagation(); const m = document.getElementById('specModal'); if (m) m.style.display = 'none'; syncBackState(); }
@@ -9572,7 +9573,7 @@
       mk('rect', { x: L, y: yS, width: w, height: sleepH, rx: 4, fill: t.empty });
       D.sleeps.filter(s => s.k !== 'wake').forEach(s => {
         const x1 = Math.max(L, X(s.a)), x2 = Math.min(R, X(s.b)); if (x2 <= x1) return;
-        mk('rect', { x: x1, y: yS + (s.k === 'nap' ? sleepH * .25 : 0), width: x2 - x1, height: s.k === 'nap' ? sleepH * .5 : sleepH, rx: 2, fill: t.sleep, opacity: s.k === 'nap' ? .45 : .85 });
+        mk('rect', { x: x1, y: yS + (s.k === 'nap' ? sleepH * .25 : 0), width: x2 - x1, height: s.k === 'nap' ? sleepH * .5 : sleepH, rx: 2, fill: t.sleep, opacity: s.k === 'nap' ? .6 : 1 });
       });
       lab(yS + sleepH / 2 + 3, '잠');
       const dw = w / D.diffDays;
@@ -9618,7 +9619,7 @@
         const part = (a, b) => { a = Math.max(a, s0); b = Math.min(b, s1); return b > a ? cell(i, (a - s0) / 3600000, (b - s0) / 3600000) : null; };
         // 1.2.12: 잔 시간에는 기분이 없다 — 기분 조각은 이미 잔 시간을 뺐으므로(specCutSleep) 잠을 먼저 깔고 그 위에 기분 (깬 때·걸음은 1.2.12 사용자 결정으로 뺌).
         // 잠 안에서 적은 기분(잠깐 깼을 때)은 적은 때부터 30분만 잠 위에 보인다.
-        D.sleeps.filter(sl => sl.k !== 'wake').forEach(sl => { const c = part(sl.a, sl.b); if (c) mk('rect', { x: c.x, y: c.y, width: c.w, height: c.h, fill: t.sleepC, opacity: sl.k === 'nap' ? .45 : .82 }, g); });
+        D.sleeps.filter(sl => sl.k !== 'wake').forEach(sl => { const c = part(sl.a, sl.b); if (c) mk('rect', { x: c.x, y: c.y, width: c.w, height: c.h, fill: t.sleepC, opacity: sl.k === 'nap' ? .6 : 1 }, g); });
         D.moods.forEach(m => { const c = part(m.a, m.b); if (c) mk('rect', { x: c.x, y: c.y, width: c.w + (vertical ? 0 : .3), height: c.h + (vertical ? .3 : 0), fill: moodColor(m.s), opacity: m.o }, g); });
       }
     }
@@ -9632,7 +9633,7 @@
     function specLegend(id, withSteps) {
       const t = specTheme(), el = document.getElementById(id); if (!el) return;
       const mood = [2, 1, 0, -1, -2].map(s => `<span><i style="background:${moodColor(s)};${moodEdge(moodColor(s)) ? 'box-shadow:inset 0 0 0 1px ' + moodEdge(moodColor(s)) : ''}"></i>${({ 2: '▲', 1: '△', 0: '○', '-1': '▽', '-2': '▼' })[s]}</span>`).join('');
-      el.innerHTML = mood + `<span><i style="background:${id === 'specLegA' ? t.sleep : t.sleepC};opacity:.85"></i>잠</span>` + (withSteps ? `<span><i style="background:${t.accent};opacity:.6"></i>걸음</span>` : '');
+      el.innerHTML = mood + `<span><i style="background:${t.sleep}"></i>잠</span>` + (withSteps ? `<span><i style="background:${t.accent};opacity:.6"></i>걸음</span>` : '');
     }
     // 📅 달력 (사용자 11.24): 지난 진료부터 오늘까지를 달 달력에. 하루 한 번이면 그 색 동그라미 하나,
     // 여러 번이면 동그라미를 적은 차례대로 왼쪽부터 겹쳐 놓는다 (기분을 가공하지 않고 적은 그대로). 진하기는 그 기분이 이어진 시간에 따라 (1.2.12)
@@ -9735,6 +9736,7 @@
       triggerHaptic();
       const m = document.getElementById('specZoomModal'), svg = document.getElementById('specZoomSvg'); if (!m || !svg) return;
       specApplyTheme(); m.style.display = 'flex';
+      const zi = document.getElementById('specZoomInner'); zi.style.zoom = 1; zi.style.width = ''; // 두 손가락 확대를 처음 크기로
       const n = getReportRange().diffDays, vw = window.innerWidth - 20;
       document.getElementById('specZoomTitle').textContent = { A: 'A · 기분 띠와 잠', C: 'C · 하루 한 줄', V: 'C 세로' }[kind];
       if (kind === 'A') specDrawA(svg, Math.max(vw, n * 72), true);
@@ -9744,6 +9746,36 @@
       syncBackState();
     }
     function specZoomClose(e) { if (e && e.stopPropagation) e.stopPropagation(); const m = document.getElementById('specZoomModal'); if (m) m.style.display = 'none'; syncBackState(); }
+    // 두 손가락 확대·축소 (사용자 11.25 "기분 스펙트럼 화면은 손가락 두 개로 확대 축소 가능하게")
+    // 앱 전체는 확대를 막아 두었으니(viewport user-scalable=no, 안드로이드 setSupportZoom(false)) 스펙트럼 창과 확대 창 안에서만
+    // 속 내용(content)을 CSS zoom으로 키운다. 손가락 가운데 있던 곳이 그 자리에 머물게 스크롤을 맞춘다. 한 손가락은 예전처럼 밀기.
+    function specPinchReset(scroller, content) { content.style.zoom = 1; content.style.width = ''; scroller.scrollTop = 0; scroller.scrollLeft = 0; }
+    function specPinch(scroller, content, zMin, zMax) {
+      let st = null;
+      const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+      const mid = (t) => ({ x: (t[0].clientX + t[1].clientX) / 2, y: (t[0].clientY + t[1].clientY) / 2 });
+      scroller.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 2) return;
+        const r = scroller.getBoundingClientRect(), m = mid(e.touches), z = parseFloat(content.style.zoom) || 1;
+        // 너비를 지금 크기로 묶어야 그림(너비 100%)이 화면 폭에 맞춰 다시 줄지 않고 함께 커진다
+        if (!content.style.width) content.style.width = content.offsetWidth + 'px';
+        st = { d: Math.max(1, dist(e.touches)), z, px: (scroller.scrollLeft + m.x - r.left) / z, py: (scroller.scrollTop + m.y - r.top) / z };
+      }, { passive: true });
+      scroller.addEventListener('touchmove', (e) => {
+        if (!st || e.touches.length !== 2) return;
+        e.preventDefault(); // 브라우저가 화면 전체를 키우거나 밀지 않게
+        const r = scroller.getBoundingClientRect(), m = mid(e.touches);
+        const z = Math.min(zMax, Math.max(zMin, st.z * dist(e.touches) / st.d));
+        content.style.zoom = z.toFixed(3);
+        scroller.scrollLeft = st.px * z - (m.x - r.left);
+        scroller.scrollTop = st.py * z - (m.y - r.top);
+      }, { passive: false });
+      const end = (e) => { if (e.touches.length < 2) st = null; };
+      scroller.addEventListener('touchend', end); scroller.addEventListener('touchcancel', end);
+      scroller.addEventListener('gesturestart', (e) => e.preventDefault()); // 아이폰 사파리: 화면 전체 확대 막기
+    }
+    specPinch(document.getElementById('specModal'), document.getElementById('specInner'), 1, 4);
+    specPinch(document.getElementById('specZoomScroll'), document.getElementById('specZoomInner'), 0.4, 4);
   </script>
 </body>
 </html>
