@@ -658,13 +658,17 @@
       <!-- 1.2.9 (사용자: 하단 잘림): 창은 화면 안에만. 사진 칸만 줄어들며 넘겨 보고, 제목·단추는 늘 보인다 -->
       <div id="reportShareCard" class="w-full max-w-md rounded-2xl p-4 flex flex-col gap-3" style="max-height: 100%;">
         <div id="reportShareTitle" class="text-sm font-bold shrink-0">함께 보는 기록을 보내요</div>
-        <div class="overflow-y-auto rounded-xl border" style="border-color: rgba(127,167,170,0.3); flex: 1 1 auto; min-height: 0;">
+        <!-- 1.2.13 (사용자 11.26 "보내기할 때 한 줄 메모 중 골라서 보내게" → 시안 가): 사진 위에 보낼 말씀 고르기. 고르는 칸과 사진이 함께 넘어간다 -->
+        <div class="overflow-y-auto flex flex-col gap-3" style="flex: 1 1 auto; min-height: 0;">
+        <div id="reportSharePick" style="display:none"></div>
+        <div class="rounded-xl border shrink-0" style="border-color: rgba(127,167,170,0.3);">
           <!-- 1.2.9 (사용자: 누르고 잠시 멈춘 듯함): 창을 먼저 열고 사진을 다 만들 때까지 이 글을 보여 준다 -->
           <div id="reportShareLoading" class="flex flex-col items-center justify-center gap-3 py-16 text-xs font-semibold" style="display:none; opacity:.75;">
             <span class="share-spin" aria-hidden="true"></span>
             기록을 정리하고 있어요…
           </div>
           <img id="reportShareImg" alt="함께 보는 기록 사진" class="w-full block">
+        </div>
         </div>
         <div class="flex gap-2 shrink-0">
           <button type="button" onclick="closeReportShare(event)" class="flex-1 py-2.5 rounded-xl text-sm font-semibold" style="background: rgba(127,167,170,0.16);" id="reportShareCancel">취소</button>
@@ -674,7 +678,7 @@
     </div>
 
     <div id="reportModal" onclick="event.stopPropagation()" class="absolute inset-0 bg-[#fbfcfc] z-30 p-5 flex flex-col justify-between opacity-0 pointer-events-none transition-all duration-300 overflow-y-auto hidden" style="display: none;">
-      <div>
+      <div id="reportInner">
         <div class="flex justify-between items-center mb-3 gap-2">
           <h2 id="reportTitle" class="text-sm font-bold text-[#597075] flex items-center gap-1.5 min-w-0 flex-1">
             <span class="shrink-0">📋</span> <span id="reportTitleText" class="truncate">함께 보는 기록</span>
@@ -3030,6 +3034,7 @@
       if (m) {
         m.classList.remove('hidden');
         m.style.display = 'flex';
+        try { specPinchReset(m, document.getElementById('reportInner')); } catch (_) {} // 1.2.13: 열 때는 늘 1배로
         void m.offsetWidth;
         m.classList.remove('opacity-0', 'pointer-events-none');
         m.classList.add('opacity-100', 'pointer-events-auto');
@@ -6455,7 +6460,8 @@
       };
       // 1.2.12 (사용자): 보내기에도 ★ 먼저, 적은 때(날짜·시)는 첫 줄 오른쪽에
       sortNotesByStar();
-      const notes = (doctorNotes || []).map(n => String(n).trim()).filter(Boolean);
+      const notes = (doctorNotes || []).map(n => String(n).trim()).filter(Boolean)
+        .filter(n => !reportSharePicked || reportSharePicked.has(n)); // 1.2.13: 보내기 창에서 고른 말씀만
       const noteStars = notes.map(n => !!noteMeta(n).star), noteWhens = notes.map(n => noteWhen(n)), noteMoods = notes.map(n => noteMood(n));
       const NOTE_WHEN_W = 160;
       // 보내기 사진: 날짜 칸·시 칸을 각각 가장 긴 것 너비로 두고 오른쪽 맞춤 (줄마다 날짜·시·기분이 위아래로 맞게)
@@ -6597,39 +6603,85 @@
       return await new Promise(res => c.toBlob(res, 'image/png'));
     }
     let reportShareToken = 0;
-    async function openReportShare(e) {
-      if (e && e.stopPropagation) e.stopPropagation();
-      triggerHaptic();
-      const pendingMemo = document.getElementById('reportMemoInput');
-      if (pendingMemo && pendingMemo.value.trim()) addReportMemo(); // 적다 만 말도 담는다
+    // 1.2.13 (사용자 11.26): 보낼 말씀 고르기 — 처음에는 ★ 말씀만 체크, 창을 열 때마다 처음 상태로 (개인적인 말이 실수로 나가지 않게)
+    let reportSharePicked = null; // 고른 말씀 글(Set). null이면 고르기 전(모두)
+    function renderSharePick(dark) {
+      const box = document.getElementById('reportSharePick');
+      if (!box) return;
+      const notes = (doctorNotes || []).map(n => String(n).trim()).filter(Boolean);
+      box.innerHTML = '';
+      if (!notes.length) { box.style.display = 'none'; return; }
+      box.style.display = 'block';
+      const head = document.createElement('div');
+      head.className = 'text-xs font-bold mb-1.5';
+      head.innerHTML = '보낼 말씀 <span style="font-weight:500;opacity:.7">(누르면 빼고 넣어요)</span>';
+      box.appendChild(head);
+      const ink = dark ? '#a9c4c6' : '#597075';
+      notes.forEach(n => {
+        const on = reportSharePicked.has(n), star = !!noteMeta(n).star;
+        const row = document.createElement('button');
+        row.type = 'button';
+        row.setAttribute('aria-pressed', on ? 'true' : 'false');
+        row.className = 'w-full flex items-center gap-2.5 text-left text-[13px] rounded-xl mb-1.5';
+        row.style.cssText = `padding:8px 10px;background:rgba(127,167,170,${on ? .16 : .05});${on ? '' : 'opacity:.55;'}`;
+        const mark = document.createElement('span');
+        mark.className = 'shrink-0 flex items-center justify-center text-xs';
+        mark.style.cssText = `width:20px;height:20px;border-radius:6px;${on ? `background:${ink};color:${dark ? '#1c2123' : '#fff'}` : `border:1.5px solid ${dark ? '#6f8486' : '#9aaeb0'}`}`;
+        mark.textContent = on ? '✓' : '';
+        const txt = document.createElement('span');
+        txt.className = 'min-w-0';
+        txt.style.cssText = `word-break:break-all;${star ? 'font-weight:700;' : ''}${on ? '' : 'text-decoration:line-through;'}`;
+        txt.textContent = (star ? '★ ' : '') + n;
+        row.append(mark, txt);
+        row.onclick = (ev) => {
+          ev.stopPropagation(); triggerHaptic();
+          if (reportSharePicked.has(n)) reportSharePicked.delete(n); else reportSharePicked.add(n);
+          renderSharePick(dark);
+          makeShareImage(false);
+        };
+        box.appendChild(row);
+      });
+    }
+    // 사진을 (다시) 만든다. 처음이면 '만들고 있어요', 고르기를 바꾼 뒤면 옛 사진을 옅게 두고 새 사진으로 바꾼다
+    async function makeShareImage(first) {
       const token = ++reportShareToken;
       reportShareBlob = null;
-      // 1.2.9: 창부터 연다. 사진(가로 2160px)을 만드는 동안 '만들고 있어요'와 돌아가는 표시
-      const dark = getEffectiveTheme(currentTheme) === 'dark';
-      const card = document.getElementById('reportShareCard');
-      if (card) { card.style.backgroundColor = dark ? '#1c2123' : '#ffffff'; card.style.color = dark ? '#eff3f2' : '#597075'; }
-      const cancel = document.getElementById('reportShareCancel'); if (cancel) cancel.style.color = dark ? '#eff3f2' : '#597075';
       const img = document.getElementById('reportShareImg');
       const loading = document.getElementById('reportShareLoading');
       const send = document.getElementById('reportShareSend');
-      if (img) img.style.display = 'none';
-      if (loading) loading.style.display = 'flex';
-      if (send) { send.disabled = true; send.style.opacity = '0.45'; }
-      const m = document.getElementById('reportShare');
-      if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+      if (first) { if (img) img.style.display = 'none'; if (loading) loading.style.display = 'flex'; }
+      else if (img) img.style.opacity = '0.4';
+      if (send) { send.disabled = true; send.style.opacity = '0.45'; } // 새 사진이 되기 전에는 보내지 않는다 (뺀 말씀이 나가지 않게)
       await new Promise(r => requestAnimationFrame(() => setTimeout(r, 30))); // 창이 먼저 그려지게
       let blob = null;
       try { blob = await buildReportImage(); } catch (err) { console.warn('report image error:', err); }
-      if (token !== reportShareToken) return; // 그 사이 닫았거나 다시 눌렀으면 버린다
+      if (token !== reportShareToken) return; // 그 사이 닫았거나 다시 골랐으면 버린다
       if (!blob) { closeReportShare(); showToast && showToast('기록을 만들지 못했어요'); return; }
       reportShareBlob = blob;
       if (img) {
         if (img.dataset.url) URL.revokeObjectURL(img.dataset.url);
         img.dataset.url = URL.createObjectURL(blob);
-        img.onload = () => { if (token !== reportShareToken) return; if (loading) loading.style.display = 'none'; img.style.display = 'block'; };
+        img.onload = () => { if (token !== reportShareToken) return; if (loading) loading.style.display = 'none'; img.style.display = 'block'; img.style.opacity = ''; };
         img.src = img.dataset.url;
       }
       if (send) { send.disabled = false; send.style.opacity = ''; }
+    }
+    async function openReportShare(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      triggerHaptic();
+      const pendingMemo = document.getElementById('reportMemoInput');
+      if (pendingMemo && pendingMemo.value.trim()) addReportMemo(); // 적다 만 말도 담는다
+      // 1.2.9: 창부터 연다. 사진(가로 2160px)을 만드는 동안 '만들고 있어요'와 돌아가는 표시
+      const dark = getEffectiveTheme(currentTheme) === 'dark';
+      const card = document.getElementById('reportShareCard');
+      if (card) { card.style.backgroundColor = dark ? '#1c2123' : '#ffffff'; card.style.color = dark ? '#eff3f2' : '#597075'; }
+      const cancel = document.getElementById('reportShareCancel'); if (cancel) cancel.style.color = dark ? '#eff3f2' : '#597075';
+      sortNotesByStar();
+      reportSharePicked = new Set((doctorNotes || []).map(n => String(n).trim()).filter(n => n && noteMeta(n).star));
+      renderSharePick(dark);
+      const m = document.getElementById('reportShare');
+      if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+      await makeShareImage(true);
     }
     function closeReportShare(e) {
       if (e && e.stopPropagation) e.stopPropagation();
@@ -6640,6 +6692,7 @@
         m.querySelectorAll('img').forEach(img => { if (img.dataset.url) { URL.revokeObjectURL(img.dataset.url); delete img.dataset.url; img.removeAttribute('src'); } });
       }
       reportShareBlob = null;
+      reportSharePicked = null; // 1.2.13: 다음에 열면 다시 ★만
       reportShareToken++; // 만드는 중이면 그 결과는 버린다
     }
     async function sendReportShare(e) {
@@ -9776,6 +9829,13 @@
     }
     specPinch(document.getElementById('specModal'), document.getElementById('specInner'), 1, 4);
     specPinch(document.getElementById('specZoomScroll'), document.getElementById('specZoomInner'), 0.4, 4);
+    // 1.2.13 (사용자 11.26 "함께 보기 화면 손가락으로 화면 확대 가능하게"): 같은 방법으로 함께 보기 속 내용만 1~4배.
+    // 맨 아래 말씀 적는 칸(reportMemoBar)은 키우지 않고 그대로 아래에 붙어 있게 둔다.
+    specPinch(document.getElementById('reportModal'), document.getElementById('reportInner'), 1, 4);
+    (function () { // 키운 채 옆으로 밀어도 말씀 적는 칸은 화면 아래에 그대로 (sticky는 아래로만 붙어서 옆으로는 따라 밀려 나감)
+      const m = document.getElementById('reportModal'), bar = document.getElementById('reportMemoBar');
+      if (m && bar) m.addEventListener('scroll', () => { bar.style.transform = m.scrollLeft ? 'translateX(' + m.scrollLeft + 'px)' : ''; }, { passive: true });
+    })();
   </script>
 </body>
 </html>
