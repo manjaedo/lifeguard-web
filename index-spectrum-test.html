@@ -6634,6 +6634,7 @@
       return await new Promise(res => c.toBlob(res, 'image/png'));
     }
     let reportShareToken = 0;
+    let reportShareBuild = () => buildReportImage(); // 1.2.13: 스펙트럼에서 열면 스펙트럼 사진을 만든다
     // 1.2.13 (사용자 11.26): 보낼 말씀 고르기 — 처음에는 ★ 말씀만 체크, 창을 열 때마다 처음 상태로 (개인적인 말이 실수로 나가지 않게)
     let reportSharePicked = null; // 고른 말씀 글(Set). null이면 고르기 전(모두)
     function renderSharePick(dark) {
@@ -6685,7 +6686,7 @@
       if (send) { send.disabled = true; send.style.opacity = '0.45'; } // 새 사진이 되기 전에는 보내지 않는다 (뺀 말씀이 나가지 않게)
       await new Promise(r => requestAnimationFrame(() => setTimeout(r, 30))); // 창이 먼저 그려지게
       let blob = null;
-      try { blob = await buildReportImage(); } catch (err) { console.warn('report image error:', err); }
+      try { blob = await reportShareBuild(); } catch (err) { console.warn('report image error:', err); }
       if (token !== reportShareToken) return; // 그 사이 닫았거나 다시 골랐으면 버린다
       if (!blob) { closeReportShare(); showToast && showToast('기록을 만들지 못했어요'); return; }
       reportShareBlob = blob;
@@ -6724,6 +6725,7 @@
       }
       reportShareBlob = null;
       reportSharePicked = null; // 1.2.13: 다음에 열면 다시 ★만
+      specShareReset();
       reportShareToken++; // 만드는 중이면 그 결과는 버린다
     }
     async function sendReportShare(e) {
@@ -6732,7 +6734,7 @@
       const blob = reportShareBlob;
       if (!blob) return;
       const now = new Date();
-      const name = `lifeguard_${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}.png`;
+      const name = `lifeguard_${reportShareBuild === buildSpecImage ? 'spectrum_' : ''}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}.png`;
       // 안드로이드 앱: 앱이 사진을 잠깐 저장해 두고 폰의 공유 창을 연다
       const bridge = window.AndroidBridge;
       if (bridge && typeof bridge.shareImage === 'function') {
@@ -8816,6 +8818,7 @@
     function closeTopWindow() {
       if (cloudSheetOpen()) { closeCloudSheet(); return true; } // 1.2.12: 맨 위(z-80)
       if (whatsNewEl) { closeWhatsNew(); return true; }
+      if (isWindowOpen('reportShare') && reportShareBuild === buildSpecImage) { closeReportShare(); return true; } // 1.2.13: 스펙트럼 위에 뜬 보내기 창
       if (isWindowOpen('specZoomModal')) { specZoomClose(); return true; } // 1.2.12: 기분 스펙트럼 본판에
       if (isWindowOpen('specModal')) { specClose(); return true; }
       if (isWindowOpen('surveyModal')) { if (surveyRun && surveyRun.stage === 'q' && surveyRun.i > 0 || surveyRun && surveyRun.stage === 'extra') surveyBack(); else closeSurvey(); return true; }
@@ -9275,6 +9278,8 @@
         const past = [];
         arch.forEach(d => { try { const v = JSON.parse(((d.data() || {}).data || {}).lifeguard_surveys || '[]'); if (Array.isArray(v)) past.push(...v); } catch (_) {} });
         cloud.archSurveys = past;
+        // 1.2.13: 기분 스펙트럼 '3개월 · 1년 · 전부'에서 지난 기록을 이어 그릴 때 쓴다 (화면에는 '보관함'이라는 말을 쓰지 않는다)
+        cloud.archData = arch.map(d => { const v = d.data() || {}; return { id: d.id, from: v.from || null, to: v.to || null, data: v.data || {} }; });
         try { carryFirstDaySleep(arch.map(d => ({ id: d.id, data: (d.data() || {}).data || {} }))); } catch (_) {}
         renderCloudCard();
         try { renderSurveyCard(); if (surveyRun && surveyRun.stage === 'result') renderSurvey(); } catch (_) {}
@@ -9554,11 +9559,16 @@
     <div id="specInner" style="max-width:440px;margin:0 auto;padding:14px 14px 40px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 2px 10px;">
         <div style="font-weight:800;font-size:15px;" class="spec-accent">🌈 기분 스펙트럼 <span style="font-size:10px;font-weight:600;opacity:.6;">시험</span></div>
-        <button type="button" onclick="specClose(event)" style="font-size:13px;font-weight:700;padding:6px 12px;border-radius:999px;" class="spec-chip">닫기 ✕</button>
+        <div style="display:flex;gap:6px;">
+          <!-- 1.2.13 (사용자 11.27 "응 보내기로 볼 수 있게 해"): 지금 고른 기간의 A·C를 사진 한 장으로 (함께 보기 보내기 창을 같이 씀) -->
+          <button type="button" onclick="openSpecShare(event)" style="font-size:13px;font-weight:700;padding:6px 12px;border-radius:999px;" class="spec-chip">↗ 보내기</button>
+          <button type="button" onclick="specClose(event)" style="font-size:13px;font-weight:700;padding:6px 12px;border-radius:999px;" class="spec-chip">닫기 ✕</button>
+        </div>
       </div>
       <div class="spec-note" id="specNote" style="font-size:11.5px;line-height:1.6;margin:0 4px 8px;"></div>
       <div id="specModes" style="display:flex;flex-wrap:wrap;gap:6px;margin:0 2px 12px;"></div>
-      <div class="spec-card"><div class="spec-head"><span>📅 달력 · 지난 진료부터 오늘까지</span></div><svg id="specM" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegM"></div></div>
+      <div id="specRange" style="display:none;gap:6px;margin:0 2px 12px;"></div>
+      <div class="spec-card"><div class="spec-head"><span id="specMTitle">📅 달력 · 지난 진료부터 오늘까지</span></div><svg id="specM" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegM"></div></div>
       <div class="spec-card"><div class="spec-head"><span>📅 달력 · 하루의 오르내림 (칸마다 0시 → 24시)</span></div><svg id="specM2" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegM2"></div></div>
       <div class="spec-card"><div class="spec-head"><span>A · 기분 띠와 잠</span><button type="button" onclick="specZoom('A', event)" class="spec-chip spec-zbtn">확대 ⤢</button></div><svg id="specA" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegA"></div></div>
       <div class="spec-card"><div class="spec-head"><span>C · 하루 한 줄 (가로: 0시 → 24시)</span><button type="button" onclick="specZoom('C', event)" class="spec-chip spec-zbtn">확대 ⤢</button></div><svg id="specC" style="display:block;width:100%"></svg><div class="spec-leg" id="specLegC"></div></div>
@@ -9597,9 +9607,10 @@
     };
     const SPEC_FADE_H = 4, SPEC_SHORT_H = 1.5;
     const SPEC_WAKE = '#D99A6C';
+    let specForceLight = false; // 보내기 사진을 그리는 동안만 true (받는 쪽 폰에서 읽기 좋게 늘 밝은 바탕)
     function specTheme() {
-      const dark = getEffectiveTheme(currentTheme) === 'dark';
-      const neutral = getEffectiveTheme(currentTheme) === 'neutral';
+      const dark = !specForceLight && getEffectiveTheme(currentTheme) === 'dark';
+      const neutral = !specForceLight && getEffectiveTheme(currentTheme) === 'neutral';
       return dark ? { dark, bg: '#141718', card: '#1e2223', ink: '#e8eeee', muted: 'rgba(255,255,255,.55)', accent: '#9ec0c4', soft: 'rgba(158,192,196,.14)', grid: 'rgba(255,255,255,.12)', empty: 'rgba(255,255,255,.06)', sleep: '#6f7779', sleepC: '#6f7779' }
         : { dark, bg: neutral ? '#ecefea' : '#fbfcfc', card: '#ffffff', ink: '#3b4547', muted: '#7b8789', accent: neutral ? '#455a5c' : '#597075', soft: 'rgba(89,112,117,.10)', grid: '#dfe5e6', empty: '#eef1f1', sleep: '#c5cbcd', sleepC: '#c5cbcd' } // 잠 색 (사용자 11.24·11.25 "옅은 회색"): A·C·C 세로·범례 모두 이 한 색;
     }
@@ -9620,8 +9631,59 @@
       const m = document.getElementById('specModal'); if (!m) return;
       specApplyTheme(); m.style.display = 'block';
       specPinchReset(m, document.getElementById('specInner'));
+      specRange = 'cur'; specRenderRange(); // 1.2.13: 열 때는 늘 이번 진료부터 (길게 본 것을 기억하지 않는다 — 되새김 막기)
       specRenderAll(); syncBackState();
     }
+    // ── 기간: 이번 진료 · 3개월 · 1년 · 전부 (1.2.13, 사용자 11.27 "지나간 기록과 합쳐서 보고 싶으면?" → 가: 스펙트럼 안에서) ──
+    // 지난 진료들의 기록(DB)을 지금 기록에 잠깐 이어 붙여 그린 뒤 되돌린다. 기분·잠만 (말씀은 꺼내지 않음), 평균·점수 없음.
+    let specRange = 'cur';
+    const SPEC_RANGES = [['cur', '이번 진료'], ['3m', '3개월'], ['1y', '1년'], ['all', '전부']];
+    let specVisits = new Set(); // 진료일들 (그림에 진료 구분선)
+    function specArchives() { return (typeof cloud !== 'undefined' && cloud.archData) || []; }
+    function specRenderRange() {
+      const box = document.getElementById('specRange'); if (!box) return;
+      if (!specArchives().length) { box.style.display = 'none'; return; } // 지난 기록이 없으면 단추도 없다
+      const t = specTheme();
+      box.style.display = 'flex';
+      box.innerHTML = SPEC_RANGES.map(([k, lab]) => `<button type="button" onclick="specSetRange('${k}', event)" style="flex:1;font-size:12px;font-weight:700;padding:7px 0;border-radius:999px;${k === specRange ? `background:${t.accent};color:${t.dark ? '#141718' : '#fff'}` : `background:${t.soft};color:${t.accent}`}">${lab}</button>`).join('');
+      const mt = document.getElementById('specMTitle'); if (mt) mt.textContent = specRange === 'cur' ? '📅 달력 · 지난 진료부터 오늘까지' : '📅 달력';
+    }
+    function specSetRange(k, e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      triggerHaptic(); specRange = k; specRenderRange(); specRenderAll();
+      const m = document.getElementById('specModal'); if (m) m.scrollTop = 0;
+    }
+    // fn을 고른 기간의 기록으로 그린다. 그리는 동안만 바꿔 끼우고 꼭 되돌린다 (저장하지 않음)
+    function specWithRange(fn) {
+      const keyOf = (d) => localDateKey(d);
+      if (specRange === 'cur' || !specArchives().length) { specVisits = new Set([lastVisitDate]); return fn(); }
+      const save = { moodRecords, sleepLog, activityDaily, lastVisitDate };
+      try {
+        const arch = specArchives().slice().sort((a, b) => a.id < b.id ? -1 : 1); // 오래된 것부터 (뒤의 것이 덮음)
+        const parse = (v, def) => { try { const o = JSON.parse(v || 'null'); return o == null ? def : o; } catch (_) { return def; } };
+        const seen = new Set(), moods = [];
+        arch.map(a => parse(a.data.lifeguard_mood_records, [])).concat([moodRecords || []]).forEach(list => (list || []).forEach(m => {
+          if (!m || !m.time || seen.has(m.time)) return; seen.add(m.time); moods.push(m);
+        }));
+        const slog = {}; arch.forEach(a => Object.assign(slog, parse(a.data.lifeguard_sleep_log, {}))); Object.assign(slog, sleepLog || {});
+        const act = new Map(); arch.forEach(a => parse(a.data.lifeguard_activity_daily, []).forEach(d => { if (d && d.date) act.set(d.date, d); })); (activityDaily || []).forEach(d => act.set(d.date, d));
+        const visits = new Set([lastVisitDate]);
+        arch.forEach(a => { const v = String(a.to || ''); if (/^\d{8}$/.test(v)) visits.add(`${v.slice(0, 4)}-${v.slice(4, 6)}-${v.slice(6, 8)}`); });
+        // 시작 날: 3개월·1년은 그만큼 앞, 전부는 가장 오래된 기록 (기록이 그보다 늦게 시작하면 기록부터)
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const times = moods.map(m => new Date(m.time).getTime()).filter(x => !isNaN(x));
+        Object.keys(slog).concat(Array.from(act.keys())).forEach(k => { const d = parseLocalDate(k); if (d) times.push(d.getTime()); });
+        const earliest = times.length ? Math.min(...times) : today.getTime();
+        const back = { '3m': 91, '1y': 365 }[specRange];
+        let start = new Date(Math.max(earliest, back ? today.getTime() - (back - 1) * 86400000 : earliest)); start.setHours(0, 0, 0, 0);
+        moodRecords = moods; sleepLog = slog; activityDaily = Array.from(act.values()); lastVisitDate = keyOf(start);
+        specVisits = visits;
+        return fn();
+      } finally {
+        moodRecords = save.moodRecords; sleepLog = save.sleepLog; activityDaily = save.activityDaily; lastVisitDate = save.lastVisitDate;
+      }
+    }
+    function specLong() { return specRange !== 'cur'; }
     function specClose(e) { if (e && e.stopPropagation) e.stopPropagation(); const m = document.getElementById('specModal'); if (m) m.style.display = 'none'; syncBackState(); }
     function specSetMode(k, e) { if (e && e.stopPropagation) e.stopPropagation(); triggerHaptic(); specMode = k; specApplyTheme(); specRenderAll(); }
     // 자료: 기간 · 기분 조각(적은 때 → 다음 적은 때) · 잠 조각(실제 시각) · 걸음
@@ -9696,7 +9758,7 @@
       const g = mk('g', { 'clip-path': `url(#spA${big ? 'z' : ''})` });
       const wPast = Math.min(w, X(D.T1) - L); // 1.2.13: 아직 오지 않은 날은 바탕도 칠하지 않는다
       mk('rect', { x: L, y: yM, width: wPast, height: moodH, fill: t.empty }, g);
-      D.moods.forEach(m => mk('rect', { x: X(m.a).toFixed(2), y: yM, width: Math.max(0.6, X(m.b) - X(m.a) + 0.3).toFixed(2), height: moodH, fill: moodColor(m.s), opacity: m.o }, g));
+      D.moods.forEach(m => mk('rect', { x: X(m.a).toFixed(2), y: yM, width: Math.max(0.6, X(m.b) - X(m.a) + 0.3).toFixed(2), height: moodH, fill: moodColor(m.s, specForceLight), opacity: m.o }, g));
       if (big) D.recs.forEach(r => mk('line', { x1: X(r.t), x2: X(r.t), y1: yM + moodH - 7, y2: yM + moodH, stroke: t.dark ? '#141718' : '#fff', 'stroke-width': 1.2, opacity: .8 }, g));
       lab(yM + moodH / 2 + 3, '기분');
       // 잠
@@ -9707,6 +9769,7 @@
       });
       lab(yS + sleepH / 2 + 3, '잠');
       const dw = w / D.drawDays;
+      if (D.drawDays > 31) { specLongTicksA(D, mk, t, L, dw, yM, yAx, fs); return D; } // 1.2.13: 3개월·1년·전부
       // 날짜 눈금
       const every = big ? 1 : Math.max(1, Math.ceil(D.drawDays / 7));
       for (let i = 0; i <= D.drawDays; i++) {
@@ -9716,21 +9779,42 @@
       }
       return D;
     }
+    // 긴 기간(1.2.13): 날마다 눈금 대신 달 첫날에 옅은 선과 'N월', 진료일에는 진한 선 (진료와 진료 사이가 보이게)
+    function specDayIndex(D, key) { const d = parseLocalDate(key); return d ? Math.round((d - D.d1) / 86400000) : -1; }
+    function specLongTicksA(D, mk, t, L, dw, yM, yAx, fs) {
+      for (let i = 0; i < D.drawDays; i++) {
+        const d = new Date(D.d1); d.setDate(D.d1.getDate() + i);
+        if (d.getDate() !== 1 && !(i === 0 && d.getDate() <= 20)) continue; // 첫날 글자는 다음 달 1일과 겹치지 않을 때만
+        const x = L + i * dw;
+        mk('line', { x1: x, x2: x, y1: yM, y2: yAx, stroke: t.grid, 'stroke-width': .6, opacity: .7, 'stroke-dasharray': '2,3' });
+        const e = mk('text', { x: x + 2, y: yAx + 11, 'text-anchor': 'start', 'font-size': fs, fill: t.muted }); e.textContent = (d.getMonth() + 1) + '월';
+      }
+      specVisits.forEach(k => { const i = specDayIndex(D, k); if (i <= 0 || i >= D.drawDays) return; const x = L + i * dw;
+        mk('line', { x1: x, x2: x, y1: yM - 2, y2: yAx, stroke: t.accent, 'stroke-width': 1.2, opacity: .75 }); });
+    }
     // C: 하루 한 줄. vertical이면 90도로 세움 (아래가 날짜, 왼쪽이 시각, 위가 0시)
     function specDrawC(svg, W, big, vertical) {
       const D = specData(), t = specTheme(), mk = specMk(svg);
       svg.textContent = '';
       const n = vertical ? D.drawDays : D.diffDays, fs = big ? 10 : 8.5, id = 'spC' + (vertical ? 'v' : 'h') + (big ? 'z' : '');
-      let H, cell; // cell(i, a, b) → 그날 i의 a~b시 칸
+      let H, cell, afterCells = null; // cell(i, a, b) → 그날 i의 a~b시 칸 · afterCells: 칸을 다 그린 뒤 (진료 구분선)
       if (!vertical) {
-        const L = 34, R = W - 6, rowH = big ? 22 : 12, gap = big ? 5 : 3, y0 = 4;
+        const long = n > 31; // 1.2.13: 3개월·1년·전부 — 하루 3px 줄로 촘촘히 (1년이면 약 1,100px)
+        const L = long ? 40 : 34, R = W - 6, rowH = long ? (big ? 5 : 3) : (big ? 22 : 12), gap = long ? 0 : (big ? 5 : 3), y0 = 4;
         H = y0 + n * (rowH + gap) + 16;
         cell = (i, a, b) => ({ x: L + (R - L) * a / 24, y: y0 + i * (rowH + gap), w: (R - L) * (b - a) / 24, h: rowH });
-        for (let i = 0; i < n; i++) { const c = cell(i, 0, 24); const e = mk('text', { x: L - 5, y: c.y + rowH / 2 + fs * 0.35, 'text-anchor': 'end', 'font-size': fs, fill: t.muted }); e.textContent = specMD(D.d1, i); }
+        if (!long) for (let i = 0; i < n; i++) { const c = cell(i, 0, 24); const e = mk('text', { x: L - 5, y: c.y + rowH / 2 + fs * 0.35, 'text-anchor': 'end', 'font-size': fs, fill: t.muted }); e.textContent = specMD(D.d1, i); }
+        else {
+          for (let i = 0; i < n; i++) { const d = new Date(D.d1); d.setDate(D.d1.getDate() + i); if (d.getDate() !== 1 && !(i === 0 && d.getDate() <= 20)) continue; // 첫날 글자는 다음 달 1일과 겹치지 않을 때만
+            const c = cell(i, 0, 24); const e = mk('text', { x: L - 5, y: c.y + fs * 0.8, 'text-anchor': 'end', 'font-size': fs, fill: t.muted }); e.textContent = (d.getMonth() + 1) + '월'; }
+          afterCells = () => specVisits.forEach(k => { const i = specDayIndex(D, k); if (i <= 0 || i >= n) return; const c = cell(i, 0, 24);
+            mk('line', { x1: L - 3, x2: R, y1: c.y, y2: c.y, stroke: t.accent, 'stroke-width': 1.2, opacity: .85 }); }); // 진료일 위에 가는 선 (칸을 다 그린 뒤)
+        }
         [0, 6, 12, 18, 24].forEach(h => { const e = mk('text', { x: L + (R - L) * h / 24, y: H - 4, 'text-anchor': h === 0 ? 'start' : h === 24 ? 'end' : 'middle', 'font-size': fs, fill: t.muted }); e.textContent = h + '시'; });
       } else {
-        const L = 26, T = 4, B = big ? 520 : 250, colGap = big ? 5 : 2;
-        const full = Math.max(big ? 22 : 4, ((W - L - 4) - (n - 1) * colGap) / n);
+        const long = n > 31;
+        const L = 26, T = 4, B = big ? 520 : 250, colGap = long ? 0 : (big ? 5 : 2);
+        const full = long ? Math.max(big ? 4 : 0.3, (W - L - 4) / n) : Math.max(big ? 22 : 4, ((W - L - 4) - (n - 1) * colGap) / n);
         const colW = big ? full : Math.min(full, 12); // 1.2.13: 가로 C 줄과 같은 12 (확대 창은 그대로 넓게)
         const slot = full + colGap, off = (full - colW) / 2; // 가늘면 하루 칸 가운데에
         if (big) W = L + n * slot + 30;
@@ -9738,8 +9822,15 @@
         cell = (i, a, b) => ({ x: L + i * slot + off, y: T + (B - T) * (24 - b) / 24, w: colW, h: (B - T) * (b - a) / 24 }); // 사용자: 0시가 아래, 24시가 꼭대기
         [0, 6, 12, 18, 24].forEach(h => { const e = mk('text', { x: L - 4, y: T + (B - T) * (24 - h) / 24 + 3, 'text-anchor': 'end', 'font-size': fs, fill: t.muted }); e.textContent = h + '시';
           if (big) { const r = mk('text', { x: W - 2, y: T + (B - T) * (24 - h) / 24 + 3, 'text-anchor': 'end', 'font-size': fs, fill: t.muted }); r.textContent = h + '시'; } }); // 확대하면 옆으로 밀려도 오른쪽에서 시각을 읽게
-        const every = big ? 1 : Math.max(1, Math.ceil(n / 7));
-        for (let i = 0; i < n; i += every) { const c = cell(i, 0, 0); const e = mk('text', { x: c.x + colW / 2, y: B + 13, 'text-anchor': 'middle', 'font-size': fs, fill: t.muted }); e.textContent = specMD(D.d1, i); }
+        if (!long) {
+          const every = big ? 1 : Math.max(1, Math.ceil(n / 7));
+          for (let i = 0; i < n; i += every) { const c = cell(i, 0, 0); const e = mk('text', { x: c.x + colW / 2, y: B + 13, 'text-anchor': 'middle', 'font-size': fs, fill: t.muted }); e.textContent = specMD(D.d1, i); }
+        } else {
+          for (let i = 0; i < n; i++) { const d = new Date(D.d1); d.setDate(D.d1.getDate() + i); if (d.getDate() !== 1 && !(i === 0 && d.getDate() <= 20)) continue; // 첫날 글자는 다음 달 1일과 겹치지 않을 때만
+            const c = cell(i, 0, 0); const e = mk('text', { x: c.x, y: B + 13, 'text-anchor': 'start', 'font-size': fs, fill: t.muted }); e.textContent = (d.getMonth() + 1) + '월'; }
+          afterCells = () => specVisits.forEach(k => { const i = specDayIndex(D, k); if (i <= 0 || i >= n) return; const c = cell(i, 0, 0);
+            mk('line', { x1: c.x, x2: c.x, y1: T, y2: B + 3, stroke: t.accent, 'stroke-width': 1.2, opacity: .85 }); });
+        }
       }
       svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('width', big ? W : '100%'); if (big) svg.setAttribute('height', H);
       const dayMs = 86400000;
@@ -9752,8 +9843,9 @@
         // 1.2.12: 잔 시간에는 기분이 없다 — 기분 조각은 이미 잔 시간을 뺐으므로(specCutSleep) 잠을 먼저 깔고 그 위에 기분 (깬 때·걸음은 1.2.12 사용자 결정으로 뺌).
         // 잠 안에서 적은 기분(잠깐 깼을 때)은 적은 때부터 30분만 잠 위에 보인다.
         D.sleeps.filter(sl => sl.k !== 'wake').forEach(sl => { const c = part(sl.a, sl.b); if (c) mk('rect', { x: c.x, y: c.y, width: c.w, height: c.h, fill: t.sleepC, opacity: sl.k === 'nap' ? .6 : 1 }, g); });
-        D.moods.forEach(m => { const c = part(m.a, m.b); if (c) mk('rect', { x: c.x, y: c.y, width: c.w + (vertical ? 0 : .3), height: c.h + (vertical ? .3 : 0), fill: moodColor(m.s), opacity: m.o }, g); });
+        D.moods.forEach(m => { const c = part(m.a, m.b); if (c) mk('rect', { x: c.x, y: c.y, width: c.w + (vertical ? 0 : .3), height: c.h + (vertical ? .3 : 0), fill: moodColor(m.s, specForceLight), opacity: m.o }, g); });
       }
+      if (afterCells) afterCells();
     }
     // 걸음: 가로면 줄 오른쪽 끝에 짧은 막대, 세로면 칸 아래에 막대
     function specStepsSide(D, mk, t, at, size, edge, far, fs, vertical) {
@@ -9804,7 +9896,7 @@
           const cell = first + dd - 1, row = Math.floor(cell / 7) - skip;
           if (row < 0 || row >= rows) continue;
           const cx = (cell % 7) * cw, cy = y + row * ch;
-          const on = inRange(d), isToday = d.getTime() === today.getTime(), isVisit = d.getTime() === d1.getTime();
+          const on = inRange(d), isToday = d.getTime() === today.getTime(), isVisit = specLong() ? specVisits.has(key(d)) : d.getTime() === d1.getTime(); // 1.2.13: 긴 기간이면 진료일들 (시작 날이 아니라)
           // 날짜 숫자 (기간 밖은 옅게). 지난 진료일·오늘은 테두리
           if (isToday || isVisit) mk('rect', { x: cx + cw / 2 - fs * 0.95, y: cy + 2, width: fs * 1.9, height: fs + 5, rx: (fs + 5) / 2, fill: 'none', stroke: t.accent, 'stroke-width': 1.2 });
           const nt = mk('text', { x: cx + cw / 2, y: cy + fs + 3, 'text-anchor': 'middle', 'font-size': fs, 'font-weight': (isToday || isVisit) ? 800 : 500, fill: on ? t.ink : t.muted, opacity: on ? 1 : 0.35 });
@@ -9854,7 +9946,91 @@
         `<span><i style="border:1.2px solid ${t.accent};background:none;border-radius:6px;width:16px"></i>지난 진료 · 오늘</span>` +
         (line ? `<span style="width:100%;text-align:center">칸 안: 왼쪽 0시 · 가운데 줄 12시 · 오른쪽 24시, 파란 줄은 ○</span>` : `<span style="width:100%;text-align:center">하루에 여러 번이면 오래 이어진 기분일수록 진하게</span>`);
     }
-    function specRenderAll() {
+    function specRenderAll() { return specWithRange(specRenderAllInner); }
+    // ── 스펙트럼 보내기 (1.2.13, 사용자 11.27 "응 보내기로 볼 수 있게 해") ──
+    // 지금 고른 기간(이번 진료·3개월·1년·전부)의 A(기분 띠와 잠)와 C(하루 한 줄)를 사진 한 장으로.
+    // 기분·잠만, 말씀·평균·점수 없음. 늘 밝은 바탕. 함께 보기 보내기 창(#reportShare)을 같이 쓰고, 그 창을 스펙트럼 위로 올린다.
+    function openSpecShare(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      triggerHaptic();
+      const dark = getEffectiveTheme(currentTheme) === 'dark';
+      const card = document.getElementById('reportShareCard');
+      if (card) { card.style.backgroundColor = dark ? '#1c2123' : '#ffffff'; card.style.color = dark ? '#eff3f2' : '#597075'; }
+      const cancel = document.getElementById('reportShareCancel'); if (cancel) cancel.style.color = dark ? '#eff3f2' : '#597075';
+      const title = document.getElementById('reportShareTitle'); if (title) title.textContent = '기분 스펙트럼을 보내요';
+      const pick = document.getElementById('reportSharePick'); if (pick) { pick.innerHTML = ''; pick.style.display = 'none'; } // 말씀은 담지 않는다
+      reportShareBuild = buildSpecImage;
+      const m = document.getElementById('reportShare');
+      if (m) { m.style.zIndex = '65'; m.classList.remove('hidden'); m.style.display = 'flex'; } // 스펙트럼(60)·확대(61) 위
+      syncBackState();
+      return makeShareImage(true);
+    }
+    function specShareReset() {
+      if (reportShareBuild !== buildSpecImage) return;
+      reportShareBuild = () => buildReportImage();
+      const m = document.getElementById('reportShare'); if (m) m.style.zIndex = '';
+      const title = document.getElementById('reportShareTitle'); if (title) title.textContent = '함께 보는 기록을 보내요';
+    }
+    async function buildSpecImage() {
+      const W = 1080, PAD = 64, INNER = W - PAD * 2, GW = 340, K = (INNER - 48) / GW; // 그림은 폰 화면 폭(340)으로 그려 키운다 → 글자·선 비율이 화면과 같다
+      const ACCENT = '#597075', TEXT = '#2d3748', SUB = '#8a9aa0', BG = '#fbfcfc', CARD = '#ffffff', LINE = '#e6ecee';
+      const FONT = getComputedStyle(document.body).fontFamily || 'sans-serif';
+      const font = (px, bold) => `${bold ? 700 : 400} ${px}px ${FONT}`;
+      const NS = 'http://www.w3.org/2000/svg';
+      const fmt = (d) => `${d.getMonth() + 1}.${d.getDate()}`;
+      let a, cS, info;
+      specForceLight = true;
+      try {
+        specWithRange(() => {
+          const mkSvg = () => { const s = document.createElementNS(NS, 'svg'); s.setAttribute('xmlns', NS); s.setAttribute('font-family', FONT); return s; };
+          a = mkSvg(); specDrawA(a, GW, false);
+          cS = mkSvg(); specDrawC(cS, GW, false, false);
+          const { d1, diffDays } = getReportRange();
+          info = { d1, diffDays, visits: specLong() ? specVisits.size : 0 };
+        });
+      } finally { specForceLight = false; }
+      const vbH = (s) => parseFloat((s.getAttribute('viewBox') || '0 0 0 0').split(' ')[3]) || 0;
+      const toImg = (s) => { const h = vbH(s); s.setAttribute('width', String(Math.round(GW * K * 2))); s.setAttribute('height', String(Math.round(h * K * 2))); return svgToImage(s).then(img => ({ img, h: h * K })); };
+      const [A, C] = await Promise.all([toImg(a), toImg(cS)]);
+      const now = new Date(), end = new Date(info.d1); end.setDate(info.d1.getDate() + info.diffDays - 1);
+      const rangeName = (SPEC_RANGES.find(r => r[0] === specRange) || [0, ''])[1];
+      const HEAD = 96, LEG = 70;
+      const aCardH = HEAD + A.h + LEG, cCardH = HEAD + C.h + 20;
+      let H = PAD + 52 + 18 + 40 + 36 + aCardH + 28 + cCardH + 40 + 34 + PAD;
+      const c = document.createElement('canvas'), ctx = c.getContext('2d');
+      const S = Math.min(2, Math.sqrt(16000000 / (W * H))); // 아이폰이 그릴 수 있는 크기 안으로 (함께 보기 사진과 같은 까닭)
+      c.width = Math.floor(W * S); c.height = Math.floor(H * S); ctx.scale(S, S);
+      const rr = (x, y, w, h, r, fill, stroke) => { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h); ctx.fillStyle = fill; ctx.fill(); if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 2; ctx.stroke(); } };
+      ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
+      let y = PAD + 46;
+      ctx.fillStyle = ACCENT; ctx.font = font(46, true); ctx.fillText('기분 스펙트럼', PAD, y);
+      y += 18 + 36;
+      ctx.fillStyle = SUB; ctx.font = font(30);
+      const fy = (d) => info.d1.getFullYear() !== end.getFullYear() ? `${d.getFullYear()}.${fmt(d)}` : fmt(d); // 해가 바뀌면 연도도
+      ctx.fillText(`${rangeName} · ${fy(info.d1)} ~ ${fy(end)} · ${info.diffDays}일`, PAD, y);
+      y += 36;
+      const cardHead = (h, title, right) => {
+        rr(PAD, y, INNER, h, 28, CARD, LINE);
+        ctx.fillStyle = ACCENT; ctx.font = font(34, true); ctx.textAlign = 'left'; ctx.fillText(title, PAD + 40, y + 66);
+        if (right) { ctx.fillStyle = SUB; ctx.font = font(26); ctx.textAlign = 'right'; ctx.fillText(right, PAD + INNER - 40, y + 64); ctx.textAlign = 'left'; }
+      };
+      cardHead(aCardH, '기분 띠와 잠', info.visits ? '진한 선 = 진료일' : '');
+      ctx.drawImage(A.img, PAD + 24, y + HEAD, GW * K, A.h);
+      // 알림표: 기분 다섯 색 + 잠
+      let lx = PAD + 40; const ly = y + HEAD + A.h + 44;
+      ctx.font = font(26);
+      [[2, '▲'], [1, '△'], [0, '○'], [-1, '▽'], [-2, '▼']].forEach(([sc, g]) => { rr(lx, ly - 22, 26, 26, 6, moodColor(sc, true)); lx += 34; ctx.fillStyle = SUB; ctx.fillText(g, lx, ly); lx += ctx.measureText(g).width + 26; });
+      rr(lx, ly - 22, 26, 26, 6, '#c5cbcd'); lx += 34; ctx.fillStyle = SUB; ctx.fillText('잠', lx, ly);
+      y += aCardH + 28;
+      cardHead(cCardH, '하루 한 줄', '0시 → 24시');
+      ctx.drawImage(C.img, PAD + 24, y + HEAD, GW * K, C.h);
+      y += cCardH;
+      y += 40 + 30;
+      ctx.fillStyle = SUB; ctx.font = font(26); ctx.textAlign = 'right';
+      ctx.fillText(`${fmt(now)} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} 작성`, W - PAD, y);
+      return await new Promise(res => c.toBlob(res, 'image/png'));
+    }
+    function specRenderAllInner() {
       const w = (id) => { const s = document.getElementById(id); return Math.max(260, Math.round((s && s.getBoundingClientRect().width) || 340)); };
       specDrawMonth(document.getElementById('specM'), w('specM'));
       specDrawMonth(document.getElementById('specM2'), w('specM2'), true);
@@ -9866,12 +10042,15 @@
     function specZoom(kind, e) {
       if (e && e.stopPropagation) e.stopPropagation();
       triggerHaptic();
+      return specWithRange(() => specZoomInner(kind));
+    }
+    function specZoomInner(kind) {
       const m = document.getElementById('specZoomModal'), svg = document.getElementById('specZoomSvg'); if (!m || !svg) return;
       specApplyTheme(); m.style.display = 'flex';
       const zi = document.getElementById('specZoomInner'); zi.style.zoom = 1; zi.style.width = ''; // 두 손가락 확대를 처음 크기로
       const n = getReportRange().drawDays, vw = window.innerWidth - 20;
       document.getElementById('specZoomTitle').textContent = { A: 'A · 기분 띠와 잠', C: 'C · 하루 한 줄', V: 'C 세로' }[kind];
-      if (kind === 'A') specDrawA(svg, Math.max(vw, n * 72), true);
+      if (kind === 'A') specDrawA(svg, Math.max(vw, n * (n > 31 ? 10 : 72)), true); // 1.2.13: 긴 기간은 하루 10px
       else if (kind === 'C') specDrawC(svg, Math.max(vw, 560), true, false);
       else specDrawC(svg, vw, true, true);
       const sc = document.getElementById('specZoomScroll'); sc.scrollLeft = kind === 'C' ? 0 : sc.scrollWidth; sc.scrollTop = 0; // A·세로는 가장 최근 쪽부터, 가로 C는 날짜가 보이게 왼쪽부터
